@@ -1,0 +1,20 @@
+CENTRAL DE INVENTÁRIO — app para instalar no celular e no PC
+
+Arquivos deste pacote (envie TODOS para o GitHub, soltos, sem pasta em volta):
+  index.html, sw.js, manifest.webmanifest, icone-192.png, icone-512.png, LEIA-ME.txt
+
+Para publicar (grátis, uma vez só), no computador:
+  1. Crie uma conta em github.com (ou entre na sua).
+  2. Clique em "+" > "New repository". Nome: central. Marque "Public". Clique em "Create repository".
+  3. Clique em "uploading an existing file" e arraste os 6 arquivos. Clique em "Commit changes".
+  4. Vá em Settings > Pages. Em "Branch", escolha "main" e "/ (root)". Clique em "Save".
+  5. Espere 1 ou 2 minutos. O endereço aparece no topo da página: https://SEU-USUARIO.github.io/central/
+
+No celular (Chrome):
+  - Abra https://SEU-USUARIO.github.io/central/
+  - Menu (3 pontinhos) > "Instalar app" ou "Adicionar à tela inicial".
+  - Pronto: abre como app, funciona sem internet e não perde os dados ao fechar.
+  - Em Produtividade > Link do robô, cole o link do robô (o link NÃO fica no GitHub; cole em cada aparelho).
+
+Para atualizar depois: envie os arquivos novos para o mesmo repositório (substituindo os antigos).
+Os dados ficam no aparelho e continuam lá.
