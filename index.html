@@ -199,6 +199,8 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
 .pessoa-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
 .pessoa-row:last-child{border-bottom:none;}
 .pessoa-row.coord .pessoa-nome{font-weight:700;}
+.tag-free{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em;vertical-align:middle;background:#DDEBF7;color:#1F4E79;}
+.tag-novo{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--accent-soft);color:var(--accent);}
 .pessoa-nome{flex:1;font-size:.88rem;min-width:0;overflow-wrap:anywhere;}
 .pill-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
 .pill{border:1px solid var(--border);background:var(--bg);color:var(--muted);border-radius:20px;padding:5px 10px;font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;}
@@ -268,6 +270,7 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
       <p class="hint">Suba o arquivo .xlsx com as abas CLT, FREELANCE e RJ (mesmo modelo baixado do app). Importar de novo substitui o cadastro inteiro.</p>
       <input type="file" id="fileUpload" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/octet-stream">
       <button class="btn" onclick="importarPlanilha()">Importar planilha</button>
+      <button class="btn secondary" onclick="baixarCadastro()">Baixar cadastro atualizado (Excel)</button>
       <div id="msgCadastro"></div>
     </div>
     <div class="card">
@@ -276,6 +279,7 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
     </div>
     <div class="card">
       <h2>Freelancers BH (<span id="qtdFL">0</span> ativos)</h2>
+      <p class="hint">Quem estiver em azul na planilha da escala e ainda não estiver aqui entra sozinho, marcado como NOVO. Complete o gênero e, quando quiser, baixe o cadastro atualizado.</p>
       <div class="wrap-table"><table id="tabFL"><thead><tr><th>Nome</th><th>Gên.</th><th>Pref.</th><th>Afastado</th></tr></thead><tbody></tbody></table></div>
     </div>
     <div class="card">
@@ -887,6 +891,9 @@ function importarPlanilha(){
         else if(key==='FREELANCE') novo.fl = parsePessoas(aoa, 'fl');
         else if(key==='RJ') novo.rj = parsePessoas(aoa, 'rj');
       });
+      // freelancers que o app aprendeu pela escala (azul) e ainda não estão na planilha continuam no cadastro
+      const jaTem = new Set([...novo.clt, ...novo.fl].map(x=>normalizarNome(x.nome)));
+      (db.fl||[]).filter(x=>x.novo && !jaTem.has(normalizarNome(x.nome))).forEach(x=>novo.fl.push(x));
       db = novo;
       saveDB(db);
       ultimaEscala = null; salvarUltimaEscala(); renderEscala();
@@ -911,7 +918,9 @@ function renderEquipe(){
   });
   [...db.fl].sort((a,b)=>a.prioridade-b.prioridade).forEach(p=>{
     const idx = db.fl.indexOf(p);
-    hF += `<tr><td>${esc(p.nome)}</td><td>${esc((p.genero||'').slice(0,1))}</td><td>${p.prioridade===99?'—':p.prioridade}</td>
+    const gen = p.genero ? esc(p.genero.slice(0,1))
+      : `<select onchange="definirGeneroFL(${idx}, this.value)" aria-label="Gênero"><option value="">?</option><option value="MASCULINO">M</option><option value="FEMININO">F</option></select>`;
+    hF += `<tr><td>${esc(p.nome)}${p.novo ? '<span class="tag-novo">NOVO</span>' : ''}</td><td>${gen}</td><td>${p.prioridade===99?'—':p.prioridade}</td>
     <td><input type="checkbox" ${p.afastado?'checked':''} onchange="toggleAfastado('fl',${idx},this.checked)"></td></tr>`;
   });
   db.rj.forEach((p,idx)=>{
@@ -923,6 +932,33 @@ function renderEquipe(){
   document.getElementById('qtdFL').textContent = db.fl.filter(p=>!p.afastado).length;
   document.getElementById('qtdRJ').textContent = db.rj.filter(p=>!p.afastado).length;
   renderRJQuartosOptions();
+}
+
+function definirGeneroFL(idx, val){
+  if(!db.fl[idx] || !val) return;
+  db.fl[idx].genero = val; saveDB(db); renderEquipe();
+}
+async function baixarCadastro(){
+  if(!excelDisponivel()) return;
+  const wb = new ExcelJS.Workbook();
+  const aba = (nome, cab, linhas, azul) => {
+    const ws = wb.addWorksheet(nome);
+    [cab, ...linhas].forEach((l, i)=>l.forEach((v, j)=>{
+      const c = ws.getCell(i + 1, j + 1);
+      c.value = v;
+      c.font = i === 0 ? {bold:true} : (azul ? {color:{argb:'FF0070C0'}} : {});
+    }));
+    cab.forEach((_,i)=>{ ws.getColumn(i+1).width = i===0 ? 42 : 14; });
+    ws.views = [{state:'frozen', ySplit:1}];
+  };
+  const pref = x => x.prioridade===99 ? '' : x.prioridade;
+  aba('CLT', ['FUNCIONÁRIO','FUNÇÃO','GENERO','AFASTADO','PREFERENCIA'],
+    db.clt.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', pref(x)]));
+  aba('FREELANCE', ['FREELANCE','GENERO','AFASTADO','','PRIORIDADE'],
+    db.fl.map(x=>[x.nome, x.genero||'', x.afastado ? 'AFASTADO' : '', '', pref(x)]), true);
+  aba('RJ', ['NOME','FUNÇÃO','GENERO','AFASTADO'],
+    db.rj.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '']));
+  await salvarExcel(wb, `Cadastro da equipe - ${hojeBR().replace(/\//g,'.')}.xlsx`);
 }
 
 function toggleAfastado(tipo, idx, val){
@@ -1478,6 +1514,85 @@ function salvarLoja(){ lsSet(LOJA_KEY, loja); marcarAlterado('loja'); }
 let editandoLista = false;
 let aoaAtual = null;
 let lojasDetectadas = [];
+let freeNaPlanilha = new Set();   // nomes (normalizados) em fonte azul na planilha da escala
+
+/* ---- freelancers: azul na planilha da escala OU cadastrados em Viagem › Equipe ---- */
+const PALETA_INDEXADA = ['000000','FFFFFF','FF0000','00FF00','0000FF','FFFF00','FF00FF','00FFFF','000000','FFFFFF','FF0000','00FF00','0000FF','FFFF00','FF00FF','00FFFF',
+  '800000','008000','000080','808000','800080','008080','C0C0C0','808080','9999FF','993366','FFFFCC','CCFFFF','660066','FF8080','0066CC','CCCCFF',
+  '000080','FF00FF','FFFF00','00FFFF','800080','800000','008080','0000FF','00CCFF','CCFFFF','CCFFCC','FFFF99','99CCFF','FF99CC','CC99FF','FFCC99',
+  '3366FF','33CCCC','99CC00','FFCC00','FF9900','FF6600','666699','969696','003366','339966','003300','333300','993300','993366','333399','333333'];
+const TEMA_PADRAO = ['FFFFFF','000000','E7E6E6','44546A','4472C4','ED7D31','A5A5A5','FFC000','5B9BD5','70AD47','0563C1','954F72'];
+function hexEhAzul(hex){
+  if(!hex || !/^[0-9a-f]{6}$/i.test(hex)) return false;
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  if(max !== b || b - r < 30 || max - min < 25) return false;   // azul tem que ser o canal mais forte
+  let h = (max === min) ? 0 : (g === max ? 2 + (b - r) / (max - min) : 4 + (r - g) / (max - min)) * 60;
+  if(h < 0) h += 360;
+  return h >= 185 && h <= 255;
+}
+function coresDoTema(wbx){
+  try{
+    const xml = (wbx._themes && (wbx._themes.theme1 || Object.values(wbx._themes)[0])) || '';
+    const cor = {};
+    ['dk1','lt1','dk2','lt2','accent1','accent2','accent3','accent4','accent5','accent6','hlink','folHlink'].forEach(n=>{
+      const m = xml.match(new RegExp('<a:' + n + '>[\\s\\S]*?(?:srgbClr val="([0-9A-Fa-f]{6})"|lastClr="([0-9A-Fa-f]{6})")'));
+      if(m) cor[n] = m[1] || m[2];
+    });
+    return ['lt1','dk1','lt2','dk2','accent1','accent2','accent3','accent4','accent5','accent6','hlink','folHlink'].map((n,i)=>cor[n] || TEMA_PADRAO[i]);
+  }catch(e){ return TEMA_PADRAO; }
+}
+function fonteAzul(cell, tema){
+  let font = cell.font;
+  const v = cell.value;
+  if(v && v.richText && v.richText.length){ const run = v.richText.find(x=>x.text && x.text.trim() && x.font); if(run) font = run.font; }
+  const c = font && font.color;
+  if(!c) return false;
+  if(c.argb) return hexEhAzul(String(c.argb).slice(-6));
+  if(c.theme !== undefined) return hexEhAzul(tema[c.theme]);
+  if(c.indexed !== undefined) return hexEhAzul(PALETA_INDEXADA[c.indexed]);
+  return false;
+}
+async function lerNomesAzuis(buf, nomeAba, faixa){
+  const res = new Set();
+  if(typeof ExcelJS === 'undefined') return res;
+  try{
+    const wbx = new ExcelJS.Workbook();
+    await wbx.xlsx.load(buf);
+    const ws = wbx.getWorksheet(nomeAba) || wbx.worksheets[0];
+    if(!ws) return res;
+    const tema = coresDoTema(wbx);
+    ws.eachRow({includeEmpty:false}, (row, rn)=>row.eachCell({includeEmpty:false}, (cell, cn)=>{
+      if(!fonteAzul(cell, tema)) return;
+      const lin = aoaAtual[rn - 1 - faixa.s.r], v = lin ? String(lin[cn - 1 - faixa.s.c] || '').replace(/\s+/g,' ').trim() : '';
+      if(pareceNome(v)) res.add(normalizarNome(v));
+    }));
+  }catch(e){ /* sem cores: segue só com o cadastro */ }
+  return res;
+}
+function pareceNome(v){
+  return !!v && !RE_LOJA.test(v) && !RE_FIM_LISTA.test(v) && !RE_IGNORAR.test(v) && /^[A-Za-zÀ-ÿ'.\s-]+$/.test(v) && v.trim().split(/\s+/).length >= 2;
+}
+function noCadastroFL(nome){ const k = normalizarNome(nome); return (db.fl||[]).some(x=>normalizarNome(x.nome)===k); }
+function noCadastroCLT(nome){ const k = normalizarNome(nome); return (db.clt||[]).some(x=>normalizarNome(x.nome)===k) || (db.rj||[]).some(x=>normalizarNome(x.nome)===k); }
+// p.free: true/false quando veio da planilha ou foi marcado à mão; sem valor = segue o cadastro
+function ehFree(p){ return !!p && !p.coordenador && (p.free === true || (p.free !== false && noCadastroFL(p.nome))); }
+function aprenderFreelancers(nomes){
+  const novos = [];
+  nomes.forEach(n=>{
+    if(noCadastroFL(n) || noCadastroCLT(n) || novos.some(x=>normalizarNome(x)===normalizarNome(n))) return;
+    db.fl.push({nome:n.toUpperCase(), genero:'', afastado:false, prioridade:99, novo:true});
+    novos.push(n.toUpperCase());
+  });
+  if(novos.length){ saveDB(db); if(typeof renderEquipe==='function') renderEquipe(); }
+  return novos;
+}
+function toggleFree(i){
+  const p = loja.pessoas[i]; if(!p) return;
+  p.free = !ehFree(p);
+  if(p.free) aprenderFreelancers([p.nome]);
+  salvarLoja(); renderPresenca();
+}
 
 const RE_LOJA = /^(.+?)\s*\|\s*(\d+)\s*$/;
 const RE_FIM_LISTA = /^(obs|observa[cç](ão|ao|ões|oes)|refer[eê]ncia)\b/i;
@@ -1493,6 +1608,8 @@ async function analisarArquivo(){
     const wb = XLSX.read(new Uint8Array(buf), {type:'array'});
     aoaAtual = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:'', raw:false});
     lojasDetectadas = [];
+    const ref0 = wb.Sheets[wb.SheetNames[0]]['!ref'];
+    freeNaPlanilha = await lerNomesAzuis(buf, wb.SheetNames[0], ref0 ? XLSX.utils.decode_range(ref0) : {s:{r:0,c:0}});
     const maxCols = aoaAtual.reduce((m,r)=>Math.max(m,r.length),0);
     for(let c=0;c<maxCols;c++){
       for(let r=0;r<aoaAtual.length;r++){
@@ -1542,11 +1659,17 @@ function importarLojaEscolhida(){
   const item = lojasDetectadas[parseInt(document.getElementById('selecaoLoja').value,10)];
   if(!confirmarSubstituir()) return;
   const nomes = nomesDaLojaDetectada(item);
-  carregarPessoasNaLoja(nomes.map(n=>({nome:n, coordenador:false, presenca:null})), item.loja, item.data);
+  carregarPessoasNaLoja(nomes.map(n=>Object.assign({nome:n, coordenador:false, presenca:null}, freeNaPlanilha.has(normalizarNome(n)) ? {free:true} : {})), item.loja, item.data);
+  // quem está em azul em qualquer loja da planilha e ainda não está no cadastro entra como freelancer NOVO
+  const todosAzuis = [];
+  lojasDetectadas.forEach(l=>nomesDaLojaDetectada(l).forEach(n=>{ if(freeNaPlanilha.has(normalizarNome(n))) todosAzuis.push(n); }));
+  const aprendidos = aprenderFreelancers(todosAzuis);
   // as demais lojas da planilha ficam guardadas para transferências (enviar / receber)
   loja.outrasLojas = lojasDetectadas.filter(l=>l!==item).map(l=>({loja:l.loja, codigo:l.codigo, nomes:nomesDaLojaDetectada(l)}));
   salvarLoja();
-  document.getElementById('msgAnalise').innerHTML = `<div class="msg ok">${nomes.length} pessoa(s) carregada(s) de ${esc(item.loja)}.</div>`;
+  const qFree = loja.pessoas.filter(ehFree).length;
+  document.getElementById('msgAnalise').innerHTML = `<div class="msg ok">${nomes.length} pessoa(s) carregada(s) de ${esc(item.loja)}${qFree ? ` · ${qFree} free` : ''}.</div>`
+    + (aprendidos.length ? `<div class="msg ok">${aprendidos.length} freelancer(s) novo(s) adicionado(s) ao cadastro (Viagem › Equipe): ${aprendidos.map(esc).join(', ')}. Complete o gênero lá.</div>` : '');
 }
 
 function levarEscalaParaPresenca(){
@@ -1787,9 +1910,10 @@ function renderPresenca(){
     const botoes = p.presenca==='transferido'
       ? `<button class="pill transf-on largo" onclick="desfazerTransferencia(${i})">Transferido · desfazer</button>`
       : `<button class="pill coordpill ${p.coordenador?'on':''}" onclick="toggleCoordenador(${i})">Coord.</button>
+        ${editandoLista && !p.coordenador ? `<button class="pill coordpill ${ehFree(p)?'on':''}" onclick="toggleFree(${i})">Free</button>` : ''}
         ${statusVisiveis().map(([st,d])=>`<button class="pill ${st} ${p.presenca===st?'on':''}" onclick="marcarPresenca(${i},'${st}')">${d.rotulo}</button>`).join('')}
         ${editandoLista ? `<button class="pill transferir" onclick="abrirTransferir(${i})">Transferir</button>` : ''}`;
-    html += `<div class="pessoa-row ${p.coordenador?'coord':''}"><span class="pessoa-nome">${esc(p.nome)}${marcaTransf}${marcaRec}${hist}</span>
+    html += `<div class="pessoa-row ${p.coordenador?'coord':''}"><span class="pessoa-nome">${esc(p.nome)}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}</span>
       <span class="pill-btns">
         ${botoes}
         ${editandoLista ? `<button class="pill remover" onclick="removerPessoa(${i})" aria-label="Remover">×</button>` : ''}
@@ -1832,7 +1956,7 @@ async function exportarPresencaExcel(){
   let r3 = r2;
   if(c.atestados){ ws.getCell(r2-1,1).value = 'Faltas: ' + detalheFaltas(c); ws.getCell(r2-1,1).font = {color:{argb:'FF666666'}}; r3 = r2 + 1; }
   const ordem = ordemPresenca().map(({p})=>p);
-  const linhas = ordem.map(p=>[p.nome + (p.coordenador ? ' (COORD.)' : '') + (p.recebidoDe ? ` (VEIO DE ${p.recebidoDe})` : ''), textoStatus(p)]);
+  const linhas = ordem.map(p=>[p.nome + (p.coordenador ? ' (COORD.)' : '') + (ehFree(p) ? ' (FREE)' : '') + (p.recebidoDe ? ` (VEIO DE ${p.recebidoDe})` : ''), textoStatus(p)]);
   tabelaExcel(ws, r3, ['NOME','STATUS'], linhas, {
     larguras:[Math.max(16, larguraPara(linhas.map(l=>l[0]), 30, 70)), Math.max(14, larguraPara(linhas.map(l=>l[1]), 14, 60)), 12, 12, 12, 12, 12, 12],
     estilo:(i,j)=>{
@@ -1858,7 +1982,7 @@ function exportarPresencaPNG(){
     const cor = d ? d.fundo : '#ffffff', tinta = d ? d.tinta : '#857c9c', st = d ? d.texto : 'PENDENTE';
     const sub = p.presenca==='transferido' ? `<div style="font-size:11px;font-weight:600">→ ${esc(p.transferidoPara || 'outra loja')}</div>` : '';
     const veio = p.recebidoDe ? `<div style="font-size:11px;font-weight:600;color:#4a2a96">veio de ${esc(p.recebidoDe)}</div>` : '';
-    h += `<tr style="background:${cor};color:${d?tinta:'#1c1530'}"><td style="padding:7px 8px;border-bottom:1px solid #e6e1f0;${p.coordenador?'font-weight:700':''}">${esc(p.nome)}${p.coordenador?' <span style="font-size:11px;color:#4a2a96">COORD.</span>':''}${veio}</td>
+    h += `<tr style="background:${cor};color:${d?tinta:'#1c1530'}"><td style="padding:7px 8px;border-bottom:1px solid #e6e1f0;${p.coordenador?'font-weight:700':''}">${esc(p.nome)}${p.coordenador?' <span style="font-size:11px;color:#4a2a96">COORD.</span>':''}${ehFree(p)?' <span style="font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;background:#DDEBF7;color:#1F4E79">FREE</span>':''}${veio}</td>
       <td style="padding:7px 8px;border-bottom:1px solid #e6e1f0;text-align:right;font-size:12px;font-weight:700;color:${tinta}">${st}${sub}</td></tr>`;
   });
   h += `</table>`;
@@ -2020,7 +2144,7 @@ function salvarNoHistorico(){
   const setores = {};
   setoresAtuais().forEach(s=>{ const n = nomesDoSetor(s); if(n.length) setores[s] = n; });
   const r = {id, atualizadoEm: Date.now(), data: chaveParaBR(chave), loja: nomeLoja, modelo: modeloPorId(loja.modelo).nome, bateVolta: !!loja.bateVolta,
-    pessoas: loja.pessoas.map(p=>Object.assign({nome:p.nome, coordenador:!!p.coordenador, presenca:p.presenca || null},
+    pessoas: loja.pessoas.map(p=>Object.assign({nome:p.nome, coordenador:!!p.coordenador, presenca:p.presenca || null}, ehFree(p) ? {free:true} : {},
       p.transferidoPara ? {transferidoPara:p.transferidoPara} : {}, p.recebidoDe ? {recebidoDe:p.recebidoDe} : {})), setores};
   const i = historico.findIndex(x=>x.id===id);
   if(i >= 0) historico[i] = r; else historico.push(r);
@@ -2566,9 +2690,13 @@ function dataRobo(v){
   if(/^\d{4}-\d{2}-\d{2}T/.test(t)){ const d = new Date(t); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); }
   return t;
 }
+const horaRobo = v => { const t = String(v == null ? '' : v).trim(); return /^\d{1,2}:\d{2}$/.test(t) ? t : ''; };
 function normLojaRobo(o){
-  return {id:String(o['ID']||''), data:dataRobo(o['DATA']), cliente:String(o['CLIENTE']||''), num:String(o['Nº LOJA']||''), loja:String(o['LOJA']||''),
-    inicio:String(o['INÍCIO']||''), fim:String(o['FIM']||''), horas:Number(o['HORAS LÍQUIDAS'])||0, pecas:Number(o['PEÇAS'])||0,
+  const id = String(o['ID']||'');
+  // o ID ("p20261003_083") guarda a data e o nº da loja exatos, mesmo se a planilha tiver convertido as células
+  const m = id.match(/^p(\d{4})(\d{2})(\d{2})_(.+)$/);
+  return {id, data: m ? `${m[3]}/${m[2]}/${m[1]}` : dataRobo(o['DATA']), cliente:String(o['CLIENTE']||''), num: m ? m[4] : String(o['Nº LOJA']||''), loja:String(o['LOJA']||''),
+    inicio:horaRobo(o['INÍCIO']), fim:horaRobo(o['FIM']), horas:Number(o['HORAS LÍQUIDAS'])||0, pecas:Number(o['PEÇAS'])||0,
     fora:Number(o['FORA DAS FAIXAS'])||0, conferentes:Number(o['CONFERENTES'])||0, obs:String(o['OBS.']||'')};
 }
 function normPessoaRobo(o){
@@ -2647,7 +2775,7 @@ function renderRobo(){
   const lojas = lojasRoboOrdenadas();
   document.getElementById('listaRobo').innerHTML = lojas.length ? `<div class="card"><h2>Lojas recebidas (${lojas.length})</h2>${
     lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
-      <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h (${esc(l.inicio)}–${esc(l.fim)})${l.obs ? ' · ' + esc(l.obs) : ''}</small></span>
+      <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small></span>
       <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('')}</div>` : '';
   renderDetalheRobo();
   const conf = porConferenteRobo();
