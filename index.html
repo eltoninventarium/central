@@ -199,6 +199,9 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
 .pessoa-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
 .pessoa-row:last-child{border-bottom:none;}
 .pessoa-row.coord .pessoa-nome{font-weight:700;}
+.tag-estag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em;vertical-align:middle;background:#FFF2CC;color:#7F6000;}
+.tag-instr{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em;vertical-align:middle;background:#E4DFEC;color:#4a2a96;}
+.checklist-estag label{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line, #e6e1f0);font-size:.92rem;}
 .tag-free{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em;vertical-align:middle;background:#DDEBF7;color:#1F4E79;}
 .tag-novo{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--accent-soft);color:var(--accent);}
 .pessoa-nome{flex:1;font-size:.88rem;min-width:0;overflow-wrap:anywhere;}
@@ -449,17 +452,18 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
         <div><label>Fim da contagem</label><input type="text" id="prodFim" placeholder="03:40"></div>
         <div><label>Margem a descontar (min)</label><input type="number" id="prodMargem" value="10"></div>
       </div>
-      <p class="hint">Início/fim são preenchidos sozinhos se o nome do arquivo de contagem seguir o padrão "0000_ATE_0340" — confira ou ajuste se precisar. Data, nº e nome da loja são lidos do cabeçalho da lista de coletores quando possível. O arquivo exportado sai como "DD.MM.AAAA - Nº DA LOJA - NOME DA LOJA".</p>
+      <p class="hint">Início/fim são preenchidos sozinhos pelo nome do arquivo de contagem ("0000 ATE 0340" ou "2230 AS 0200") — confira ou ajuste se precisar. Data, nº e nome da loja são lidos do cabeçalho da lista de coletores / escala quando possível. O arquivo exportado sai como "DD.MM.AAAA - Nº DA LOJA - NOME DA LOJA".</p>
     </div>
     <div class="card">
       <h2>Arquivos</h2>
-      <label>Arquivo de contagem (.txt — código, quantidade, item)</label>
+      <label>Arquivo de contagem (.TXT ou .INV — código, quantidade, item)</label>
       <input type="file" id="prodArquivoContagem">
-      <label>Arquivo de faixas / PENDCTL (.txt)</label>
+      <label>Arquivo de faixas (PENDCTL.TXT ou PRODUTIVIDADE.TXT)</label>
       <input type="file" id="prodArquivoFaixas">
-      <label>Lista de coletores (.xlsx — coletor e nome)</label>
+      <label>Lista de coletores ou escala (.xlsx — coluna A coletor, coluna B nome)</label>
       <input type="file" id="prodArquivoColetores" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/octet-stream">
-      <button class="btn" onclick="calcularProdutividade()">Calcular produtividade</button>
+      <div class="acoes"><button class="btn" onclick="calcularProdutividade()">Calcular produtividade</button>
+      <button class="btn secondary" onclick="novaLojaProdutividade()">Nova loja (limpar)</button></div>
       <div id="msgProdutividade"></div>
     </div>
     <div id="resultadoProdutividade"></div>
@@ -1642,6 +1646,26 @@ function confirmarSubstituir(){
   return confirm('Substituir a lista atual da Presença (e zerar os setores)?');
 }
 
+// Blocos de nomes separados por linha em branco: [coordenador(es)] · [equipe] · [estagiários]
+function gruposDaLojaDetectada(item){
+  const grupos = []; let atual = [];
+  const fechar = ()=>{ if(atual.length) grupos.push(atual); atual = []; };
+  for(let r=item.row+1; r<aoaAtual.length; r++){
+    const v = (aoaAtual[r][item.col]||'').toString().replace(/\s+/g,' ').trim();
+    if(!v){ fechar(); continue; }
+    if(RE_FIM_LISTA.test(v) || lojaNaCelula(aoaAtual, r, item.col)) break;
+    if(RE_IGNORAR.test(v)) continue;
+    atual.push(v);
+  }
+  fechar();
+  return grupos;
+}
+// Estagiários: o último bloco da lista, depois de uma linha em branco (ex.: depois do "VITOR HENRIQUE")
+function estagiariosDetectados(grupos){
+  if(grupos.length >= 3) return grupos[grupos.length-1];
+  if(grupos.length === 2 && grupos[0].length > 2 && grupos[1].length < grupos[0].length) return grupos[1];
+  return [];
+}
 function nomesDaLojaDetectada(item){
   const nomes = [];
   for(let r=item.row+1; r<aoaAtual.length; r++){
@@ -1659,7 +1683,9 @@ function importarLojaEscolhida(){
   const item = lojasDetectadas[parseInt(document.getElementById('selecaoLoja').value,10)];
   if(!confirmarSubstituir()) return;
   const nomes = nomesDaLojaDetectada(item);
-  carregarPessoasNaLoja(nomes.map(n=>Object.assign({nome:n, coordenador:false, presenca:null}, freeNaPlanilha.has(normalizarNome(n)) ? {free:true} : {})), item.loja, item.data);
+  const estag = new Set(estagiariosDetectados(gruposDaLojaDetectada(item)).map(normalizarNome));
+  carregarPessoasNaLoja(nomes.map(n=>Object.assign({nome:n, coordenador:false, presenca:null},
+    freeNaPlanilha.has(normalizarNome(n)) ? {free:true} : {}, estag.has(normalizarNome(n)) ? {estagiario:true} : {})), item.loja, item.data);
   // quem está em azul em qualquer loja da planilha e ainda não está no cadastro entra como freelancer NOVO
   const todosAzuis = [];
   lojasDetectadas.forEach(l=>nomesDaLojaDetectada(l).forEach(n=>{ if(freeNaPlanilha.has(normalizarNome(n))) todosAzuis.push(n); }));
@@ -1669,6 +1695,7 @@ function importarLojaEscolhida(){
   salvarLoja();
   const qFree = loja.pessoas.filter(ehFree).length;
   document.getElementById('msgAnalise').innerHTML = `<div class="msg ok">${nomes.length} pessoa(s) carregada(s) de ${esc(item.loja)}${qFree ? ` · ${qFree} free` : ''}.</div>`
+    + (estag.size ? `<div class="msg ok">${estag.size} estagiário(s) encontrado(s) no fim da lista (depois da linha em branco). Quando souber quem é o instrutor, toque em "Editar lista" › "Instrutor".</div>` : '')
     + (aprendidos.length ? `<div class="msg ok">${aprendidos.length} freelancer(s) novo(s) adicionado(s) ao cadastro (Viagem › Equipe): ${aprendidos.map(esc).join(', ')}. Complete o gênero lá.</div>` : '');
 }
 
@@ -1726,6 +1753,33 @@ function tirarDosSetores(nome, motivo){
   });
   if(saiu.length) toast(`${nome} saiu de ${saiu.join(', ')} (${motivo}). Veja quem colocar no lugar na aba Setores.`, 6000);
   return saiu;
+}
+function toggleEstagiario(i){
+  const p = loja.pessoas[i]; if(!p) return;
+  p.estagiario = !p.estagiario; if(p.estagiario) delete p.instrutor;
+  salvarLoja(); renderPresenca();
+}
+// Ao marcar um instrutor, pede para confirmar quem são os estagiários (já vêm marcados os que o app achou na planilha)
+function toggleInstrutor(i){
+  const p = loja.pessoas[i]; if(!p) return;
+  if(p.instrutor){ delete p.instrutor; salvarLoja(); renderPresenca(); return; }
+  p.instrutor = true; delete p.estagiario;
+  salvarLoja(); renderPresenca();
+  escolherEstagiarios(p.nome);
+}
+function escolherEstagiarios(nomeInstrutor){
+  const lista = loja.pessoas.map((x,ix)=>({x,ix})).filter(({x})=>!x.coordenador && !x.instrutor);
+  const marcados = lista.filter(({x})=>x.estagiario).length;
+  abrirFolha(`Quem são os estagiários${nomeInstrutor ? ' de ' + esc(nomeInstrutor) : ''}?`,
+    `<p class="hint">${marcados ? `O app já marcou ${marcados} pelo fim da lista da planilha. Confira e ajuste.` : 'Marque quem está nos 10 dias de estágio.'} Estagiários e instrutor não contam como conferente.</p>
+     <div class="checklist-estag" style="max-height:50vh;overflow:auto">${lista.map(({x,ix})=>
+       `<label><input type="checkbox" data-ix="${ix}" ${x.estagiario?'checked':''}> ${esc(x.nome)}</label>`).join('')}</div>`,
+    'Confirmar', b=>{
+      b.querySelectorAll('input[data-ix]').forEach(cb=>{ const x = loja.pessoas[+cb.dataset.ix]; if(!x) return; if(cb.checked) x.estagiario = true; else delete x.estagiario; });
+      salvarLoja(); renderPresenca();
+      const n = loja.pessoas.filter(x=>x.estagiario && !x.coordenador && !x.instrutor).length;
+      toast(`${n} estagiário(s) marcado(s).`);
+    });
 }
 function toggleCoordenador(i){
   const p = loja.pessoas[i]; if(!p) return;
@@ -1846,8 +1900,14 @@ function textoStatus(p){
   return p.presenca==='transferido' && p.transferidoPara ? `${d.texto} → ${p.transferidoPara}` : d.texto;
 }
 // Coordenadores não entram em Escalados nem nos demais números; têm caixa própria.
+// Estagiários (10 primeiros dias) e instrutor não contam como conferente: têm caixas próprias.
+function ehConferente(p){ return !p.coordenador && !p.estagiario && !p.instrutor; }
 function contagemPresenca(){
-  const equipe = loja.pessoas.filter(p=>!p.coordenador);
+  const equipe = loja.pessoas.filter(ehConferente);
+  const estagiarios = loja.pessoas.filter(p=>!p.coordenador && !p.instrutor && p.estagiario);
+  const instrutores = loja.pessoas.filter(p=>!p.coordenador && p.instrutor).length;
+  const estagPresentes = estagiarios.filter(p=>p.presenca==='presente').length;
+  const estagFaltas = estagiarios.filter(p=>STATUS_FALTA.includes(p.presenca)).length;
   const conta = st => equipe.filter(p=>p.presenca===st).length;
   const presentes = conta('presente'), caminho = conta('caminho'), direto = conta('direto');
   const faltaSimples = conta('falta'), atestados = conta('atestado');
@@ -1855,7 +1915,8 @@ function contagemPresenca(){
   const transferidos = conta('transferido'); // continuam nos Escalados, com caixa própria
   const recebidos = equipe.filter(p=>p.recebidoDe).length;
   // "Vai direto": ainda não chegou — vira Presente quando chegar na loja
-  return {coordenadores: loja.pessoas.length - equipe.length, escalados: equipe.length,
+  return {coordenadores: loja.pessoas.filter(p=>p.coordenador).length, escalados: equipe.length,
+    instrutores, estagiarios: estagiarios.length, estagPresentes, estagFaltas,
     presentes, faltas, faltaSimples, atestados, caminho, direto, transferidos, recebidos,
     pendentes: equipe.length - presentes - faltas - caminho - direto - transferidos};
 }
@@ -1863,7 +1924,10 @@ function detalheFaltas(c){
   return c.atestados ? `${c.faltaSimples} falta · ${c.atestados} atestado` : '';
 }
 function caixasResumo(c){
-  return [['Coordenadores',c.coordenadores,''],['Escalados',c.escalados,'',c.recebidos ? `inclui ${c.recebidos} recebido(s)` : ''],['Presentes',c.presentes,'presente'],
+  return [['Coordenadores',c.coordenadores,''], ...(c.instrutores ? [['Instrutor',c.instrutores,'']] : []),
+          ['Escalados',c.escalados,'',c.recebidos ? `inclui ${c.recebidos} recebido(s)` : ''],
+          ...(c.estagiarios ? [['Estagiários',c.estagiarios,'',[c.estagPresentes ? c.estagPresentes + ' presente(s)' : '', c.estagFaltas ? c.estagFaltas + ' falta(s)' : ''].filter(Boolean).join(' · ')]] : []),
+          ['Presentes',c.presentes,'presente'],
           ['A caminho',c.caminho,'caminho'], ...(loja.bateVolta ? [['Vai direto',c.direto,'direto']] : []),
           ['Faltas',c.faltas,'falta',detalheFaltas(c)],
           ...(c.transferidos ? [['Transferidos',c.transferidos,'transferido']] : []),
@@ -1875,7 +1939,10 @@ function spansCaixas(n){
   if(n===5) return [3,3,2,2,2];
   if(n===7) return [3,3,2,2,2,3,3];
   if(n===8) return [3,3,2,2,2,2,2,2];
-  return Array(n).fill(2);
+  const s = Array(n).fill(2);
+  if(n % 3 === 1 && n >= 4) s.splice(n-4, 4, 3, 3, 3, 3);
+  else if(n % 3 === 2) s.splice(n-2, 2, 3, 3);
+  return s;
 }
 // "Vai direto" só existe em loja de bate e volta
 function statusVisiveis(){ return Object.entries(STATUS).filter(([k,d])=>!d.especial && (k!=='direto' || loja.bateVolta)); }
@@ -1890,7 +1957,8 @@ function alternarBateVolta(ligar){
   salvarLoja(); renderPresenca();
 }
 function ordemPresenca(){
-  return loja.pessoas.map((p,i)=>({p,i})).sort((a,b)=>(b.p.coordenador?1:0)-(a.p.coordenador?1:0));
+  const peso = p => p.coordenador ? 0 : p.instrutor ? 1 : p.estagiario ? 3 : 2;
+  return loja.pessoas.map((p,i)=>({p,i})).sort((a,b)=>peso(a.p)-peso(b.p) || a.i-b.i);
 }
 
 function renderPresenca(){
@@ -1910,10 +1978,12 @@ function renderPresenca(){
     const botoes = p.presenca==='transferido'
       ? `<button class="pill transf-on largo" onclick="desfazerTransferencia(${i})">Transferido · desfazer</button>`
       : `<button class="pill coordpill ${p.coordenador?'on':''}" onclick="toggleCoordenador(${i})">Coord.</button>
-        ${editandoLista && !p.coordenador ? `<button class="pill coordpill ${ehFree(p)?'on':''}" onclick="toggleFree(${i})">Free</button>` : ''}
+        ${editandoLista && !p.coordenador ? `<button class="pill coordpill ${ehFree(p)?'on':''}" onclick="toggleFree(${i})">Free</button>
+          <button class="pill coordpill ${p.instrutor?'on':''}" onclick="toggleInstrutor(${i})">Instrutor</button>
+          ${p.instrutor ? '' : `<button class="pill coordpill ${p.estagiario?'on':''}" onclick="toggleEstagiario(${i})">Estag.</button>`}` : ''}
         ${statusVisiveis().map(([st,d])=>`<button class="pill ${st} ${p.presenca===st?'on':''}" onclick="marcarPresenca(${i},'${st}')">${d.rotulo}</button>`).join('')}
         ${editandoLista ? `<button class="pill transferir" onclick="abrirTransferir(${i})">Transferir</button>` : ''}`;
-    html += `<div class="pessoa-row ${p.coordenador?'coord':''}"><span class="pessoa-nome">${esc(p.nome)}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}</span>
+    html += `<div class="pessoa-row ${p.coordenador?'coord':''}"><span class="pessoa-nome">${esc(p.nome)}${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}</span>
       <span class="pill-btns">
         ${botoes}
         ${editandoLista ? `<button class="pill remover" onclick="removerPessoa(${i})" aria-label="Remover">×</button>` : ''}
@@ -1956,7 +2026,7 @@ async function exportarPresencaExcel(){
   let r3 = r2;
   if(c.atestados){ ws.getCell(r2-1,1).value = 'Faltas: ' + detalheFaltas(c); ws.getCell(r2-1,1).font = {color:{argb:'FF666666'}}; r3 = r2 + 1; }
   const ordem = ordemPresenca().map(({p})=>p);
-  const linhas = ordem.map(p=>[p.nome + (p.coordenador ? ' (COORD.)' : '') + (ehFree(p) ? ' (FREE)' : '') + (p.recebidoDe ? ` (VEIO DE ${p.recebidoDe})` : ''), textoStatus(p)]);
+  const linhas = ordem.map(p=>[p.nome + (p.coordenador ? ' (COORD.)' : '') + (p.instrutor && !p.coordenador ? ' (INSTRUTOR)' : '') + (p.estagiario && !p.coordenador && !p.instrutor ? ' (ESTAGIÁRIO)' : '') + (ehFree(p) ? ' (FREE)' : '') + (p.recebidoDe ? ` (VEIO DE ${p.recebidoDe})` : ''), textoStatus(p)]);
   tabelaExcel(ws, r3, ['NOME','STATUS'], linhas, {
     larguras:[Math.max(16, larguraPara(linhas.map(l=>l[0]), 30, 70)), Math.max(14, larguraPara(linhas.map(l=>l[1]), 14, 60)), 12, 12, 12, 12, 12, 12],
     estilo:(i,j)=>{
@@ -1982,7 +2052,7 @@ function exportarPresencaPNG(){
     const cor = d ? d.fundo : '#ffffff', tinta = d ? d.tinta : '#857c9c', st = d ? d.texto : 'PENDENTE';
     const sub = p.presenca==='transferido' ? `<div style="font-size:11px;font-weight:600">→ ${esc(p.transferidoPara || 'outra loja')}</div>` : '';
     const veio = p.recebidoDe ? `<div style="font-size:11px;font-weight:600;color:#4a2a96">veio de ${esc(p.recebidoDe)}</div>` : '';
-    h += `<tr style="background:${cor};color:${d?tinta:'#1c1530'}"><td style="padding:7px 8px;border-bottom:1px solid #e6e1f0;${p.coordenador?'font-weight:700':''}">${esc(p.nome)}${p.coordenador?' <span style="font-size:11px;color:#4a2a96">COORD.</span>':''}${ehFree(p)?' <span style="font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;background:#DDEBF7;color:#1F4E79">FREE</span>':''}${veio}</td>
+    h += `<tr style="background:${cor};color:${d?tinta:'#1c1530'}"><td style="padding:7px 8px;border-bottom:1px solid #e6e1f0;${p.coordenador?'font-weight:700':''}">${esc(p.nome)}${p.coordenador?' <span style="font-size:11px;color:#4a2a96">COORD.</span>':''}${p.instrutor && !p.coordenador?' <span style="font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;background:#E4DFEC;color:#4a2a96">INSTRUTOR</span>':''}${p.estagiario && !p.coordenador && !p.instrutor?' <span style="font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;background:#FFF2CC;color:#7F6000">ESTAGIÁRIO</span>':''}${ehFree(p)?' <span style="font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;background:#DDEBF7;color:#1F4E79">FREE</span>':''}${veio}</td>
       <td style="padding:7px 8px;border-bottom:1px solid #e6e1f0;text-align:right;font-size:12px;font-weight:700;color:${tinta}">${st}${sub}</td></tr>`;
   });
   h += `</table>`;
@@ -2145,6 +2215,7 @@ function salvarNoHistorico(){
   setoresAtuais().forEach(s=>{ const n = nomesDoSetor(s); if(n.length) setores[s] = n; });
   const r = {id, atualizadoEm: Date.now(), data: chaveParaBR(chave), loja: nomeLoja, modelo: modeloPorId(loja.modelo).nome, bateVolta: !!loja.bateVolta,
     pessoas: loja.pessoas.map(p=>Object.assign({nome:p.nome, coordenador:!!p.coordenador, presenca:p.presenca || null}, ehFree(p) ? {free:true} : {},
+      p.instrutor ? {instrutor:true} : {}, p.estagiario ? {estagiario:true} : {},
       p.transferidoPara ? {transferidoPara:p.transferidoPara} : {}, p.recebidoDe ? {recebidoDe:p.recebidoDe} : {})), setores};
   const i = historico.findIndex(x=>x.id===id);
   if(i >= 0) historico[i] = r; else historico.push(r);
@@ -2442,13 +2513,14 @@ document.getElementById('prodArquivoColetores').addEventListener('change', async
   try{
     const wb3 = XLSX.read(new Uint8Array(await f.arrayBuffer()), {type:'array'});
     const aoa = XLSX.utils.sheet_to_json(wb3.Sheets[wb3.SheetNames[0]], {header:1});
+    // arquivo novo = loja nova: o que vier no cabeçalho substitui o que estava preenchido
+    let achouData = false, achouLoja = false;
     aoa.slice(0,6).map(r=>(r[1]||r[0]||'').toString()).forEach(t=>{
       const d = t.match(/(\d{2}\/\d{2}\/\d{4})/);
-      if(d && !document.getElementById('prodData').value) document.getElementById('prodData').value = d[1];
+      if(d && !achouData){ document.getElementById('prodData').value = d[1]; achouData = true; }
       const l = lerLojaDoTexto(t);
       if(l){
-        if(!document.getElementById('prodLoja').value) document.getElementById('prodLoja').value = l.loja;
-        if(!document.getElementById('prodNumLoja').value) document.getElementById('prodNumLoja').value = l.codigo;
+        if(!achouLoja){ document.getElementById('prodLoja').value = l.loja; document.getElementById('prodNumLoja').value = l.codigo; achouLoja = true; }
       }
     });
   }catch(e){}
@@ -2473,6 +2545,13 @@ function lojaNaCelula(aoa, r, c){
   if(!l || !l.semBarra) return l;
   const cima = String((aoa[r-1] && aoa[r-1][c]) || ''), baixo = String((aoa[r+1] && aoa[r+1][c]) || '');
   return (/\d{1,2}\/\d{1,2}(\/\d{2,4})?/.test(cima) || /in[ií]cio programado/i.test(baixo)) ? l : null;
+}
+function novaLojaProdutividade(){
+  ['prodData','prodNumLoja','prodLoja','prodInicio','prodFim','prodArquivoContagem','prodArquivoFaixas','prodArquivoColetores']
+    .forEach(id=>{ const el = document.getElementById(id); if(el) el.value = ''; });
+  ultimaProdutividade = null; renderProdutividade();
+  document.getElementById('msgProdutividade').innerHTML = '';
+  const c = document.getElementById('prodData'); if(c && c.scrollIntoView) c.scrollIntoView({behavior:'smooth', block:'center'});
 }
 function nomeArquivoProdutividade(p){
   const data = limpaNomeArquivo((p.data||'').replace(/[\/-]/g,'.'));
