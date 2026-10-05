@@ -2545,13 +2545,53 @@ function renderProdutividade(){
   if(!p){ div.innerHTML=''; return; }
   let html = `<div class="card"><h2>Produtividade${p.loja?' — '+esc(p.loja):''}${p.data?' ('+esc(p.data)+')':''}</h2>`;
   html += `<p class="hint">Horas líquidas consideradas: ${p.horas.toFixed(2)}h. Peças fora de qualquer faixa cadastrada: ${p.naoIdentificado}.</p>`;
-  html += `<button class="btn secondary" onclick="exportarProdutividade()">Exportar produtividade (Excel)</button>`;
+  html += `<div class="acoes"><button class="btn secondary" onclick="exportarProdutividadePNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarProdutividade()">Excel</button></div>`;
   html += `<div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Coletor(es)</th><th>Peças</th><th>Itens/hora</th></tr></thead><tbody>`;
   p.resultados.forEach((r,i)=>{
     html += `<tr><td>${i+1}</td><td>${esc(r.nome)}</td><td>${esc(r.coletores)}</td><td>${r.pecas}</td><td>${Math.round(r.itemHora)}</td></tr>`;
   });
   html += `</tbody></table></div></div>`;
   div.innerHTML = html;
+}
+
+// tabela em HTML para virar imagem (mesmo visual do ranking do robô)
+function tabelaImagem(cab, linhas, alinhar, destaque){
+  const td = (v, j, extra) => `<td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;${alinhar[j]==='right'?'text-align:right;':alinhar[j]==='center'?'text-align:center;':''}${extra||''}">${v}</td>`;
+  return `<table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="background:#e7e0f5;font-weight:700">${
+    cab.map((c,j)=>`<td style="padding:6px 8px;${alinhar[j]==='right'?'text-align:right':alinhar[j]==='center'?'text-align:center':''}">${c}</td>`).join('')}</tr>${
+    linhas.map((l,i)=>`<tr style="background:${i%2?'#faf8fd':'#ffffff'}">${l.map((v,j)=>td(v, j, j===destaque ? 'font-weight:700' : '')).join('')}</tr>`).join('')}</table>`;
+}
+function cabecalhoImagem(titulo, sub){
+  return `<div style="font-size:20px;font-weight:700;margin-bottom:2px">${titulo}</div><div style="color:#62597a;font-size:13px;margin-bottom:12px">${sub}</div>`;
+}
+function exportarProdutividadePNG(){
+  const p = ultimaProdutividade; if(!p) return;
+  const titulo = esc([p.loja, p.numLoja].filter(Boolean).join(' | ') || 'Produtividade');
+  const sub = ['Produtividade', p.data ? esc(p.data) : '', p.horas.toFixed(2).replace('.', ',') + ' h líquidas'].filter(Boolean).join(' · ');
+  const h = cabecalhoImagem(titulo, sub) + tabelaImagem(['#','Nome','Peças','Itens/h'],
+    p.resultados.map((r,i)=>[i+1, esc(r.nome), fmtN(r.pecas), fmtN(Math.round(r.itemHora))]), ['', '', 'right', 'right'], 3);
+  gerarImagem(h, nomeArquivoProdutividade(p).replace(/\.xlsx$/, '.png'));
+}
+function exportarResumoPNG(){
+  const r = ultimoResumo; if(!r) return;
+  const datas = r.lojas.map(l=>l.data).filter(Boolean);
+  const periodo = datas.length ? (datas[0] + (datas.length > 1 ? ' a ' + datas[datas.length-1] : '')) : '';
+  let h = cabecalhoImagem(`Resumo da viagem — ${r.lojas.length} loja(s)`, ['Ranking por itens/hora', esc(periodo)].filter(Boolean).join(' · '));
+  h += `<div style="font-weight:700;margin:4px 0 6px">Agrupado (peças e horas somadas)</div>`;
+  h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h'], r.agrupado.map((p,i)=>[i+1, esc(p.nome), p.lojas, fmtN(p.pecas), fmtN(Math.round(p.ih))]), ['', '', 'center', 'right', 'right'], 4);
+  h += `<div style="font-weight:700;margin:16px 0 6px">Média (dos itens/hora de cada loja)</div>`;
+  h += tabelaImagem(['#','Nome','Lojas','Média itens/h'], r.medio.map((p,i)=>[i+1, esc(p.nome), p.lojas, fmtN(Math.round(p.media))]), ['', '', 'center', 'right'], 3);
+  h += `<div style="color:#62597a;font-size:11px;margin-top:10px">${r.lojas.map(l=>esc(l.label)).join(' · ')}</div>`;
+  const dd = datas.map(d=>d.replace(/\//g,'.'));
+  gerarImagem(h, dd.length ? `Resumo da viagem ${dd[0]}${dd.length>1?' a '+dd[dd.length-1]:''}.png` : 'Resumo da viagem.png');
+}
+function exportarConferentesRoboPNG(){
+  const conf = porConferenteRobo(); if(!conf.length) return;
+  const lojas = lojasRoboOrdenadas();
+  let h = cabecalhoImagem('Produtividade por conferente', `${lojas.length} loja(s) de ${esc(lojas[lojas.length-1].data)} a ${esc(lojas[0].data)}`);
+  h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h','Média'], conf.map((c,i)=>[i+1, esc(c.nome), c.lojas, fmtN(c.pecas), fmtN(c.ih), fmtN(c.media)]), ['', '', 'center', 'right', 'right', 'right'], 4);
+  h += `<div style="color:#62597a;font-size:11px;margin-top:10px">Itens/h = peças somadas ÷ horas somadas · Média = média dos itens/hora de cada loja</div>`;
+  gerarImagem(h, `Produtividade por conferente - ${dataHojeArquivo()}.png`);
 }
 
 async function exportarProdutividade(){
@@ -2644,7 +2684,7 @@ function renderResumo(){
   const div = document.getElementById('resultadoResumo');
   if(!r){ div.innerHTML=''; return; }
   let html = `<div class="card"><h2>Resumo da viagem — ${r.lojas.length} loja(s)</h2>`;
-  html += `<button class="btn secondary" onclick="exportarResumo()">Exportar resumo (Excel)</button>`;
+  html += `<div class="acoes"><button class="btn secondary" onclick="exportarResumoPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarResumo()">Excel</button></div>`;
   html += `<div class="section-title">Agrupado (peças e horas somadas)</div><div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Horas</th><th>Itens/hora</th></tr></thead><tbody>`;
   r.agrupado.forEach((p,i)=>{ html += `<tr><td>${i+1}</td><td>${esc(p.nome)}</td><td>${p.lojas}</td><td>${p.pecas}</td><td>${p.horas.toFixed(2)}</td><td>${Math.round(p.ih)}</td></tr>`; });
   html += `</tbody></table></div>`;
@@ -2784,7 +2824,7 @@ function renderRobo(){
     <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Média</th></tr></thead><tbody>${
       conf.map((c,i)=>`<tr><td>${i+1}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtN(c.ih)}</td><td>${fmtN(c.media)}</td></tr>`).join('')
     }</tbody></table></div>
-    <div class="acoes"><button class="btn secondary" onclick="exportarConferentesRobo()">Excel</button></div></div>` : '';
+    <div class="acoes"><button class="btn secondary" onclick="exportarConferentesRoboPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarConferentesRobo()">Excel</button></div></div>` : '';
 }
 function renderDetalheRobo(){
   const div = document.getElementById('detalheRobo');
