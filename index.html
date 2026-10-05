@@ -454,9 +454,9 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
     <div class="card">
       <h2>Arquivos</h2>
       <label>Arquivo de contagem (.txt — código, quantidade, item)</label>
-      <input type="file" id="prodArquivoContagem" accept=".txt,.TXT,text/plain,application/octet-stream">
+      <input type="file" id="prodArquivoContagem">
       <label>Arquivo de faixas / PENDCTL (.txt)</label>
-      <input type="file" id="prodArquivoFaixas" accept=".txt,.TXT,text/plain,application/octet-stream">
+      <input type="file" id="prodArquivoFaixas">
       <label>Lista de coletores (.xlsx — coletor e nome)</label>
       <input type="file" id="prodArquivoColetores" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/octet-stream">
       <button class="btn" onclick="calcularProdutividade()">Calcular produtividade</button>
@@ -1571,7 +1571,7 @@ async function lerNomesAzuis(buf, nomeAba, faixa){
   return res;
 }
 function pareceNome(v){
-  return !!v && !RE_LOJA.test(v) && !RE_FIM_LISTA.test(v) && !RE_IGNORAR.test(v) && /^[A-Za-zÀ-ÿ'.\s-]+$/.test(v) && v.trim().split(/\s+/).length >= 2;
+  return !!v && !lerLojaDoTexto(v) && !RE_FIM_LISTA.test(v) && !RE_IGNORAR.test(v) && /^[A-Za-zÀ-ÿ'.\s-]+$/.test(v) && v.trim().split(/\s+/).length >= 2;
 }
 function noCadastroFL(nome){ const k = normalizarNome(nome); return (db.fl||[]).some(x=>normalizarNome(x.nome)===k); }
 function noCadastroCLT(nome){ const k = normalizarNome(nome); return (db.clt||[]).some(x=>normalizarNome(x.nome)===k) || (db.rj||[]).some(x=>normalizarNome(x.nome)===k); }
@@ -1614,10 +1614,10 @@ async function analisarArquivo(){
     for(let c=0;c<maxCols;c++){
       for(let r=0;r<aoaAtual.length;r++){
         const v = (aoaAtual[r][c]||'').toString().trim();
-        const m = v.match(RE_LOJA);
+        const m = lojaNaCelula(aoaAtual, r, c);
         if(m){
           const dataAcima = (aoaAtual[r-1] && aoaAtual[r-1][c] || '').toString().trim();
-          lojasDetectadas.push({col:c, row:r, loja:m[1].trim(), codigo:m[2], data:dataAcima});
+          lojasDetectadas.push({col:c, row:r, loja:m.loja, codigo:m.codigo, data:dataAcima});
         }
       }
     }
@@ -1629,7 +1629,7 @@ async function analisarArquivo(){
       msg.innerHTML = `<div class="msg ok">${lojasDetectadas.length} loja(s) encontrada(s) no arquivo. Escolha qual importar.</div>`;
     } else {
       bloco.style.display = 'none';
-      msg.innerHTML = '<div class="msg warn">Não encontrei o padrão "LOJA | CÓDIGO" no arquivo. Confira se é o arquivo certo.</div>';
+      msg.innerHTML = '<div class="msg warn">Não encontrei a loja no arquivo (ex.: "DROGARIA ARAUJO - TIROL | 227" ou "DROGASIL ARACRUZ 2 3878"). Confira se é o arquivo certo.</div>';
     }
   }catch(err){
     msg.innerHTML = '<div class="msg warn">Não consegui ler esse arquivo.</div>';
@@ -1648,7 +1648,7 @@ function nomesDaLojaDetectada(item){
     const v = (aoaAtual[r][item.col]||'').toString().replace(/\s+/g,' ').trim();
     if(!v) continue;
     if(RE_FIM_LISTA.test(v)) break;   // OBS / referência: acabou a lista de pessoas
-    if(RE_LOJA.test(v)) break;        // começou outra loja na mesma coluna
+    if(lojaNaCelula(aoaAtual, r, item.col)) break;   // começou outra loja na mesma coluna
     if(RE_IGNORAR.test(v)) continue;  // início programado, datas, números soltos
     if(!nomes.some(n=>normalizarNome(n)===normalizarNome(v))) nomes.push(v);
   }
@@ -2430,7 +2430,7 @@ let ultimoResumo = null;
 
 document.getElementById('prodArquivoContagem').addEventListener('change', function(){
   const nome = this.files[0] ? this.files[0].name : '';
-  const m = nome.match(/(\d{2})(\d{2})\D+ATE\D+(\d{2})(\d{2})/i);
+  const m = horarioDoNome(nome);
   if(m){
     document.getElementById('prodInicio').value = `${m[1]}:${m[2]}`;
     document.getElementById('prodFim').value = `${m[3]}:${m[4]}`;
@@ -2445,15 +2445,35 @@ document.getElementById('prodArquivoColetores').addEventListener('change', async
     aoa.slice(0,6).map(r=>(r[1]||r[0]||'').toString()).forEach(t=>{
       const d = t.match(/(\d{2}\/\d{2}\/\d{4})/);
       if(d && !document.getElementById('prodData').value) document.getElementById('prodData').value = d[1];
-      const l = t.match(/^(.*?)\s*\|\s*(\d+)\s*$/);
+      const l = lerLojaDoTexto(t);
       if(l){
-        if(!document.getElementById('prodLoja').value) document.getElementById('prodLoja').value = l[1].trim();
-        if(!document.getElementById('prodNumLoja').value) document.getElementById('prodNumLoja').value = l[2];
+        if(!document.getElementById('prodLoja').value) document.getElementById('prodLoja').value = l.loja;
+        if(!document.getElementById('prodNumLoja').value) document.getElementById('prodNumLoja').value = l.codigo;
       }
     });
   }catch(e){}
 });
 
+// "0000 ATE 0340.TXT", "2230 AS 0200.INV", "2230_AS_0200" → [HH, MM, HH, MM]
+function horarioDoNome(nome){
+  return String(nome || '').match(/(?:^|[^\d])(\d{2})(\d{2})[\s_.-]*(?:AT[EÉ]|[AÀ]S|A)[\s_.-]*(\d{2})(\d{2})(?!\d)/i);
+}
+// "DROGARIA ARAUJO - TIROL | 227" ou "DROGASIL ARACRUZ 2 3878" (sem a barra)
+const RE_LOJA_SEM_BARRA = /^([A-Za-zÀ-ÿ].*?[A-Za-zÀ-ÿ0-9])\s+(\d{3,5})$/;
+function lerLojaDoTexto(t){
+  const v = String(t || '').replace(/\s+/g, ' ').trim();
+  if(!v || RE_FIM_LISTA.test(v) || /in[ií]cio programado/i.test(v)) return null;
+  const m = v.match(/^(.+?)\s*\|\s*(\d+)$/) || v.match(RE_LOJA_SEM_BARRA);
+  return m ? {loja: m[1].trim(), codigo: m[2], semBarra: !/\|/.test(v)} : null;
+}
+// na planilha da escala: sem a barra, só vale se tiver a data em cima ou o "Início programado" embaixo
+// (evita confundir endereço da referência, ex. "Rua X 123", com uma loja)
+function lojaNaCelula(aoa, r, c){
+  const l = lerLojaDoTexto(aoa[r] && aoa[r][c]);
+  if(!l || !l.semBarra) return l;
+  const cima = String((aoa[r-1] && aoa[r-1][c]) || ''), baixo = String((aoa[r+1] && aoa[r+1][c]) || '');
+  return (/\d{1,2}\/\d{1,2}(\/\d{2,4})?/.test(cima) || /in[ií]cio programado/i.test(baixo)) ? l : null;
+}
 function nomeArquivoProdutividade(p){
   const data = limpaNomeArquivo((p.data||'').replace(/[\/-]/g,'.'));
   const partes = [data, limpaNomeArquivo(p.numLoja), limpaNomeArquivo(p.loja)].filter(Boolean);
@@ -2490,10 +2510,14 @@ async function calcularProdutividade(){
     if(!isNaN(num) && row[1]) coletorNome[num] = row[1].toString().trim();
   });
 
-  const faixas = [];
+  const faixas = [], nomeFaixa = {};
   (await lerTexto(fFaixas)).split(/\r?\n/).forEach(line=>{
     const m = line.match(/^\s*(\d+)-(\d+)\s+(\d+)\s+(\d+)\s+(.+)/);
-    if(m) faixas.push([parseInt(m[1],10), parseInt(m[2],10), parseInt(m[3],10)]);
+    if(m){
+      faixas.push([parseInt(m[1],10), parseInt(m[2],10), parseInt(m[3],10)]);
+      const n = m[5].replace(/\s+/g,' ').trim();
+      if(n && !/^EM TREINAMENTO$/i.test(n) && !nomeFaixa[parseInt(m[3],10)]) nomeFaixa[parseInt(m[3],10)] = n.toUpperCase();
+    }
   });
   faixas.sort((a,b)=>a[0]-b[0]);
   function achaColetor(item){
@@ -2519,7 +2543,7 @@ async function calcularProdutividade(){
   const porPessoa = {};
   Object.entries(pecasPorColetor).forEach(([coletor,pecas])=>{
     coletor = parseInt(coletor,10);
-    const nome = coletorNome[coletor] || `Coletor ${coletor} (sem nome cadastrado)`;
+    const nome = coletorNome[coletor] || nomeFaixa[coletor] || `Coletor ${coletor} (sem nome cadastrado)`;
     const chave = normalizarNome(nome);
     if(!porPessoa[chave]) porPessoa[chave] = {nome: nome.replace(/\s+/g,' ').trim(), coletores:[], pecas:0};
     porPessoa[chave].coletores.push(coletor);
@@ -2739,8 +2763,17 @@ function normLojaRobo(o){
     inicio:horaRobo(o['INÍCIO']), fim:horaRobo(o['FIM']), horas:Number(o['HORAS LÍQUIDAS'])||0, pecas:Number(o['PEÇAS'])||0,
     fora:Number(o['FORA DAS FAIXAS'])||0, conferentes:Number(o['CONFERENTES'])||0, obs:String(o['OBS.']||'')};
 }
+// o PENDCTL corta o nome em 30 letras ("THIAGO EVANGELISTA JESUS DA SI"): completa pelo cadastro quando só um nome bate
+function nomeCompletoCadastro(nome){
+  const n = String(nome || '').replace(/\s+/g,' ').trim();
+  if(n.length < 25) return n;
+  const k = normalizarNome(n);
+  const achados = [...(db.clt||[]), ...(db.fl||[]), ...(db.rj||[])].map(x=>x.nome).filter(x=>normalizarNome(x).startsWith(k));
+  const unicos = [...new Set(achados.map(normalizarNome))];
+  return unicos.length === 1 ? achados[0] : n;
+}
 function normPessoaRobo(o){
-  return {id:String(o['ID']||''), pos:Number(o['POSIÇÃO'])||0, nome:String(o['NOME']||''), pecas:Number(o['PEÇAS'])||0,
+  return {id:String(o['ID']||''), pos:Number(o['POSIÇÃO'])||0, nome:nomeCompletoCadastro(o['NOME']), pecas:Number(o['PEÇAS'])||0,
     horas:Number(o['HORAS LÍQUIDAS'])||0, ih:Number(o['ITENS/HORA'])||0};
 }
 function salvarLinkRobo(){
