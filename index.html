@@ -199,6 +199,15 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
 .pessoa-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
 .pessoa-row:last-child{border-bottom:none;}
 .pessoa-row.coord .pessoa-nome{font-weight:700;}
+.secao-toggle{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:2px 0;color:inherit;font:inherit;font-size:1.05rem;font-weight:700;cursor:pointer;text-align:left;}
+.secao-toggle .seta{display:inline-block;transition:transform .15s;color:var(--accent);}
+.secao-toggle.aberta .seta{transform:rotate(90deg);}
+.secao-toggle small{font-weight:500;color:var(--muted, #857c9c);font-size:.85rem;}
+.busca-robo{position:relative;margin-top:10px;}
+.busca-robo input{padding-left:36px;}
+.busca-robo .lupa{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.6;pointer-events:none;}
+.linha-clicavel{cursor:pointer;}
+.linha-clicavel:hover td{background:var(--accent-soft);}
 .tag-estag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em;vertical-align:middle;background:#FFF2CC;color:#7F6000;}
 .tag-instr{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em;vertical-align:middle;background:#E4DFEC;color:#4a2a96;}
 .checklist-estag label{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line, #e6e1f0);font-size:.92rem;}
@@ -433,6 +442,8 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
         <p class="hint">Cole aqui a linha que a função "mostrarLinkDoApp" do robô mostrou (termina com ?chave=...). Só precisa fazer uma vez em cada aparelho.</p>
       </details>
       <div class="acoes"><button class="btn" onclick="atualizarDoRobo(true)">Atualizar agora</button></div>
+      <div class="busca-robo"><span class="lupa" aria-hidden="true">🔍</span>
+        <input type="text" inputmode="search" enterkeyhint="search" id="buscaRobo" placeholder="Pesquisar loja ou conferente" autocomplete="off" oninput="roboBusca=this.value; renderRobo()"></div>
     </div>
     <div id="listaRobo"></div>
     <div id="detalheRobo"></div>
@@ -2826,7 +2837,21 @@ async function exportarResumo(){
    ===================================================================== */
 const ROBO_KEY = 'central_robo_v1';
 let robo = Object.assign({link:'', lojas:[], pessoas:[], atualizadoEm:0, ultimoErro:''}, lsGet(ROBO_KEY, {}));
-let roboBuscando = false, roboLojaAberta = null, roboPedidoManual = false;
+let roboBuscando = false, roboLojaAberta = null, roboPedidoManual = false, roboBusca = '', roboConfAberto = null;
+const ROBO_UI_KEY = 'central_robo_ui_v1';
+let roboUi = Object.assign({lojas:false, conf:false}, lsGet(ROBO_UI_KEY, {}));
+function alternarSecaoRobo(qual){ roboUi[qual] = !roboUi[qual]; lsSet(ROBO_UI_KEY, roboUi); renderRobo(); }
+// nomes corrigidos à mão, por nº da loja (valem também para as próximas vezes que a loja vier)
+function aplicarNomesRobo(){ const n = robo.nomes || {}; robo.lojas.forEach(l=>{ if(l.num && n[String(+l.num)]) l.loja = n[String(+l.num)]; }); }
+function corrigirNomeLojaRobo(){
+  const l = robo.lojas.find(x=>x.id===roboLojaAberta); if(!l) return;
+  const novo = prompt(`Nome correto da loja ${l.num || ''}:`, l.loja);
+  if(novo === null) return;
+  const v = novo.replace(/\s+/g,' ').trim().toUpperCase(); if(!v) return;
+  robo.nomes = Object.assign({}, robo.nomes || {}); if(l.num) robo.nomes[String(+l.num)] = v; else l.loja = v;
+  aplicarNomesRobo(); salvarRobo(); marcarAlterado('robo'); renderRobo();
+  toast(l.num ? `Loja ${l.num} agora se chama "${v}" (vale para as próximas também).` : 'Nome corrigido.');
+}
 function salvarRobo(){ lsSet(ROBO_KEY, robo); }
 function dataRobo(v){
   const t = String(v == null ? '' : v);
@@ -2886,6 +2911,7 @@ async function atualizarDoRobo(manual){
     const antes = new Set(robo.lojas.map(l=>l.id));
     robo.lojas = (j.lojas||[]).map(normLojaRobo).filter(l=>l.id);
     robo.pessoas = (j.pessoas||[]).map(normPessoaRobo).filter(p=>p.id && p.nome);
+    aplicarNomesRobo();
     robo.atualizadoEm = Date.now(); robo.ultimoErro = '';
     salvarRobo();
     const novas = robo.lojas.filter(l=>!antes.has(l.id)).length;
@@ -2927,20 +2953,46 @@ function renderRobo(){
     : roboBuscando ? (roboPedidoManual ? 'Pedindo ao robô para olhar o Gmail agora… (pode levar até 1 minuto)' : 'Buscando lojas no robô…')
     : `Ligado ao robô · ${robo.lojas.length} loja(s)${quando ? ' · atualizado em ' + quando : ''}`;
   document.getElementById('avisoRobo').innerHTML = robo.ultimoErro ? `<div class="msg warn">${esc(robo.ultimoErro)}</div>` : '';
-  const lojas = lojasRoboOrdenadas();
-  document.getElementById('listaRobo').innerHTML = lojas.length ? `<div class="card"><h2>Lojas recebidas (${lojas.length})</h2>${
-    lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
+  const todasLojas = lojasRoboOrdenadas();
+  const busca = normalizarNome(roboBusca || '');
+  const casaPessoa = id => busca && robo.pessoas.some(p=>p.id===id && normalizarNome(p.nome).includes(busca));
+  const lojas = busca ? todasLojas.filter(l=>normalizarNome(`${l.data} ${l.loja} ${l.num}`).includes(busca) || casaPessoa(l.id)) : todasLojas;
+  const abrirLojas = roboUi.lojas || !!busca;
+  const contLojas = busca ? `${lojas.length} de ${todasLojas.length}` : `${todasLojas.length}`;
+  document.getElementById('listaRobo').innerHTML = todasLojas.length ? `<div class="card"><button class="secao-toggle ${abrirLojas?'aberta':''}" onclick="alternarSecaoRobo('lojas')"><span class="seta">▶</span> Lojas recebidas <small>(${contLojas})</small></button>${
+    !abrirLojas ? '' : !lojas.length ? '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>' : lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
       <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small></span>
       <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('')}</div>` : '';
   renderDetalheRobo();
-  const conf = porConferenteRobo();
-  document.getElementById('conferentesRobo').innerHTML = conf.length ? `<div class="card"><h2>Por conferente</h2>
-    <p class="hint">Todas as lojas recebidas do robô. Itens/hora (agrupado) = peças somadas ÷ horas somadas.</p>
-    <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Média</th></tr></thead><tbody>${
-      conf.map((c,i)=>`<tr><td>${i+1}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtN(c.ih)}</td><td>${fmtN(c.media)}</td></tr>`).join('')
-    }</tbody></table></div>
-    <div class="acoes"><button class="btn secondary" onclick="exportarConferentesRoboPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarConferentesRobo()">Excel</button></div></div>` : '';
+  const confTodos = porConferenteRobo().map((c,i)=>Object.assign({pos:i+1}, c));
+  const conf = busca ? confTodos.filter(c=>normalizarNome(c.nome).includes(busca)) : confTodos;
+  const abrirConf = roboUi.conf || !!busca;
+  const contConf = busca ? `${conf.length} de ${confTodos.length}` : `${confTodos.length}`;
+  document.getElementById('conferentesRobo').innerHTML = confTodos.length ? `<div class="card"><button class="secao-toggle ${abrirConf?'aberta':''}" onclick="alternarSecaoRobo('conf')"><span class="seta">▶</span> Por conferente <small>(${contConf})</small></button>
+    ${!abrirConf ? '' : `<p class="hint" style="margin-top:6px">Todas as lojas recebidas do robô. Itens/hora (agrupado) = peças somadas ÷ horas somadas. Toque num nome para ver as lojas dele(a).</p>
+    ${!conf.length ? '<p class="hint">Nenhum conferente encontrado.</p>' : `<div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Média</th></tr></thead><tbody>${
+      conf.map(c=>`<tr class="linha-clicavel" data-conf="${esc(normalizarNome(c.nome))}"><td>${c.pos}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtN(c.ih)}</td><td>${fmtN(c.media)}</td></tr>`).join('')
+    }</tbody></table></div>`}
+    ${detalheConferenteRobo()}`}
+    ${abrirConf ? `<div class="acoes"><button class="btn secondary" onclick="exportarConferentesRoboPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarConferentesRobo()">Excel</button></div>` : ''}</div>` : '';
 }
+function detalheConferenteRobo(){
+  if(!roboConfAberto) return '';
+  const regs = robo.pessoas.filter(p=>normalizarNome(p.nome)===roboConfAberto)
+    .map(p=>({p, l:robo.lojas.find(x=>x.id===p.id)})).filter(x=>x.l)
+    .sort((a,b)=>dataParaChave(b.l.data)-dataParaChave(a.l.data));
+  if(!regs.length) return '';
+  return `<div class="card" id="cardConfRobo" style="margin-top:10px;background:var(--accent-soft)"><h2 style="font-size:1rem">${esc(regs[0].p.nome)} · ${regs.length} loja(s)</h2>
+    <div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th></tr></thead><tbody>${
+      regs.map(({p,l})=>`<tr><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</td><td>${p.pos}º de ${pessoasDaLojaRobo(l.id).length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`).join('')
+    }</tbody></table></div>
+    <div class="acoes"><button class="btn secondary small" onclick="roboConfAberto=null;renderRobo()">Fechar</button></div></div>`;
+}
+document.getElementById('conferentesRobo').addEventListener('click', e=>{
+  const tr = e.target.closest('[data-conf]'); if(!tr) return;
+  roboConfAberto = roboConfAberto === tr.dataset.conf ? null : tr.dataset.conf; renderRobo();
+  const el = document.getElementById('cardConfRobo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+});
 function renderDetalheRobo(){
   const div = document.getElementById('detalheRobo');
   const l = roboLojaAberta && robo.lojas.find(x=>x.id===roboLojaAberta);
@@ -2954,6 +3006,7 @@ function renderDetalheRobo(){
     <div class="acoes">
       <button class="btn secondary" onclick="exportarRankingRoboPNG()">Imagem (PNG)</button>
       <button class="btn secondary" onclick="exportarRankingRoboExcel()">Excel</button>
+      <button class="btn secondary" onclick="corrigirNomeLojaRobo()">Corrigir nome</button>
       <button class="btn secondary" onclick="roboLojaAberta=null;renderDetalheRobo()">Fechar</button>
     </div></div>`;
 }
@@ -3086,8 +3139,10 @@ registrarSinc('loja', ()=>loja,
 registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
   ()=>{ const q = lsGet(QUARTOS_KEY, {}); return !(q.coord || q.lider || q.motorista); });
-registrarSinc('robo', ()=>({link: robo.link}),
-  v=>{ if(v && typeof v.link === 'string' && v.link !== robo.link){ robo.link = v.link; salvarRobo(); renderRobo(); atualizarDoRobo(false); } },
+registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}}),
+  v=>{ if(!v || typeof v !== 'object') return;
+       if(v.nomes && typeof v.nomes === 'object'){ robo.nomes = v.nomes; aplicarNomesRobo(); salvarRobo(); renderRobo(); }
+       if(typeof v.link === 'string' && v.link !== robo.link){ robo.link = v.link; salvarRobo(); renderRobo(); atualizarDoRobo(false); } },
   ()=>!robo.link);
 renderRobo();
 if(robo.link) atualizarDoRobo(false);
