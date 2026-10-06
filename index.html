@@ -2477,13 +2477,16 @@ function contagemPresenca(){
   const faltas = faltaSimples + atestados; // atestado conta como falta
   const transferidos = conta('transferido'); // continuam nos Escalados, com caixa própria
   const recebidos = equipe.filter(p=>p.recebidoDe).length;
+  // presentes divididos entre CLT e freelancer (só conferentes)
+  const presFree = equipe.filter(p=>p.presenca==='presente' && ehFree(p)).length;
   const atrasos = loja.pessoas.filter(p=>!p.coordenador && p.presenca==='presente' && p.atraso).length;
   // "Vai direto": ainda não chegou — vira Presente quando chegar na loja
   return {coordenadores: loja.pessoas.filter(p=>p.coordenador).length, escalados: equipe.length,
     instrutores, estagiarios: estagiarios.length, estagPresentes, estagFaltas,
-    presentes, faltas, faltaSimples, atestados, caminho, direto, transferidos, recebidos, atrasos,
+    presentes, presFree, presCLT: presentes - presFree, faltas, faltaSimples, atestados, caminho, direto, transferidos, recebidos, atrasos,
     pendentes: equipe.length - presentes - faltas - caminho - direto - transferidos};
 }
+function detalhePresentes(c){ return `${c.presCLT} CLT · ${c.presFree} free`; }
 function detalheFaltas(c){
   return c.atestados ? `${c.faltaSimples} falta · ${c.atestados} atestado` : '';
 }
@@ -2491,7 +2494,7 @@ function caixasResumo(c){
   return [['Coordenadores',c.coordenadores,''], ...(c.instrutores ? [['Instrutor',c.instrutores,'']] : []),
           ['Escalados',c.escalados,'',c.recebidos ? `inclui ${c.recebidos} recebido(s)` : ''],
           ...(c.estagiarios ? [['Estagiários',c.estagiarios,'',[c.estagPresentes ? c.estagPresentes + ' presente(s)' : '', c.estagFaltas ? c.estagFaltas + ' falta(s)' : ''].filter(Boolean).join(' · ')]] : []),
-          ['Presentes',c.presentes,'presente',c.atrasos ? `${c.atrasos} com atraso` : ''],
+          ['Presentes',c.presentes,'presente',[c.presentes ? detalhePresentes(c) : '', c.atrasos ? `${c.atrasos} com atraso` : ''].filter(Boolean).join(' · ')],
           ['A caminho',c.caminho,'caminho'], ...(loja.bateVolta ? [['Vai direto',c.direto,'direto']] : []),
           ['Faltas',c.faltas,'falta',detalheFaltas(c)],
           ...(c.transferidos ? [['Transferidos',c.transferidos,'transferido']] : []),
@@ -2593,7 +2596,8 @@ async function exportarPresencaExcel(){
   const r = cabecalhoPlanilha(ws, loja.nome || 'Equipe', [[loja.data ? 'Data: ' + loja.data : '', loja.inicio ? 'Início programado: ' + loja.inicio : ''].filter(Boolean).join(' · ')]);
   const r2 = tabelaExcel(ws, r, caixasResumo(c).map(x=>x[0].toUpperCase()), [caixasResumo(c).map(x=>x[1])], {alinhar:caixasResumo(c).map(()=> 'center')});
   let r3 = r2;
-  if(c.atestados){ ws.getCell(r2-1,1).value = 'Faltas: ' + detalheFaltas(c); ws.getCell(r2-1,1).font = {color:{argb:'FF666666'}}; r3 = r2 + 1; }
+  const detResumo = [c.presentes ? 'Presentes: ' + detalhePresentes(c) : '', c.atestados ? 'Faltas: ' + detalheFaltas(c) : ''].filter(Boolean).join(' · ');
+  if(detResumo){ ws.getCell(r2-1,1).value = detResumo; ws.getCell(r2-1,1).font = {color:{argb:'FF666666'}}; r3 = r2 + 1; }
   const ordem = ordemPresenca().map(({p})=>p);
   const linhas = ordem.map(p=>[p.nome + (p.coordenador ? ' (COORD.)' : '') + (p.instrutor && !p.coordenador ? ' (INSTRUTOR)' : '') + (p.estagiario && !p.coordenador && !p.instrutor ? ' (ESTAGIÁRIO)' : '') + (ehFree(p) ? ' (FREE)' : '') + (p.recebidoDe ? ` (VEIO DE ${p.recebidoDe})` : ''), textoStatus(p)]);
   tabelaExcel(ws, r3, ['NOME','STATUS'], linhas, {
@@ -2654,7 +2658,9 @@ function renderSetores(){
   const disponiveis = nomesDisponiveis();
   const jaAlocados = new Set();
   setoresAtuais().forEach(s=> listaSetor(s).forEach(it=>{ if(it.tipo==='lista' && it.nome) jaAlocados.add(it.nome); }));
-  const semSetor = disponiveis.filter(n=>!jaAlocados.has(n));
+  // coordenador(es) e instrutor(es) podem entrar num setor, mas não aparecem como pendentes
+  const foraDaConta = new Set(loja.pessoas.filter(p=>p.coordenador || p.instrutor).map(p=>p.nome));
+  const semSetor = disponiveis.filter(n=>!jaAlocados.has(n) && !foraDaConta.has(n));
   const est = estatisticasHistorico();
   const temHist = historicoAtivo().length > 0;
   let html = `<div class="card"><div class="hint">${loja.nome?'<b>'+esc(loja.nome)+'</b> · ':''}${disponiveis.length} disponível(is) · ${semSetor.length} ainda sem setor${semSetor.length?': '+semSetor.map(esc).join(', '):''}</div>
