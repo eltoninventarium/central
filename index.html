@@ -2826,7 +2826,7 @@ async function exportarResumo(){
    ===================================================================== */
 const ROBO_KEY = 'central_robo_v1';
 let robo = Object.assign({link:'', lojas:[], pessoas:[], atualizadoEm:0, ultimoErro:''}, lsGet(ROBO_KEY, {}));
-let roboBuscando = false, roboLojaAberta = null;
+let roboBuscando = false, roboLojaAberta = null, roboPedidoManual = false;
 function salvarRobo(){ lsSet(ROBO_KEY, robo); }
 function dataRobo(v){
   const t = String(v == null ? '' : v);
@@ -2872,11 +2872,13 @@ function salvarLinkRobo(){
 async function atualizarDoRobo(manual){
   if(!robo.link){ if(manual) toast('Cole o link do robô primeiro (toque em "Link do robô").'); renderRobo(); return; }
   if(roboBuscando) return;
-  roboBuscando = true; renderRobo();
+  roboBuscando = true; roboPedidoManual = !!manual; renderRobo();
   try{
     const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    const tempo = setTimeout(()=>{ if(ctrl) ctrl.abort(); }, 40000);
-    const resp = await fetch(robo.link, ctrl ? {signal: ctrl.signal} : {});
+    // no "Atualizar agora" o robô olha o Gmail na hora (pode levar até ~1 min se chegaram lojas novas)
+    const tempo = setTimeout(()=>{ if(ctrl) ctrl.abort(); }, manual ? 150000 : 40000);
+    const url = manual ? robo.link + (robo.link.includes('?') ? '&' : '?') + 'processar=1' : robo.link;
+    const resp = await fetch(url, ctrl ? {signal: ctrl.signal} : {});
     clearTimeout(tempo);
     let j;
     try{ j = await resp.json(); }catch(e){ throw new Error('O robô respondeu algo inesperado. Confira se ele foi publicado como App da Web com acesso "Qualquer pessoa".'); }
@@ -2887,7 +2889,8 @@ async function atualizarDoRobo(manual){
     robo.atualizadoEm = Date.now(); robo.ultimoErro = '';
     salvarRobo();
     const novas = robo.lojas.filter(l=>!antes.has(l.id)).length;
-    if(manual || (novas && antes.size)) toast(novas ? `${novas} loja(s) nova(s) do robô.` : 'Tudo em dia: nenhuma loja nova.');
+    if(manual || (novas && antes.size)) toast(novas ? `${novas} loja(s) nova(s) do robô.` : 'Tudo em dia: nenhuma loja nova no Gmail.');
+    if(manual && j.processamento && /erro|consegui/i.test(j.processamento)) toast(j.processamento, 6000);
   }catch(e){
     const m = (e && e.message) || '';
     robo.ultimoErro = (e && e.name === 'AbortError') ? 'O robô demorou demais para responder. Tente de novo.'
@@ -2921,7 +2924,7 @@ function renderRobo(){
   const box = document.getElementById('boxLinkRobo'); if(box && !robo.link) box.open = true;
   const quando = robo.atualizadoEm ? new Date(robo.atualizadoEm).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
   st.textContent = !robo.link ? 'Ainda não ligado ao robô. Cole o link do robô abaixo.'
-    : roboBuscando ? 'Buscando lojas no robô…'
+    : roboBuscando ? (roboPedidoManual ? 'Pedindo ao robô para olhar o Gmail agora… (pode levar até 1 minuto)' : 'Buscando lojas no robô…')
     : `Ligado ao robô · ${robo.lojas.length} loja(s)${quando ? ' · atualizado em ' + quando : ''}`;
   document.getElementById('avisoRobo').innerHTML = robo.ultimoErro ? `<div class="msg warn">${esc(robo.ultimoErro)}</div>` : '';
   const lojas = lojasRoboOrdenadas();
