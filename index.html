@@ -212,6 +212,26 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
 .tag-instr{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em;vertical-align:middle;background:#E4DFEC;color:#4a2a96;}
 .checklist-estag label{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line, #e6e1f0);font-size:.92rem;}
 .tag-free{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.04em;vertical-align:middle;background:#DDEBF7;color:#1F4E79;}
+.whats-in{width:128px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:.8rem;font-family:inherit;}
+.whats-in.vazio{border-style:dashed;}
+textarea.full{width:100%;min-height:96px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 9px;color:var(--text);font-size:.86rem;font-family:inherit;resize:vertical;}
+.conv-resumo{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px;}
+.conv-resumo span{border-radius:12px;padding:3px 9px;font-size:.76rem;font-weight:700;background:var(--accent-soft);color:var(--accent);}
+.conv-linha{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:9px 0;border-top:1px solid var(--border);}
+.conv-pos{width:22px;font-size:.78rem;color:var(--muted);font-weight:700;}
+.conv-nome{flex:1;min-width:150px;font-size:.86rem;font-weight:600;}
+.conv-nome small{display:block;font-weight:400;color:var(--muted);font-size:.74rem;margin-top:1px;}
+.conv-st{font-size:.76rem;font-weight:700;border-radius:10px;padding:2px 8px;white-space:nowrap;}
+.conv-st.sim{background:var(--ok-bg);color:var(--ok);}
+.conv-st.nao{background:#fde2e1;color:#b3261e;}
+.conv-st.esp{background:var(--warn-bg);color:var(--warn);}
+.conv-st.nada{background:var(--accent-soft);color:var(--muted);}
+.conv-acoes{display:flex;gap:6px;flex-wrap:wrap;}
+button.btn.whats{background:#1e8e3e;color:#fff;}
+.chip-atraso{display:inline-block;margin-top:3px;border:1px solid var(--danger);background:var(--danger-bg);color:var(--danger);border-radius:10px;padding:1px 8px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;}
+.chip-atraso.ok{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);}
+.resumo .item.atraso{border-left:4px solid var(--danger);}
+.nome-ficha{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;}
 .tag-novo{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--accent-soft);color:var(--accent);}
 .pessoa-nome{flex:1;font-size:.88rem;min-width:0;overflow-wrap:anywhere;}
 .pill-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
@@ -286,18 +306,25 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
       <div id="msgCadastro"></div>
     </div>
     <div class="card">
+      <h2>WhatsApp da equipe (<span id="qtdWhats">0</span> com número)</h2>
+      <p class="hint">Suba a planilha "Contatos da equipe - WhatsApp" (ou o cadastro com a coluna F WHATSAPP). Entram os números marcados como Certo ou Provável e os que você preencheu em "Números sem nome". Os marcados como Conferir ficam de fora. Também dá para digitar o número direto nas tabelas abaixo.</p>
+      <input type="file" id="arquivoContatos" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/octet-stream">
+      <button class="btn" onclick="importarContatos()">Importar contatos</button>
+      <div id="msgContatos"></div>
+    </div>
+    <div class="card">
       <h2>Conferentes CLT (<span id="qtdCLT">0</span> ativos)</h2>
-      <div class="wrap-table"><table id="tabCLT"><thead><tr><th>Nome</th><th>Nível</th><th>Gên.</th><th>Pref.</th><th>Afastado</th></tr></thead><tbody></tbody></table></div>
+      <div class="wrap-table"><table id="tabCLT"><thead><tr><th>Nome</th><th>Nível</th><th>Gên.</th><th>Pref.</th><th>Afastado</th><th>WhatsApp</th></tr></thead><tbody></tbody></table></div>
     </div>
     <div class="card">
       <h2>Freelancers BH (<span id="qtdFL">0</span> ativos)</h2>
       <p class="hint">Quem estiver em azul na planilha da escala e ainda não estiver aqui entra sozinho, marcado como NOVO. Complete o gênero e, quando quiser, baixe o cadastro atualizado.</p>
-      <div class="wrap-table"><table id="tabFL"><thead><tr><th>Nome</th><th>Gên.</th><th>Pref.</th><th>Afastado</th></tr></thead><tbody></tbody></table></div>
+      <div class="wrap-table"><table id="tabFL"><thead><tr><th>Nome</th><th>Gên.</th><th>Pref.</th><th>Afastado</th><th>WhatsApp</th></tr></thead><tbody></tbody></table></div>
     </div>
     <div class="card">
       <h2>Equipe RJ (<span id="qtdRJ">0</span> ativos)</h2>
       <p class="hint">Fica em branco enquanto não houver ninguém do Rio atuando em Minas. Não entra na sugestão automática de escala — só aparece como opção na aba Quartos.</p>
-      <div class="wrap-table"><table id="tabRJ"><thead><tr><th>Nome</th><th>Nível</th><th>Gên.</th><th>Afastado</th></tr></thead><tbody></tbody></table></div>
+      <div class="wrap-table"><table id="tabRJ"><thead><tr><th>Nome</th><th>Nível</th><th>Gên.</th><th>Afastado</th><th>WhatsApp</th></tr></thead><tbody></tbody></table></div>
     </div>
     <div class="card">
       <h2>Backup dos dados</h2>
@@ -308,6 +335,24 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
       <button class="btn secondary" onclick="restaurarBackup()">Restaurar backup</button>
       <div id="msgBackup"></div>
     </div>
+  </section>
+
+  <!-- ================= VIAGEM: FICHAS ================= -->
+  <section id="fichas" class="view">
+    <div class="card">
+      <h2>Ficha do conferente</h2>
+      <p class="hint">Junta numa tela só: cadastro, produtividade do robô, presença, atrasos, setores e convites de viagem. A nota (0 a 100) mistura itens/hora (70%) e presença (30%).</p>
+      <div class="busca-robo"><span class="lupa" aria-hidden="true">🔍</span>
+        <input type="text" inputmode="search" id="buscaFicha" placeholder="Pesquisar nome" autocomplete="off" oninput="renderFichas()"></div>
+      <div class="row">
+        <div><label>Mostrar</label><select id="filtroFicha" class="full" onchange="renderFichas()">
+          <option value="todos">Todos</option><option value="clt">Só CLT</option><option value="fl">Só freelancers</option></select></div>
+        <div><label>Ordenar por</label><select id="ordemFicha" class="full" onchange="renderFichas()">
+          <option value="nota">Nota</option><option value="ih">Itens/hora</option><option value="faltas">Mais faltas</option><option value="atrasos">Mais atrasos</option><option value="nome">Nome (A-Z)</option></select></div>
+      </div>
+    </div>
+    <div id="fichaAberta"></div>
+    <div class="card"><div class="wrap-table" id="listaFichas"></div></div>
   </section>
 
   <!-- ================= VIAGEM: NOVA ESCALA ================= -->
@@ -323,6 +368,25 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
           <label class="checklist" style="margin-top:26px"><input type="checkbox" id="isAraujo"> Viagem para a ARAUJO</label>
         </div>
       </div>
+      <details id="boxConvocacao" style="margin-top:10px">
+        <summary style="cursor:pointer;color:var(--accent);font-weight:600;font-size:.86rem">Colar a mensagem de convocação da empresa</summary>
+        <textarea id="txtConvocacao" class="full" placeholder="CONVOCAÇÃO DE VIAGEM&#10;Cliente: ARAUJO&#10;Cidades: Divinópolis e Itaúna&#10;Ida: 10/10 | Volta: 12/10&#10;Pessoas: 14&#10;Saída: 06h - Contagem"></textarea>
+        <button class="btn small" style="margin-top:6px" onclick="lerConvocacao()">Preencher os campos</button>
+      </details>
+      <div class="row">
+        <div><label>Cliente</label><input type="text" id="viaCliente" placeholder="Ex.: ARAUJO"></div>
+        <div><label>Cidades</label><input type="text" id="viaCidades" placeholder="Ex.: Divinópolis e Itaúna"></div>
+      </div>
+      <div class="row">
+        <div><label>Datas</label><input type="text" id="viaDatas" placeholder="Ex.: 10/10 a 12/10"></div>
+        <div><label>Saída</label><input type="text" id="viaSaida" placeholder="Ex.: 06h - Contagem"></div>
+      </div>
+      <label>Quem entra primeiro, dentro de cada nível</label>
+      <select id="modoEscala" class="full">
+        <option value="desempenho">Desempenho real (itens/hora do robô + presença)</option>
+        <option value="preferencia">Preferência da planilha (coluna E)</option>
+      </select>
+      <p class="hint" id="dicaModoEscala"></p>
       <p class="hint">A classificação da regra (menos/mais de 14) usa esse número total. Ordem de preenchimento depois de IV/III/os 3 CONFERENTE I da ARAUJO: freelancer primeiro, depois CONFERENTE II, e CONFERENTE I extra só como último recurso.</p>
       <button class="btn" onclick="gerarEscala()">Gerar sugestão</button>
     </div>
@@ -362,6 +426,8 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
       </div>
       <label>Nome da loja (ajuste se precisar)</label>
       <input type="text" id="nomeLoja" placeholder="DROGARIA ARAUJO - SANTA MARIA">
+      <label>Início programado (para os atrasos)</label>
+      <input type="text" id="inicioLoja" inputmode="numeric" placeholder="22:00" style="max-width:120px">
       <label class="chave-linha"><input type="checkbox" id="bateVolta" onchange="alternarBateVolta(this.checked)">
         <span><b>Bate e volta</b><span class="hint" style="display:block">Liga o status "Vai direto" para quem vai direto para a loja.</span></span></label>
       <p class="hint">Depois de carregar, toque em "Coord." ao lado de quem for coordenador — a planilha nem sempre marca isso de forma consistente.</p>
@@ -441,7 +507,8 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
         <div class="acoes"><button class="btn small" style="margin-top:8px;margin-right:6px" onclick="salvarLinkRobo()">Salvar link</button></div>
         <p class="hint">Cole aqui a linha que a função "mostrarLinkDoApp" do robô mostrou (termina com ?chave=...). Só precisa fazer uma vez em cada aparelho.</p>
       </details>
-      <div class="acoes"><button class="btn" onclick="atualizarDoRobo(true)">Atualizar agora</button></div>
+      <div class="acoes"><button class="btn" onclick="atualizarDoRobo(true)">Atualizar agora</button>
+        <button class="btn secondary" onclick="abrirResumoRobo()">Resumo da viagem</button></div>
       <div class="busca-robo"><span class="lupa" aria-hidden="true">🔍</span>
         <input type="text" inputmode="search" enterkeyhint="search" id="buscaRobo" placeholder="Pesquisar loja ou conferente" autocomplete="off" oninput="roboBusca=this.value; renderRobo()"></div>
     </div>
@@ -563,19 +630,123 @@ function statusNuvem(texto, ok){
   el.classList.toggle('ok', !!ok);
 }
 let PASTA_DB = null; // na versão loja: cada pessoa sincroniza só os próprios dados (data/users/<id>)
+let nuvemLigada = false, nuvemIniciando = false, nuvemRobo = null;
 async function iniciarNuvem(){
-  let db = null;
-  try{ const c = window.claude; db = (c && typeof c.use==='function') ? await c.use('db') : null; }catch(e){ db = null; }
-  if(!db){
-    statusNuvem(dentroDoClaude()
-      ? 'Salvo só neste aparelho (sincronização indisponível nesta tela).'
-      : 'Versão fora do Claude: dados salvos neste aparelho. Para levar a outro aparelho, use Backup (Viagem › Equipe).', false);
-    return;
+  if(nuvemLigada || nuvemIniciando) return;
+  nuvemIniciando = true;
+  try{
+    let db = null;
+    try{ const c = window.claude; db = (c && typeof c.use==='function') ? await c.use('db') : null; }catch(e){ db = null; }
+    if(!db && !dentroDoClaude() && typeof robo !== 'undefined' && robo.link){
+      // app instalado (GitHub): os dados ficam guardados no Drive pelo robô — PC e celular iguais + backup diário
+      statusNuvem('Conectando ao robô para sincronizar…', false);
+      try{ nuvemRobo = nuvemRobo || criarNuvemRobo(); await nuvemRobo.baixar(); db = nuvemRobo; }
+      catch(e){
+        statusNuvem(/antiga/.test(e.message||'') ? 'O robô ainda está na versão antiga: dados salvos só neste aparelho.'
+          : 'Sem conexão com o robô agora — dados salvos neste aparelho. Tento de novo sozinho.', false);
+        return;
+      }
+    }
+    if(!db){
+      statusNuvem(dentroDoClaude()
+        ? 'Salvo só neste aparelho (sincronização indisponível nesta tela).'
+        : 'Dados salvos só neste aparelho. Para o PC e o celular ficarem iguais, cole o link do robô em Produtividade.', false);
+      return;
+    }
+    await conectarModelos(db);
+    await conectarSinc(db);
+    await conectarHistorico(db);
+    nuvemLigada = true;
+    if(db === nuvemRobo) nuvemRobo.ligarVerificacao();
+    statusNuvem(db === nuvemRobo ? 'Sincronizado pelo robô (PC e celular) · backup diário no Drive.' : 'Sincronizado entre o PC e o celular.', true);
+  } finally { nuvemIniciando = false; }
+}
+// sem internet na abertura: tenta de novo quando a conexão voltar ou o app voltar para a tela
+['online','focus'].forEach(ev=>window.addEventListener(ev, ()=>{ if(!nuvemLigada) iniciarNuvem(); }));
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !nuvemLigada) iniciarNuvem(); });
+
+/* ---------- Nuvem do robô: imita o banco de dados do Claude, guardando tudo no Drive pelo robô ---------- */
+const NUVEM_PEND_KEY = 'central_nuvemPendentes_v1';
+function criarNuvemRobo(){
+  let docs = {}, salvoEm = 0, timer = null, lote = null, intervalo = null;
+  const pendentes = lsGet(NUVEM_PEND_KEY, {}) || {};
+  const ouvDoc = {}, ouvCol = {};
+  const url = extra => robo.link + (robo.link.includes('?') ? '&' : '?') + extra;
+  const copia = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+  const guardarPend = ()=> lsSet(NUVEM_PEND_KEY, pendentes);
+  async function baixar(){
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const t = setTimeout(()=>{ if(ctrl) ctrl.abort(); }, 40000);
+    try{
+      const r = await fetch(url('acao=nuvem&desde=' + salvoEm), ctrl ? {signal:ctrl.signal} : {});
+      const j = await r.json();
+      if(j.erro) throw new Error(j.erro);
+      if(j.semMudanca) return false;
+      if(!j.docs || typeof j.docs !== 'object') throw new Error('robô na versão antiga');
+      docs = j.docs; salvoEm = j.salvoEm || 0;
+      Object.assign(docs, copia(pendentes));   // o que ainda não subiu daqui vale por cima
+      return true;
+    } finally { clearTimeout(t); }
   }
-  await conectarModelos(db);
-  await conectarSinc(db);
-  await conectarHistorico(db);
-  statusNuvem('Sincronizado entre o PC e o celular.', true);
+  async function enviar(){
+    const l = lote; lote = null;
+    const corpo = Object.assign({}, pendentes);
+    if(!Object.keys(corpo).length){ if(l) l.ok(); return; }
+    try{
+      const r = await fetch(url('x=1'), {method:'POST', body: JSON.stringify({acao:'nuvemSalvar', docs:corpo})});
+      const j = await r.json();
+      if(j.erro) throw new Error(j.erro);
+      Object.keys(corpo).forEach(k=>{ if(pendentes[k] === corpo[k]) delete pendentes[k]; });
+      guardarPend();
+      if(l) l.ok(j);
+    }catch(e){ if(l) l.falhou(e); }
+  }
+  function agendar(){
+    if(!lote){ let ok, falhou; const pr = new Promise((a,b)=>{ ok = a; falhou = b; }); lote = {pr, ok, falhou}; }
+    clearTimeout(timer); timer = setTimeout(enviar, 1200);
+    return lote.pr;
+  }
+  const snapDoc = c => ({exists: !!docs[c], data: ()=>copia(docs[c]), metadata:{hasPendingWrites:false}});
+  const snapCol = n => ({docs: Object.keys(docs).filter(k=>k.indexOf(n + '/') === 0).map(k=>({id:k.slice(n.length+1), data:()=>copia(docs[k])}))});
+  function doc(c){
+    return {
+      get: async ()=>snapDoc(c),
+      set: dados=>{ const v = copia(dados); docs[c] = v; pendentes[c] = v; guardarPend(); return agendar(); },
+      onSnapshot: (cb)=>{ (ouvDoc[c] = ouvDoc[c] || []).push(cb); return ()=>{}; }
+    };
+  }
+  function collection(n){
+    const col = {
+      limit: ()=>col,
+      get: async ()=>snapCol(n),
+      onSnapshot: (cb)=>{ (ouvCol[n] = ouvCol[n] || []).push(cb); return ()=>{}; },
+      doc: id=>doc(n + '/' + id)
+    };
+    return col;
+  }
+  // a cada minuto (e quando o app volta para a tela) olha se o outro aparelho mudou algo
+  let verificando = false;
+  async function verificar(){
+    if(verificando || document.visibilityState === 'hidden') return;
+    verificando = true;
+    try{
+      if(Object.keys(pendentes).length) agendar().catch(()=>{});
+      if(!(await baixar())) return;
+      Object.keys(ouvDoc).forEach(c=>ouvDoc[c].forEach(cb=>{ try{ cb(snapDoc(c)); }catch(e){} }));
+      Object.keys(ouvCol).forEach(n=>{ const sn = snapCol(n); ouvCol[n].forEach(cb=>{ try{ cb(sn); }catch(e){} }); });
+      statusNuvem('Sincronizado pelo robô (PC e celular) · backup diário no Drive.', true);
+    }catch(e){
+      statusNuvem('Sem conexão com o robô agora — alterações salvas neste aparelho.', false);
+    }finally{ verificando = false; }
+  }
+  function ligarVerificacao(){
+    if(intervalo) return;
+    intervalo = setInterval(verificar, 60000);
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') verificar(); });
+    window.addEventListener('online', verificar);
+    if(Object.keys(pendentes).length) agendar().catch(()=>{});
+  }
+  return {doc, collection, baixar, verificar, ligarVerificacao};
 }
 
 /* =====================================================================
@@ -627,7 +798,7 @@ function mostrarAvisoArquivo(){
    NAVEGAÇÃO (3 grupos + subabas)
    ===================================================================== */
 const GRUPOS = {
-  viagem: [['equipe','Equipe'],['escala','Nova escala'],['quartos','Quartos']],
+  viagem: [['equipe','Equipe'],['fichas','Fichas'],['escala','Nova escala'],['quartos','Quartos']],
   loja:   [['presenca','Presença'],['setores','Setores'],['modelos','Modelos'],['historico','Histórico']],
   prod:   [['produtividade','Produtividade']]
 };
@@ -644,6 +815,11 @@ function abrirView(id){
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active', s.id===id));
   ui.view = id; ui.ultimaPorGrupo[g] = id; lsSet(UI_KEY, ui);
   if(id==='quartos') renderRJQuartosOptions();
+  if(id==='fichas') renderFichas();
+  if(id==='escala' && typeof dicaModoEscala==='function') dicaModoEscala();
+  if(id==='escala' && typeof aplicarRespostasConvites==='function' && ultimaEscala && robo.link
+     && [...ultimaEscala.selecionados, ...ultimaEscala.freelancers].some(p=>p.convite && p.convite.enviadoEm && !p.convite.resp)
+     && Date.now() - (robo.atualizadoEm||0) > 60*1000) atualizarDoRobo(false, true);
   if(id==='setores') renderSetores();
   if(id==='presenca') renderPresenca();
   if(id==='modelos') renderModelos();
@@ -879,6 +1055,8 @@ function parsePessoas(aoa, tipo){
     }
     const pref = parseInt(row[4], 10);
     obj.prioridade = (pref>=1 && pref<=4) ? pref : 99;
+    const w = formatarWhats(row[5]);   // coluna F: WHATSAPP (opcional)
+    if(w) obj.whats = w;
     registros.push(obj);
   }
   return registros;
@@ -909,6 +1087,10 @@ function importarPlanilha(){
       // freelancers que o app aprendeu pela escala (azul) e ainda não estão na planilha continuam no cadastro
       const jaTem = new Set([...novo.clt, ...novo.fl].map(x=>normalizarNome(x.nome)));
       (db.fl||[]).filter(x=>x.novo && !jaTem.has(normalizarNome(x.nome))).forEach(x=>novo.fl.push(x));
+      // o WhatsApp já cadastrado no app continua, se a planilha nova não trouxer número
+      const whatsAntigo = {};
+      [...(db.clt||[]), ...(db.fl||[]), ...(db.rj||[])].forEach(x=>{ if(x.whats) whatsAntigo[normalizarNome(x.nome)] = x.whats; });
+      [...novo.clt, ...novo.fl, ...novo.rj].forEach(x=>{ if(!x.whats && whatsAntigo[normalizarNome(x.nome)]) x.whats = whatsAntigo[normalizarNome(x.nome)]; });
       db = novo;
       saveDB(db);
       ultimaEscala = null; salvarUltimaEscala(); renderEscala();
@@ -928,27 +1110,105 @@ function renderEquipe(){
   let hC='', hF='', hR='';
   [...db.clt].sort((a,b)=>a.prioridade-b.prioridade).forEach(p=>{
     const idx = db.clt.indexOf(p);
-    hC += `<tr><td>${esc(p.nome)}</td><td>${esc(p.nivel)}</td><td>${esc((p.genero||'').slice(0,1))}</td><td>${p.prioridade===99?'—':p.prioridade}</td>
-    <td><input type="checkbox" ${p.afastado?'checked':''} onchange="toggleAfastado('clt',${idx},this.checked)"></td></tr>`;
+    hC += `<tr><td><span class="nome-ficha" data-nome="${esc(p.nome)}">${esc(p.nome)}</span></td><td>${esc(p.nivel)}</td><td>${esc((p.genero||'').slice(0,1))}</td><td>${p.prioridade===99?'—':p.prioridade}</td>
+    <td><input type="checkbox" ${p.afastado?'checked':''} onchange="toggleAfastado('clt',${idx},this.checked)"></td>${celulaWhats('clt', idx, p)}</tr>`;
   });
   [...db.fl].sort((a,b)=>a.prioridade-b.prioridade).forEach(p=>{
     const idx = db.fl.indexOf(p);
     const gen = p.genero ? esc(p.genero.slice(0,1))
       : `<select onchange="definirGeneroFL(${idx}, this.value)" aria-label="Gênero"><option value="">?</option><option value="MASCULINO">M</option><option value="FEMININO">F</option></select>`;
-    hF += `<tr><td>${esc(p.nome)}${p.novo ? '<span class="tag-novo">NOVO</span>' : ''}</td><td>${gen}</td><td>${p.prioridade===99?'—':p.prioridade}</td>
-    <td><input type="checkbox" ${p.afastado?'checked':''} onchange="toggleAfastado('fl',${idx},this.checked)"></td></tr>`;
+    hF += `<tr><td><span class="nome-ficha" data-nome="${esc(p.nome)}">${esc(p.nome)}</span>${p.novo ? '<span class="tag-novo">NOVO</span>' : ''}</td><td>${gen}</td><td>${p.prioridade===99?'—':p.prioridade}</td>
+    <td><input type="checkbox" ${p.afastado?'checked':''} onchange="toggleAfastado('fl',${idx},this.checked)"></td>${celulaWhats('fl', idx, p)}</tr>`;
   });
   db.rj.forEach((p,idx)=>{
     hR += `<tr><td>${esc(p.nome)}</td><td>${esc(p.nivel)}</td><td>${esc((p.genero||'').slice(0,1))}</td>
-    <td><input type="checkbox" ${p.afastado?'checked':''} onchange="toggleAfastado('rj',${idx},this.checked)"></td></tr>`;
+    <td><input type="checkbox" ${p.afastado?'checked':''} onchange="toggleAfastado('rj',${idx},this.checked)"></td>${celulaWhats('rj', idx, p)}</tr>`;
   });
   bodyCLT.innerHTML = hC; bodyFL.innerHTML = hF; bodyRJ.innerHTML = hR;
   document.getElementById('qtdCLT').textContent = db.clt.filter(p=>!p.afastado).length;
   document.getElementById('qtdFL').textContent = db.fl.filter(p=>!p.afastado).length;
   document.getElementById('qtdRJ').textContent = db.rj.filter(p=>!p.afastado).length;
+  document.getElementById('qtdWhats').textContent = [...db.clt, ...db.fl, ...db.rj].filter(p=>p.whats).length;
   renderRJQuartosOptions();
 }
 
+/* ---------- WhatsApp de cada pessoa ---------- */
+// "(31) 98641-9754" a partir de qualquer jeito de escrever; vazio se não parecer telefone
+function formatarWhats(v){
+  let d = String(v==null ? '' : v).replace(/\D/g, '');
+  if(d.length >= 12 && d.startsWith('55')) d = d.slice(2);
+  if(d.length === 10 && /^[6-9]/.test(d.slice(2))) d = d.slice(0,2) + '9' + d.slice(2); // celular antigo sem o 9
+  if(d.length === 11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+  if(d.length === 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
+  return '';
+}
+function whatsDigitos(p){ const d = String((p && p.whats) || '').replace(/\D/g, ''); return d ? '55' + d : ''; }
+function celulaWhats(tipo, idx, p){
+  return `<td><input type="tel" inputmode="tel" class="whats-in${p.whats?'':' vazio'}" value="${esc(p.whats||'')}" placeholder="(31) 9…" onchange="definirWhats('${tipo}',${idx},this)" aria-label="WhatsApp de ${esc(p.nome)}"></td>`;
+}
+function definirWhats(tipo, idx, el){
+  const p = db[tipo] && db[tipo][idx]; if(!p) return;
+  const bruto = el.value.trim();
+  const w = formatarWhats(bruto);
+  if(bruto && !w){ toast('Número incompleto. Use DDD + número, ex.: (31) 98641-9754.'); el.value = p.whats || ''; return; }
+  if(w) p.whats = w; else delete p.whats;
+  saveDB(db); renderEquipe();
+  if(ultimaEscala) renderEscala();
+}
+// Lê a planilha "Contatos da equipe - WhatsApp" (abas CLT, FREELANCE e "Números sem nome") ou o cadastro com a coluna WHATSAPP
+function importarContatos(){
+  const input = document.getElementById('arquivoContatos');
+  const msg = document.getElementById('msgContatos');
+  if(!bibliotecaOk(msg)) return;
+  if(!input.files.length){ msg.innerHTML = '<div class="msg warn">Escolha a planilha de contatos primeiro.</div>'; return; }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb2 = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const todos = [...db.clt, ...db.fl, ...db.rj];
+      const porNome = {}; todos.forEach(p=>{ porNome[normalizarNome(p.nome)] = p; });
+      // "QUEM É?" pode vir só com parte do nome: vale se só uma pessoa do cadastro bater
+      const acharPessoa = nome=>{
+        const k = normalizarNome(nome); if(!k) return null;
+        if(porNome[k]) return porNome[k];
+        const pal = k.split(' ').filter(x=>x.length>1);
+        const bate = todos.filter(p=>{ const n = ' ' + normalizarNome(p.nome) + ' '; return pal.every(w=>n.includes(' ' + w + ' ')); });
+        return bate.length === 1 ? bate[0] : null;
+      };
+      let gravados = 0, conferir = 0; const naoAchei = [];
+      wb2.SheetNames.forEach(aba=>{
+        const aoa = XLSX.utils.sheet_to_json(wb2.Sheets[aba], {header:1, defval:''});
+        const cab = (aoa[0]||[]).map(c=>normalizarNome(c));
+        const cW = cab.findIndex(c=>/WHATS/.test(c));
+        if(cW < 0) return;
+        let cN = cab.findIndex(c=>/^QUEM E/.test(c));
+        if(cN < 0) cN = cab.findIndex(c=>/^(NOME|FUNCIONARIO|FREELANCE)/.test(c));
+        if(cN < 0) cN = 0;
+        const cC = cab.findIndex(c=>/CONFIAN/.test(c));
+        for(let r=1; r<aoa.length; r++){
+          const l = aoa[r] || [];
+          const w = formatarWhats(l[cW]); const nome = String(l[cN]||'').trim();
+          if(!w || !nome) continue;
+          if(cC >= 0 && /CONFERIR/.test(normalizarNome(l[cC]))){ conferir++; continue; }
+          const p = acharPessoa(nome);
+          if(!p){ naoAchei.push(nome); continue; }
+          if(p.whats !== w){ p.whats = w; }
+          gravados++;
+        }
+      });
+      saveDB(db); renderEquipe(); if(ultimaEscala) renderEscala();
+      msg.innerHTML = `<div class="msg ok">${gravados} número(s) no cadastro.${conferir ? ` ${conferir} marcado(s) como Conferir ficaram de fora.` : ''}</div>` +
+        (naoAchei.length ? `<div class="msg warn">Não achei no cadastro: ${esc(naoAchei.slice(0,12).join(', '))}${naoAchei.length>12 ? '…' : ''}</div>` : '');
+    }catch(err){
+      msg.innerHTML = '<div class="msg warn">Não consegui ler essa planilha.</div>';
+    }
+  };
+  reader.readAsArrayBuffer(input.files[0]);
+}
+
+document.getElementById('equipe').addEventListener('click', e=>{
+  const n = e.target.closest('.nome-ficha'); if(n) abrirFicha(n.dataset.nome);
+});
 function definirGeneroFL(idx, val){
   if(!db.fl[idx] || !val) return;
   db.fl[idx].genero = val; saveDB(db); renderEquipe();
@@ -963,16 +1223,16 @@ async function baixarCadastro(){
       c.value = v;
       c.font = i === 0 ? {bold:true} : (azul ? {color:{argb:'FF0070C0'}} : {});
     }));
-    cab.forEach((_,i)=>{ ws.getColumn(i+1).width = i===0 ? 42 : 14; });
+    cab.forEach((c,i)=>{ ws.getColumn(i+1).width = i===0 ? 42 : (c==='WHATSAPP' ? 18 : 14); });
     ws.views = [{state:'frozen', ySplit:1}];
   };
   const pref = x => x.prioridade===99 ? '' : x.prioridade;
-  aba('CLT', ['FUNCIONÁRIO','FUNÇÃO','GENERO','AFASTADO','PREFERENCIA'],
-    db.clt.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', pref(x)]));
-  aba('FREELANCE', ['FREELANCE','GENERO','AFASTADO','','PRIORIDADE'],
-    db.fl.map(x=>[x.nome, x.genero||'', x.afastado ? 'AFASTADO' : '', '', pref(x)]), true);
-  aba('RJ', ['NOME','FUNÇÃO','GENERO','AFASTADO'],
-    db.rj.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '']));
+  aba('CLT', ['FUNCIONÁRIO','FUNÇÃO','GENERO','AFASTADO','PREFERENCIA','WHATSAPP'],
+    db.clt.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', pref(x), x.whats||'']));
+  aba('FREELANCE', ['FREELANCE','GENERO','AFASTADO','','PRIORIDADE','WHATSAPP'],
+    db.fl.map(x=>[x.nome, x.genero||'', x.afastado ? 'AFASTADO' : '', '', pref(x), x.whats||'']), true);
+  aba('RJ', ['NOME','FUNÇÃO','GENERO','AFASTADO','','WHATSAPP'],
+    db.rj.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', '', x.whats||'']));
   await salvarExcel(wb, `Cadastro da equipe - ${hojeBR().replace(/\//g,'.')}.xlsx`);
 }
 
@@ -999,10 +1259,11 @@ const ESCALA_KEY = 'central_ultimaEscala_v1';
 function salvarUltimaEscala(){
   if(!ultimaEscala){ lsSet(ESCALA_KEY, null); marcarAlterado('escala'); return; }
   const e = ultimaEscala;
+  const item = p=>{ const o = {nome:p.nome, status:p.status}; if(p.convite) o.convite = p.convite; return o; };
   lsSet(ESCALA_KEY, {
-    nTotal:e.nTotal, isAraujo:e.isAraujo, menor14:e.menor14, avisos:e.avisos,
-    sel: e.selecionados.map(p=>({nome:p.nome, status:p.status})),
-    fl:  e.freelancers.map(p=>({nome:p.nome, status:p.status}))
+    nTotal:e.nTotal, isAraujo:e.isAraujo, menor14:e.menor14, avisos:e.avisos, viagem:e.viagem || null,
+    sel: e.selecionados.map(item),
+    fl:  e.freelancers.map(item)
   });
   marcarAlterado('escala');
 }
@@ -1010,12 +1271,16 @@ function restaurarUltimaEscala(){
   ultimaEscala = null;
   const s = lsGet(ESCALA_KEY, null);
   if(!s) return;
-  const mapear = (lista, base)=> lista.map(x=>{ const p = base.find(b=>b.nome===x.nome); if(p) p.status = x.status; return p; }).filter(Boolean);
-  ultimaEscala = {nTotal:s.nTotal, isAraujo:s.isAraujo, menor14:s.menor14, avisos:s.avisos||[],
+  const mapear = (lista, base)=> lista.map(x=>{ const p = base.find(b=>b.nome===x.nome);
+    if(p){ p.status = x.status; if(x.convite) p.convite = x.convite; else delete p.convite; } return p; }).filter(Boolean);
+  ultimaEscala = {nTotal:s.nTotal, isAraujo:s.isAraujo, menor14:s.menor14, avisos:s.avisos||[], viagem:s.viagem || null,
     selecionados: mapear(s.sel||[], db.clt), freelancers: mapear(s.fl||[], db.fl)};
+  if(ultimaEscala.viagem) preencherCamposViagem(ultimaEscala.viagem);
 }
 
 function gerarEscala(){
+  if(ultimaEscala && [...ultimaEscala.selecionados, ...ultimaEscala.freelancers].some(p=>p.convite && p.convite.enviadoEm)
+     && !confirm('Já tem convites enviados nesta escala. Gerar uma nova sugestão começa outra viagem (os convites enviados continuam valendo para quem já recebeu). Continuar?')) return;
   const nTotal = parseInt(document.getElementById('qtdNecessaria').value,10) || 0;
   const isAraujo = document.getElementById('isAraujo').checked;
   const menor14 = nTotal < 14;
@@ -1024,9 +1289,10 @@ function gerarEscala(){
   const maxIII = menor14 ? 2 : 3;
 
   const avisos = [];
-  const cltAtivos = db.clt.filter(p=>!p.afastado).sort((a,b)=>a.prioridade-b.prioridade);
-  const flAtivos = db.fl.filter(p=>!p.afastado).sort((a,b)=>a.prioridade-b.prioridade);
-  db.clt.forEach(p=>delete p.status); db.fl.forEach(p=>delete p.status);
+  const ordem = ordenadorEscala('clt'), ordemFL = ordenadorEscala('fl');
+  const cltAtivos = db.clt.filter(p=>!p.afastado).sort(ordem);
+  const flAtivos = db.fl.filter(p=>!p.afastado).sort(ordemFL);
+  db.clt.forEach(p=>{ delete p.status; delete p.convite; }); db.fl.forEach(p=>{ delete p.status; delete p.convite; });
 
   let selecionados = [];
   if(isAraujo){
@@ -1061,7 +1327,8 @@ function gerarEscala(){
 
   selecionados.forEach(p=>{ p.status='Convocado'; });
   freelancers.forEach(p=>{ p.status='Convocado'; });
-  ultimaEscala = {nTotal, isAraujo, menor14, selecionados, freelancers, avisos};
+  ultimaEscala = {nTotal, isAraujo, menor14, selecionados, freelancers, avisos,
+    viagem: Object.assign(lerCamposViagem(), {id: 'v' + Date.now(), recusas: []})};
   salvarUltimaEscala();
   renderEscala();
 }
@@ -1075,6 +1342,7 @@ function renderEscala(){
   html += `<div class="acoes"><button class="btn secondary" onclick="exportarEscala()">Exportar escala (Excel)</button>
     <button class="btn" onclick="levarEscalaParaPresenca()">Levar para Presença</button></div>`;
   e.avisos.forEach(a=> html += `<div class="msg warn">${esc(a)}</div>`);
+  html += painelConvites();
   html += `<div class="section-title">Conferentes CLT</div><div class="wrap-table"><table><thead><tr><th>Nome</th><th>Nível</th><th>Status</th><th>Trocar por</th></tr></thead><tbody>`;
   e.selecionados.forEach((p,i)=>{ html += linhaEscala(p, i, 'clt'); });
   html += `</tbody></table></div>`;
@@ -1085,19 +1353,22 @@ function renderEscala(){
   html += addRow('fl');
   html += `</div>`;
   div.innerHTML = html;
+  if(typeof autoPrepararLinks === 'function') setTimeout(autoPrepararLinks, 0);
 }
 
 function poolDisponivel(tipo, nivel){
   const usados = tipo==='clt' ? ultimaEscala.selecionados : ultimaEscala.freelancers;
   const base = tipo==='clt' ? db.clt : db.fl;
   return base.filter(p=>!p.afastado && !usados.includes(p) && (tipo==='fl' || p.nivel===nivel))
-    .sort((a,b)=>a.prioridade-b.prioridade);
+    .sort(ordenadorEscala(tipo));
 }
 
 function linhaEscala(p, i, tipo){
-  const cols = tipo==='clt' ? `<td>${esc(p.nome)}</td><td>${esc(p.nivel)}</td>` : `<td>${esc(p.nome)}</td>`;
+  const ind = indicadoresDe(p.nome);
+  const info = `<small class="hint" style="display:block;margin-top:2px">${esc(resumoIndicadores(ind))}</small>`;
+  const cols = tipo==='clt' ? `<td>${esc(p.nome)}${info}</td><td>${esc(p.nivel)}</td>` : `<td>${esc(p.nome)}${info}</td>`;
   const pool = poolDisponivel(tipo, p.nivel);
-  const opts = pool.map(c=>`<option value="${esc(c.nome)}">${esc(c.nome)}</option>`).join('');
+  const opts = pool.map(c=>`<option value="${esc(c.nome)}">${esc(c.nome)}${rotuloNota(c)}</option>`).join('');
   return `<tr>${cols}
     <td><select onchange="mudarStatus('${tipo}',${i},this.value)">
       <option ${p.status==='Convocado'?'selected':''}>Convocado</option>
@@ -1111,10 +1382,10 @@ function linhaEscala(p, i, tipo){
 function addRow(tipo){
   const nivelOrdem = {IV:0, III:1, II:2, I:3};
   const pool = tipo==='clt'
-    ? db.clt.filter(p=>!p.afastado && !ultimaEscala.selecionados.includes(p)).sort((a,b)=>((nivelOrdem[a.nivel]??9)-(nivelOrdem[b.nivel]??9)) || (a.prioridade-b.prioridade))
-    : db.fl.filter(p=>!p.afastado && !ultimaEscala.freelancers.includes(p)).sort((a,b)=>a.prioridade-b.prioridade);
+    ? db.clt.filter(p=>!p.afastado && !ultimaEscala.selecionados.includes(p)).sort((a,b)=>((nivelOrdem[a.nivel]??9)-(nivelOrdem[b.nivel]??9)) || ordenadorEscala('clt')(a,b))
+    : db.fl.filter(p=>!p.afastado && !ultimaEscala.freelancers.includes(p)).sort(ordenadorEscala('fl'));
   if(!pool.length) return '';
-  const opts = pool.map(c=>`<option value="${esc(c.nome)}">${esc(c.nome)}${tipo==='clt'?' ('+esc(c.nivel)+')':''}</option>`).join('');
+  const opts = pool.map(c=>`<option value="${esc(c.nome)}">${esc(c.nome)}${tipo==='clt'?' ('+esc(c.nivel)+')':''}${rotuloNota(c)}</option>`).join('');
   return `<div style="margin:6px 0"><select id="add-${tipo}"><option value="">Adicionar pessoa...</option>${opts}</select>
     <button class="btn small" onclick="adicionarPessoa('${tipo}')">Adicionar</button></div>`;
 }
@@ -1126,8 +1397,9 @@ function trocarPessoa(tipo, i){
   if(!sel || !sel.value) return;
   const novo = acharPorNome(tipo, sel.value); if(!novo) return;
   const lista = tipo==='clt' ? ultimaEscala.selecionados : ultimaEscala.freelancers;
-  delete lista[i].status;
-  novo.status = 'Convocado';
+  anotarRecusa(lista[i]);
+  delete lista[i].status; delete lista[i].convite;
+  novo.status = 'Convocado'; delete novo.convite;
   lista[i] = novo;
   salvarUltimaEscala(); renderEscala();
 }
@@ -1135,7 +1407,7 @@ function adicionarPessoa(tipo){
   const sel = document.getElementById(`add-${tipo}`);
   if(!sel || !sel.value) return;
   const novo = acharPorNome(tipo, sel.value); if(!novo) return;
-  novo.status = 'Convocado';
+  novo.status = 'Convocado'; delete novo.convite;
   (tipo==='clt' ? ultimaEscala.selecionados : ultimaEscala.freelancers).push(novo);
   salvarUltimaEscala(); renderEscala();
 }
@@ -1161,6 +1433,240 @@ async function exportarEscala(){
     estilo:(i,j,l)=> (j===4 && corStatus[l[4]]) ? {fundo:corStatus[l[4]][0], fonte:{bold:true, color:{argb:corStatus[l[4]][1]}}} : null,
     congelar:true });
   await salvarExcel(wb, `Escala - ${dataHojeArquivo()}.xlsx`);
+}
+
+/* =====================================================================
+   VIAGEM: CONVITES PELO WHATSAPP (link com ✅ Vou sim / ❌ Não posso, respostas pelo robô)
+   ===================================================================== */
+const VIAGEM_FORM_KEY = 'central_viagemForm_v1';
+const CAMPOS_VIAGEM = [['viaCliente','cliente'],['viaCidades','cidades'],['viaDatas','datas'],['viaSaida','saida']];
+function lerCamposViagem(){
+  const v = {}; CAMPOS_VIAGEM.forEach(([id,k])=>{ v[k] = (document.getElementById(id).value||'').trim(); }); return v;
+}
+function preencherCamposViagem(v){
+  CAMPOS_VIAGEM.forEach(([id,k])=>{ const el = document.getElementById(id); if(el && document.activeElement !== el) el.value = (v && v[k]) || ''; });
+}
+(function(){
+  if(!(ultimaEscala && ultimaEscala.viagem)) preencherCamposViagem(lsGet(VIAGEM_FORM_KEY, {}));
+  CAMPOS_VIAGEM.forEach(([id,k])=>{
+    document.getElementById(id).addEventListener('change', ()=>{
+      const v = lerCamposViagem(); lsSet(VIAGEM_FORM_KEY, v);
+      if(ultimaEscala && ultimaEscala.viagem){ Object.assign(ultimaEscala.viagem, v); salvarUltimaEscala(); renderEscala(); }
+    });
+  });
+})();
+
+// Lê a mensagem da empresa (Cliente:, Cidades:, Ida:/Volta:, Datas:, Pessoas:, Saída:)
+function lerConvocacao(){
+  const t = document.getElementById('txtConvocacao').value || '';
+  const pega = re => { const m = t.match(re); return m ? m[1].trim() : ''; };
+  const cliente = pega(/cliente\s*[:\-]\s*([^\n|]+)/i);
+  const cidades = pega(/cidades?\s*[:\-]\s*([^\n|]+)/i);
+  const ida = pega(/ida\s*[:\-]\s*([0-9]{1,2}\/[0-9]{1,2}(?:\/[0-9]{2,4})?)/i);
+  const volta = pega(/volta\s*[:\-]\s*([0-9]{1,2}\/[0-9]{1,2}(?:\/[0-9]{2,4})?)/i);
+  const datas = pega(/datas?\s*[:\-]\s*([^\n|]+)/i) || (ida && volta ? `${ida} a ${volta}` : ida);
+  const saida = pega(/sa[ií]da\s*[:\-]\s*([^\n|]+)/i);
+  const pessoas = parseInt(pega(/(?:pessoas|qtd|quantidade)\s*[:\-]\s*(\d+)/i), 10);
+  const v = {cliente, cidades, datas, saida};
+  let n = 0;
+  CAMPOS_VIAGEM.forEach(([id,k])=>{ if(v[k]){ document.getElementById(id).value = v[k]; n++; } });
+  if(pessoas > 0){ document.getElementById('qtdNecessaria').value = pessoas; n++; }
+  if(/ARA[UÚ]JO/i.test(cliente)) document.getElementById('isAraujo').checked = true;
+  lsSet(VIAGEM_FORM_KEY, lerCamposViagem());
+  if(ultimaEscala && ultimaEscala.viagem){ Object.assign(ultimaEscala.viagem, lerCamposViagem()); salvarUltimaEscala(); renderEscala(); }
+  toast(n ? `Preenchi ${n} campo(s). Confira e toque em "Gerar sugestão".` : 'Não achei Cliente, Cidades, Datas ou Saída na mensagem. Preencha à mão.');
+}
+
+function primeiroNome(nome){ const p = String(nome||'').trim().split(/\s+/)[0] || ''; return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase(); }
+function linkConvite(id){ return (robo.link||'').split('?')[0] + '?c=' + encodeURIComponent(id); }
+function mensagemConvite(p){
+  const v = ultimaEscala.viagem || {};
+  const linhas = [`Fala, ${primeiroNome(p.nome)}! Tudo certo?`, '',
+    'Vou fazer uma viagem e queria muito você na minha equipe, posso contar com você?', ''];
+  if(v.cidades || v.cliente) linhas.push(`📍 ${v.cidades || ''}${v.cliente ? (v.cidades ? ` (${v.cliente})` : v.cliente) : ''}`);
+  if(v.datas) linhas.push(`📅 ${v.datas}`);
+  if(v.saida) linhas.push(`🚐 Saída: ${v.saida}`);
+  linhas.push('', 'É só tocar no link e responder 👇', linkConvite(p.convite.id));
+  return linhas.join('\n');
+}
+function mensagemCobranca(p){
+  const v = ultimaEscala.viagem || {};
+  return [`Oi, ${primeiroNome(p.nome)}! Conseguiu ver o convite da viagem${v.cidades ? ' pra ' + v.cidades : ''}${v.datas ? ' (' + v.datas + ')' : ''}?`,
+    'Me dá um retorno por aqui 👇', linkConvite(p.convite.id)].join('\n');
+}
+function abrirWhats(p, texto){
+  const num = whatsDigitos(p);
+  const url = `https://wa.me/${num}?text=${encodeURIComponent(texto)}`;
+  const w = window.open(url, '_blank');
+  if(!w){ toast('O navegador bloqueou a abertura do WhatsApp. Toque de novo no botão.'); return false; }
+  return true;
+}
+
+// Mais fortes primeiro: IV > III ≈ freelancer > II > I; depois itens/hora do robô; depois preferência
+function forcaRobo(){
+  const m = {}; try{ porConferenteRobo().forEach(c=>{ m[normalizarNome(c.nome)] = c.ih; }); }catch(e){}
+  return m;
+}
+function listaConvites(){
+  const e = ultimaEscala; if(!e) return [];
+  const ih = forcaRobo();
+  const rank = {IV:0, III:1, FL:1.5, II:2, I:3};
+  const itens = [...e.selecionados.map((p,i)=>({p, tipo:'clt', i, nivel:p.nivel})), ...e.freelancers.map((p,i)=>({p, tipo:'fl', i, nivel:'FL'}))];
+  itens.forEach(x=>{ x.ih = ih[normalizarNome(x.p.nome)] || 0; x.nota = indicadoresDe(x.p.nome).nota; });
+  return itens.sort((a,b)=>((rank[a.nivel]??9)-(rank[b.nivel]??9)) || (b.nota-a.nota) || (a.p.prioridade-b.p.prioridade));
+}
+function anotarRecusa(p){
+  const v = ultimaEscala && ultimaEscala.viagem; if(!v || !p || p.status !== 'Recusado') return;
+  v.recusas = v.recusas || [];
+  if(!v.recusas.includes(normalizarNome(p.nome))) v.recusas.push(normalizarNome(p.nome));
+}
+function substitutoSugerido(tipo, p){
+  const rec = new Set((ultimaEscala.viagem && ultimaEscala.viagem.recusas) || []);
+  const ih = forcaRobo();
+  const pool = poolDisponivel(tipo, p.nivel).filter(c=>!rec.has(normalizarNome(c.nome)));
+  return pool[0] || null;
+}
+function horaCurta(ts){ const d = new Date(ts); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
+let convitesPreparando = false;
+function painelConvites(){
+  const e = ultimaEscala; if(!e) return '';
+  if(!e.viagem) e.viagem = Object.assign(lerCamposViagem(), {id:'v' + Date.now(), recusas:[]});
+  const itens = listaConvites();
+  const cont = {sim:0, nao:0, esp:0, nada:0};
+  let linhas = '';
+  itens.forEach((x, pos)=>{
+    const p = x.p, c = p.convite || {};
+    let st, cls;
+    if(p.status === 'Confirmado'){ st = '✅ Vai'; cls = 'sim'; }
+    else if(p.status === 'Recusado'){ st = '❌ Não vai'; cls = 'nao'; }
+    else if(c.enviadoEm){ st = '⏳ Aguardando'; cls = 'esp'; }
+    else { st = 'Não convidado'; cls = 'nada'; }
+    cont[cls]++;
+    const det = [x.tipo==='clt' ? 'CONFERENTE ' + (p.nivel||'') : 'Freelancer'];
+    det.push('nota ' + x.nota);
+    if(x.ih) det.push(fmtN(x.ih) + ' itens/h');
+    if(!p.whats) det.push('sem WhatsApp no cadastro');
+    if(c.enviadoEm) det.push('convite ' + horaCurta(c.enviadoEm));
+    if(c.cobradoEm) det.push('cobrado ' + horaCurta(c.cobradoEm));
+    let acoes = '';
+    if(p.status === 'Recusado'){
+      const sub = substitutoSugerido(x.tipo, p);
+      acoes = sub ? `<button class="btn small" onclick="trocarPorSugerido('${x.tipo}',${x.i})">Trocar por ${esc(primeiroNome(sub.nome))} ${esc(sub.nome.split(' ').slice(-1)[0].charAt(0))}.</button>`
+                  : '<span class="hint">sem substituto do mesmo nível — use "Trocar por"</span>';
+    } else if(p.status !== 'Confirmado'){
+      acoes = !c.enviadoEm
+        ? `<button class="btn small whats" onclick="convidar('${x.tipo}',${x.i})">Convidar</button>`
+        : `<button class="btn small secondary" onclick="cobrar('${x.tipo}',${x.i})">Cobrar</button>
+           <button class="btn small secondary" onclick="convidar('${x.tipo}',${x.i})" title="Mandar o convite de novo">Reenviar</button>`;
+    }
+    linhas += `<div class="conv-linha"><span class="conv-pos">${pos+1}º</span>
+      <div class="conv-nome">${esc(p.nome)}<small>${esc(det.join(' · '))}</small></div>
+      <span class="conv-st ${cls}">${st}</span><div class="conv-acoes">${acoes}</div></div>`;
+  });
+  const v = e.viagem;
+  const faltaViagem = !(v.cidades || v.cliente);
+  return `<div class="section-title">Convites pelo WhatsApp</div>
+    <p class="hint">Ordem: mais fortes primeiro. "Convidar" abre o WhatsApp com a mensagem e o link prontos; é só enviar. Quando a pessoa tocar em ✅ ou ❌, a resposta aparece aqui sozinha.</p>
+    ${!robo.link ? '<div class="msg warn">Para os convites, o robô precisa estar ligado: cole o link em Produtividade › Produtividade automática.</div>' : ''}
+    ${faltaViagem ? '<div class="msg warn">Preencha Cliente e Cidades em "Parâmetros da viagem" para a mensagem sair completa.</div>' : ''}
+    <div class="conv-resumo"><span>✅ ${cont.sim} vão</span><span>❌ ${cont.nao} não vão</span><span>⏳ ${cont.esp} aguardando</span><span>${cont.nada} não convidado(s)</span></div>
+    <div class="acoes"><button class="btn small secondary" onclick="atualizarRespostas()" ${convitesPreparando||roboBuscando?'disabled':''}>${roboBuscando ? 'Buscando…' : 'Atualizar respostas'}</button></div>
+    <div style="margin-top:6px">${linhas}</div>`;
+}
+
+// Pede ao robô os links de quem ainda não tem (uma chamada só para todos)
+async function prepararLinks(silencioso){
+  const aviso = silencioso ? ()=>{} : toast;
+  const e = ultimaEscala; if(!e) return false;
+  if(!robo.link){ aviso('Ligue o robô primeiro: Produtividade › Produtividade automática › Link do robô.', 6000); return false; }
+  const faltam = [...e.selecionados, ...e.freelancers].filter(p=>!(p.convite && p.convite.id));
+  if(!faltam.length) return true;
+  convitesPreparando = true;
+  try{
+    const v = e.viagem;
+    const dados = JSON.stringify({viagem:{id:v.id, cliente:v.cliente, cidades:v.cidades, datas:v.datas, saida:v.saida}, nomes: faltam.map(p=>p.nome)});
+    const url = robo.link + (robo.link.includes('?') ? '&' : '?') + 'acao=convidar&dados=' + encodeURIComponent(dados);
+    const resp = await fetch(url);
+    let j; try{ j = await resp.json(); }catch(err){ throw new Error('O robô respondeu algo inesperado. Confira se ele está com a versão nova (Nova versão da implantação).'); }
+    if(j.erro) throw new Error(j.erro === 'chave inválida' ? 'A chave do link do robô não confere.' : j.erro);
+    if(!Array.isArray(j.convites)) throw new Error('O robô ainda está com a versão antiga. Faça a nova versão da implantação.');
+    j.convites.forEach(c=>{
+      const p = faltam.find(x=>normalizarNome(x.nome)===normalizarNome(c.nome));
+      if(p) p.convite = Object.assign({}, p.convite||{}, {id:c.id});
+    });
+    salvarUltimaEscala();
+    return true;
+  }catch(err){
+    aviso(/fetch|network|load failed/i.test(err.message||'') ? 'Sem conexão com o robô agora. Tente de novo.' : err.message, 6000);
+    return false;
+  }finally{ convitesPreparando = false; }
+}
+// Ao abrir a escala, já deixa os links prontos (assim o "Convidar" abre o WhatsApp direto)
+let linksTentadoEm = 0;
+async function autoPrepararLinks(){
+  const e = ultimaEscala;
+  if(!e || !robo.link || convitesPreparando || Date.now() - linksTentadoEm < 60000) return;
+  if(!document.getElementById('escala').classList.contains('active')) return;
+  if(!(e.viagem && (e.viagem.cidades || e.viagem.cliente))) return;   // só prepara quando a viagem já tem destino
+  if(![...e.selecionados, ...e.freelancers].some(p=>!(p.convite && p.convite.id))) return;
+  if(await prepararLinks(true)) renderEscala();   // em segundo plano: sem avisos
+  else linksTentadoEm = Date.now();               // falhou: tenta de novo daqui a 1 minuto
+}
+function pessoaDaEscala(tipo, i){ return (tipo==='clt' ? ultimaEscala.selecionados : ultimaEscala.freelancers)[i]; }
+async function convidar(tipo, i){
+  let p = pessoaDaEscala(tipo, i); if(!p) return;
+  // a janela do WhatsApp é aberta já no toque (senão o celular bloqueia), e recebe o endereço quando o link fica pronto
+  let janela = null;
+  if(!(p.convite && p.convite.id)){
+    janela = window.open('', '_blank');
+    toast('Preparando o link do convite…');
+    const ok = await prepararLinks();
+    p = pessoaDaEscala(tipo, i);
+    if(!ok || !(p.convite && p.convite.id)){ if(janela) janela.close(); renderEscala(); return; }
+  }
+  const url = `https://wa.me/${whatsDigitos(p)}?text=${encodeURIComponent(mensagemConvite(p))}`;
+  if(janela){ janela.location.href = url; }
+  else if(!window.open(url, '_blank')){ toast('O navegador bloqueou a abertura do WhatsApp. Toque de novo.'); return; }
+  p.convite.enviadoEm = Date.now();
+  salvarUltimaEscala(); renderEscala();
+}
+function cobrar(tipo, i){
+  const p = pessoaDaEscala(tipo, i); if(!p || !(p.convite && p.convite.id)) return;
+  if(!abrirWhats(p, mensagemCobranca(p))) return;
+  p.convite.cobradoEm = Date.now();
+  salvarUltimaEscala(); renderEscala();
+}
+function trocarPorSugerido(tipo, i){
+  const lista = tipo==='clt' ? ultimaEscala.selecionados : ultimaEscala.freelancers;
+  const p = lista[i]; if(!p) return;
+  const sub = substitutoSugerido(tipo, p); if(!sub) return;
+  anotarRecusa(p);
+  delete p.status; delete p.convite;
+  sub.status = 'Convocado'; delete sub.convite;
+  lista[i] = sub;
+  salvarUltimaEscala(); renderEscala();
+  toast(`${sub.nome} entrou no lugar. Toque em "Convidar".`);
+}
+function atualizarRespostas(){
+  if(!robo.link){ toast('Ligue o robô primeiro (Produtividade › Link do robô).'); return; }
+  atualizarDoRobo(false, true).then(()=>renderEscala());
+  renderEscala();
+}
+// Respostas novas do robô viram Confirmado / Recusado na escala
+function aplicarRespostasConvites(){
+  const e = ultimaEscala; if(!e || !Array.isArray(robo.convites)) return [];
+  const porId = {}; robo.convites.forEach(c=>{ porId[c.id] = c; });
+  const novidades = [];
+  [...e.selecionados, ...e.freelancers].forEach(p=>{
+    const c = p.convite && porId[p.convite.id];
+    if(!c || !c.resposta || c.resposta === p.convite.resp) return;
+    p.convite.resp = c.resposta;
+    p.status = c.resposta === 'SIM' ? 'Confirmado' : 'Recusado';
+    novidades.push(`${primeiroNome(p.nome)} ${c.resposta === 'SIM' ? '✅ vai' : '❌ não vai'}`);
+  });
+  if(novidades.length){ salvarUltimaEscala(); renderEscala(); }
+  return novidades;
 }
 
 /* =====================================================================
@@ -1632,7 +2138,8 @@ async function analisarArquivo(){
         const m = lojaNaCelula(aoaAtual, r, c);
         if(m){
           const dataAcima = (aoaAtual[r-1] && aoaAtual[r-1][c] || '').toString().trim();
-          lojasDetectadas.push({col:c, row:r, loja:m.loja, codigo:m.codigo, data:dataAcima});
+          const ini = String((aoaAtual[r+1] && aoaAtual[r+1][c]) || '').match(/in[ií]cio\s+programado\s*:?\s*(\d{1,2})\s*[:h]\s*(\d{2})/i);
+          lojasDetectadas.push({col:c, row:r, loja:m.loja, codigo:m.codigo, data:dataAcima, inicio: ini ? ini[1].padStart(2,'0') + ':' + ini[2] : ''});
         }
       }
     }
@@ -1696,7 +2203,7 @@ function importarLojaEscolhida(){
   const nomes = nomesDaLojaDetectada(item);
   const estag = new Set(estagiariosDetectados(gruposDaLojaDetectada(item)).map(normalizarNome));
   carregarPessoasNaLoja(nomes.map(n=>Object.assign({nome:n, coordenador:false, presenca:null},
-    freeNaPlanilha.has(normalizarNome(n)) ? {free:true} : {}, estag.has(normalizarNome(n)) ? {estagiario:true} : {})), item.loja, item.data);
+    freeNaPlanilha.has(normalizarNome(n)) ? {free:true} : {}, estag.has(normalizarNome(n)) ? {estagiario:true} : {})), item.loja, item.data, {codigo:item.codigo, inicio:item.inicio});
   // quem está em azul em qualquer loja da planilha e ainda não está no cadastro entra como freelancer NOVO
   const todosAzuis = [];
   lojasDetectadas.forEach(l=>nomesDaLojaDetectada(l).forEach(n=>{ if(freeNaPlanilha.has(normalizarNome(n))) todosAzuis.push(n); }));
@@ -1725,9 +2232,12 @@ function levarEscalaParaPresenca(){
   toast(`${pessoas.length} pessoa(s) da escala carregada(s) na Presença.`);
 }
 
-function carregarPessoasNaLoja(pessoas, nomeLoja, data){
+function carregarPessoasNaLoja(pessoas, nomeLoja, data, extra){
   loja.nome = nomeLoja || '';
   loja.data = data || '';
+  loja.codigo = (extra && extra.codigo) || '';
+  loja.inicio = (extra && extra.inicio) || '';
+  document.getElementById('inicioLoja').value = loja.inicio;
   loja.pessoas = pessoas;
   loja.bateVolta = false;
   loja.outrasLojas = [];
@@ -1741,6 +2251,11 @@ function carregarPessoasNaLoja(pessoas, nomeLoja, data){
 }
 
 document.getElementById('arquivoEscala').addEventListener('change', ()=>analisarArquivo());
+document.getElementById('inicioLoja').addEventListener('change', function(){
+  const v = horaValida(this.value);
+  if(this.value.trim() && !v){ toast('Use o formato HH:MM, ex.: 22:00.'); this.value = loja.inicio || ''; return; }
+  loja.inicio = v; this.value = v; recalcularAtrasos(); salvarLoja(); renderPresenca();
+});
 document.getElementById('nomeLoja').addEventListener('input', function(){
   loja.nome = this.value.trim(); salvarLoja();
   const h = document.querySelector('#cardPresenca h2'); if(h) h.textContent = loja.nome || 'Equipe';
@@ -1751,6 +2266,8 @@ function marcarPresenca(i, valor){
   const novo = (p.presenca===valor) ? null : valor;
   p.presenca = novo;
   if(novo !== 'transferido') delete p.transferidoPara;
+  if(novo === 'presente'){ if(!p.chegada) p.chegada = horaAgora(); calcularAtraso(p); if(p.atraso) toast(`${p.nome}: chegou ${p.chegada} · ${p.atraso} min de atraso. Toque no aviso vermelho para corrigir a hora.`, 6000); }
+  else { delete p.chegada; delete p.atraso; }
   if(STATUS_FORA.includes(novo)) tirarDosSetores(p.nome, STATUS[novo].rotulo.toLowerCase());
   salvarLoja(); renderPresenca();
 }
@@ -1895,6 +2412,40 @@ function abrirReceber(){
   selL.onchange = ajustar; selP.onchange = ajustarP; ajustar();
 }
 
+/* ---- Atrasos: hora de chegada ao marcar Presente; tolerância de 15 min sobre o início programado ---- */
+const TOLERANCIA_ATRASO = 15;
+function horaAgora(){ const d = new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+function horaValida(t){ const m = String(t||'').trim().match(/^(\d{1,2})\s*[:hH.]\s*(\d{2})$/) || String(t||'').trim().match(/^(\d{2})(\d{2})$/);
+  if(!m || +m[1] > 23 || +m[2] > 59) return ''; return m[1].padStart(2,'0') + ':' + m[2]; }
+function minutosDe(t){ const v = horaValida(t); return v ? (+v.slice(0,2))*60 + (+v.slice(3)) : null; }
+// minutos depois de "inicio" (vira a noite: 22:00 → 00:30 = 150); antes do início = 0
+function minutosApos(inicio, hora){
+  const a = minutosDe(inicio), b = minutosDe(hora); if(a===null || b===null) return 0;
+  const d = (b - a + 1440) % 1440; return d > 720 ? 0 : d;
+}
+function calcularAtraso(p){
+  delete p.atraso;
+  if(p.presenca !== 'presente' || !p.chegada || !loja.inicio) return;
+  const d = minutosApos(loja.inicio, p.chegada);
+  if(d > TOLERANCIA_ATRASO) p.atraso = d;
+}
+function recalcularAtrasos(){ loja.pessoas.forEach(calcularAtraso); }
+function textoAtraso(p){ return p.atraso ? `chegou ${p.chegada} · ${p.atraso} min de atraso` : ''; }
+function editarChegada(i){
+  const p = loja.pessoas[i]; if(!p) return;
+  abrirFolha(`Chegada de ${esc(p.nome)}`,
+    `<label>Hora que chegou na loja</label><input type="text" id="horaChegada" inputmode="numeric" value="${esc(p.chegada||'')}" placeholder="22:10">
+     <p class="hint">Início programado: ${loja.inicio ? esc(loja.inicio) : '—'} · tolerância de ${TOLERANCIA_ATRASO} min. Para quem chegou no horário, toque em "Sem atraso".</p>
+     <div class="acoes"><button class="btn small secondary" type="button" id="semAtraso">Sem atraso</button></div>`,
+    'Salvar', b=>{
+      const v = horaValida(b.querySelector('#horaChegada').value);
+      if(!v) return 'Use o formato HH:MM, ex.: 22:10.';
+      p.chegada = v; calcularAtraso(p); salvarLoja(); renderPresenca();
+    });
+  const bt = document.getElementById('semAtraso');
+  if(bt) bt.onclick = ()=>{ p.chegada = loja.inicio || p.chegada; delete p.atraso; salvarLoja(); renderPresenca(); const f = document.getElementById('folha'); if(f) f.remove(); };
+}
+
 const STATUS = {
   presente: {rotulo:'Presente',  texto:'PRESENTE',  fundo:'#C6EFCE', tinta:'#006100'},
   caminho:  {rotulo:'A caminho', texto:'A CAMINHO', fundo:'#FFEB9C', tinta:'#9C5700'},
@@ -1908,6 +2459,7 @@ const STATUS_FORA = [...STATUS_FALTA, 'transferido']; // saem das opções de se
 function textoStatus(p){
   const d = STATUS[p.presenca];
   if(!d) return 'PENDENTE';
+  if(p.presenca==='presente' && p.atraso) return `PRESENTE · ATRASO ${p.atraso} MIN (${p.chegada})`;
   return p.presenca==='transferido' && p.transferidoPara ? `${d.texto} → ${p.transferidoPara}` : d.texto;
 }
 // Coordenadores não entram em Escalados nem nos demais números; têm caixa própria.
@@ -1925,10 +2477,11 @@ function contagemPresenca(){
   const faltas = faltaSimples + atestados; // atestado conta como falta
   const transferidos = conta('transferido'); // continuam nos Escalados, com caixa própria
   const recebidos = equipe.filter(p=>p.recebidoDe).length;
+  const atrasos = loja.pessoas.filter(p=>!p.coordenador && p.presenca==='presente' && p.atraso).length;
   // "Vai direto": ainda não chegou — vira Presente quando chegar na loja
   return {coordenadores: loja.pessoas.filter(p=>p.coordenador).length, escalados: equipe.length,
     instrutores, estagiarios: estagiarios.length, estagPresentes, estagFaltas,
-    presentes, faltas, faltaSimples, atestados, caminho, direto, transferidos, recebidos,
+    presentes, faltas, faltaSimples, atestados, caminho, direto, transferidos, recebidos, atrasos,
     pendentes: equipe.length - presentes - faltas - caminho - direto - transferidos};
 }
 function detalheFaltas(c){
@@ -1938,7 +2491,7 @@ function caixasResumo(c){
   return [['Coordenadores',c.coordenadores,''], ...(c.instrutores ? [['Instrutor',c.instrutores,'']] : []),
           ['Escalados',c.escalados,'',c.recebidos ? `inclui ${c.recebidos} recebido(s)` : ''],
           ...(c.estagiarios ? [['Estagiários',c.estagiarios,'',[c.estagPresentes ? c.estagPresentes + ' presente(s)' : '', c.estagFaltas ? c.estagFaltas + ' falta(s)' : ''].filter(Boolean).join(' · ')]] : []),
-          ['Presentes',c.presentes,'presente'],
+          ['Presentes',c.presentes,'presente',c.atrasos ? `${c.atrasos} com atraso` : ''],
           ['A caminho',c.caminho,'caminho'], ...(loja.bateVolta ? [['Vai direto',c.direto,'direto']] : []),
           ['Faltas',c.faltas,'falta',detalheFaltas(c)],
           ...(c.transferidos ? [['Transferidos',c.transferidos,'transferido']] : []),
@@ -1977,7 +2530,8 @@ function renderPresenca(){
   const chave = document.getElementById('bateVolta'); if(chave) chave.checked = !!loja.bateVolta;
   if(!loja.pessoas.length){ div.innerHTML=''; return; }
   const c = contagemPresenca();
-  let html = `<div class="card" id="cardPresenca"><h2>${esc(loja.nome || 'Equipe')}</h2>
+  let html = `<div class="card" id="cardPresenca"><h2>${esc(loja.nome || 'Equipe')}${loja.inicio ? ` <small class="hint">· início ${esc(loja.inicio)}</small>` : ''}</h2>
+    ${!loja.inicio ? '<p class="hint">Preencha o "Início programado" acima para o app marcar os atrasos.</p>' : ''}
     <div class="resumo" style="--n:${caixasResumo(c).length}">${caixasResumo(c).map(([k,v,cl,det],ix)=>`<div class="item ${cl}" style="--span:${spansCaixas(caixasResumo(c).length)[ix]}">${k}<b>${v}</b>${det?`<small>${det}</small>`:''}</div>`).join('')}</div>`;
   const est = estatisticasHistorico();
   ordemPresenca().forEach(({p,i})=>{
@@ -1986,6 +2540,10 @@ function renderPresenca(){
       ? `<small class="hist">Histórico: ${e.falta} falta(s)${e.atestado ? ' · ' + e.atestado + ' atestado(s)' : ''} em ${e.lojas} loja(s)</small>` : '';
     const marcaTransf = p.presenca==='transferido' ? `<small class="hist">Transferido → ${esc(p.transferidoPara || 'outra loja')}</small>` : '';
     const marcaRec = p.recebidoDe ? `<small class="hist">Veio de ${esc(p.recebidoDe)}</small>` : '';
+    const marcaAtraso = p.presenca==='presente' && !p.coordenador
+      ? (p.atraso ? `<br><button class="chip-atraso" onclick="editarChegada(${i})">⏰ ${esc(textoAtraso(p))}</button>`
+         : p.chegada ? `<br><button class="chip-atraso ok" onclick="editarChegada(${i})">chegou ${esc(p.chegada)}</button>` : '') : '';
+    const histAtraso = (e && e.atrasos) ? `<small class="hist">${e.atrasos} atraso(s) no histórico</small>` : '';
     const botoes = p.presenca==='transferido'
       ? `<button class="pill transf-on largo" onclick="desfazerTransferencia(${i})">Transferido · desfazer</button>`
       : `<button class="pill coordpill ${p.coordenador?'on':''}" onclick="toggleCoordenador(${i})">Coord.</button>
@@ -1994,7 +2552,7 @@ function renderPresenca(){
           ${p.instrutor ? '' : `<button class="pill coordpill ${p.estagiario?'on':''}" onclick="toggleEstagiario(${i})">Estag.</button>`}` : ''}
         ${statusVisiveis().map(([st,d])=>`<button class="pill ${st} ${p.presenca===st?'on':''}" onclick="marcarPresenca(${i},'${st}')">${d.rotulo}</button>`).join('')}
         ${editandoLista ? `<button class="pill transferir" onclick="abrirTransferir(${i})">Transferir</button>` : ''}`;
-    html += `<div class="pessoa-row ${p.coordenador?'coord':''}"><span class="pessoa-nome">${esc(p.nome)}${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}</span>
+    html += `<div class="pessoa-row ${p.coordenador?'coord':''}"><span class="pessoa-nome">${esc(p.nome)}${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}${histAtraso}${marcaAtraso}</span>
       <span class="pill-btns">
         ${botoes}
         ${editandoLista ? `<button class="pill remover" onclick="removerPessoa(${i})" aria-label="Remover">×</button>` : ''}
@@ -2032,7 +2590,7 @@ async function exportarPresencaExcel(){
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Presença');
   const c = contagemPresenca();
-  const r = cabecalhoPlanilha(ws, loja.nome || 'Equipe', [loja.data ? 'Data: ' + loja.data : '']);
+  const r = cabecalhoPlanilha(ws, loja.nome || 'Equipe', [[loja.data ? 'Data: ' + loja.data : '', loja.inicio ? 'Início programado: ' + loja.inicio : ''].filter(Boolean).join(' · ')]);
   const r2 = tabelaExcel(ws, r, caixasResumo(c).map(x=>x[0].toUpperCase()), [caixasResumo(c).map(x=>x[1])], {alinhar:caixasResumo(c).map(()=> 'center')});
   let r3 = r2;
   if(c.atestados){ ws.getCell(r2-1,1).value = 'Faltas: ' + detalheFaltas(c); ws.getCell(r2-1,1).font = {color:{argb:'FF666666'}}; r3 = r2 + 1; }
@@ -2043,6 +2601,7 @@ async function exportarPresencaExcel(){
     estilo:(i,j)=>{
       const p = ordem[i], d = STATUS[p.presenca];
       if(!d) return p.coordenador && j===0 ? {fonte:{bold:true}} : null;
+      if(j===1 && p.presenca==='presente' && p.atraso) return {fundo:'FFFFC7CE', fonte:{bold:true, color:{argb:'FF9C0006'}}};
       return {fundo:'FF'+d.fundo.slice(1), fonte:{bold: j===1 || !!p.coordenador, color:{argb:'FF'+d.tinta.slice(1)}}};
     },
     congelar:true });
@@ -2061,7 +2620,8 @@ function exportarPresencaPNG(){
   ordemPresenca().forEach(({p})=>{
     const d = STATUS[p.presenca];
     const cor = d ? d.fundo : '#ffffff', tinta = d ? d.tinta : '#857c9c', st = d ? d.texto : 'PENDENTE';
-    const sub = p.presenca==='transferido' ? `<div style="font-size:11px;font-weight:600">→ ${esc(p.transferidoPara || 'outra loja')}</div>` : '';
+    const sub = p.presenca==='transferido' ? `<div style="font-size:11px;font-weight:600">→ ${esc(p.transferidoPara || 'outra loja')}</div>`
+      : (p.presenca==='presente' && p.atraso) ? `<div style="font-size:11px;font-weight:700;color:#9C0006">ATRASO ${p.atraso} MIN · ${esc(p.chegada)}</div>` : '';
     const veio = p.recebidoDe ? `<div style="font-size:11px;font-weight:600;color:#4a2a96">veio de ${esc(p.recebidoDe)}</div>` : '';
     h += `<tr style="background:${cor};color:${d?tinta:'#1c1530'}"><td style="padding:7px 8px;border-bottom:1px solid #e6e1f0;${p.coordenador?'font-weight:700':''}">${esc(p.nome)}${p.coordenador?' <span style="font-size:11px;color:#4a2a96">COORD.</span>':''}${p.instrutor && !p.coordenador?' <span style="font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;background:#E4DFEC;color:#4a2a96">INSTRUTOR</span>':''}${p.estagiario && !p.coordenador && !p.instrutor?' <span style="font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;background:#FFF2CC;color:#7F6000">ESTAGIÁRIO</span>':''}${ehFree(p)?' <span style="font-size:10px;font-weight:800;padding:1px 5px;border-radius:5px;background:#DDEBF7;color:#1F4E79">FREE</span>':''}${veio}</td>
       <td style="padding:7px 8px;border-bottom:1px solid #e6e1f0;text-align:right;font-size:12px;font-weight:700;color:${tinta}">${st}${sub}</td></tr>`;
@@ -2225,9 +2785,11 @@ function salvarNoHistorico(){
   const setores = {};
   setoresAtuais().forEach(s=>{ const n = nomesDoSetor(s); if(n.length) setores[s] = n; });
   const r = {id, atualizadoEm: Date.now(), data: chaveParaBR(chave), loja: nomeLoja, modelo: modeloPorId(loja.modelo).nome, bateVolta: !!loja.bateVolta,
+    codigo: loja.codigo || '', inicio: loja.inicio || '',
     pessoas: loja.pessoas.map(p=>Object.assign({nome:p.nome, coordenador:!!p.coordenador, presenca:p.presenca || null}, ehFree(p) ? {free:true} : {},
       p.instrutor ? {instrutor:true} : {}, p.estagiario ? {estagiario:true} : {},
-      p.transferidoPara ? {transferidoPara:p.transferidoPara} : {}, p.recebidoDe ? {recebidoDe:p.recebidoDe} : {})), setores};
+      p.transferidoPara ? {transferidoPara:p.transferidoPara} : {}, p.recebidoDe ? {recebidoDe:p.recebidoDe} : {},
+      p.presenca==='presente' && p.chegada ? {chegada:p.chegada} : {}, p.presenca==='presente' && p.atraso ? {atraso:p.atraso} : {})), setores};
   const i = historico.findIndex(x=>x.id===id);
   if(i >= 0) historico[i] = r; else historico.push(r);
   salvarHistoricoLocal();
@@ -2276,13 +2838,14 @@ async function conectarHistorico(db){
     const mapa = new Map(remotos.map(r=>[r.id, r]));
     const enviar = historico.filter(r=>{ const x = mapa.get(r.id); return !x || (r.atualizadoEm||0) > (x.atualizadoEm||0); });
     mesclarRegistros(remotos);
-    for(const r of enviar) await enviarRegistro(r);
+    await Promise.all(enviar.map(r=>enviarRegistro(r)));
     atualizarTelasHistorico();
     col.limit(1000).onSnapshot(sn=>{ if(mesclarRegistros(sn.docs.map(d=>d.data()))) atualizarTelasHistorico(); }, ()=>{});
   }catch(e){ /* o histórico segue só neste aparelho */ }
 }
 function atualizarTelasHistorico(){
   const ativa = id=>{ const el = document.getElementById(id); return el && el.classList.contains('active'); };
+  if(ativa('produtividade') && typeof renderRobo === 'function') renderRobo();
   if(ativa('historico')) renderHistorico();
   if(ativa('presenca')) renderPresenca();
   if(ativa('setores')) renderSetores();
@@ -2297,8 +2860,9 @@ function estatisticasHistorico(){
     (r.pessoas || []).forEach(p=>{
       if(p.coordenador) return;
       const k = normalizarNome(p.nome);
-      const e = est[k] || (est[k] = {chave:k, nome:p.nome, lojas:0, presente:0, falta:0, atestado:0, transferido:0, outros:0, setores:{}, registros:[]});
+      const e = est[k] || (est[k] = {chave:k, nome:p.nome, lojas:0, presente:0, falta:0, atestado:0, transferido:0, outros:0, atrasos:0, minAtraso:0, setores:{}, registros:[]});
       e.nome = p.nome; e.lojas++;
+      if(p.presenca==='presente' && p.atraso){ e.atrasos++; e.minAtraso += p.atraso; }
       if(p.presenca==='presente') e.presente++;
       else if(p.presenca==='falta') e.falta++;
       else if(p.presenca==='atestado') e.atestado++;
@@ -2309,7 +2873,7 @@ function estatisticasHistorico(){
         const x = e.setores[ks] || (e.setores[ks] = {nome:s, n:0, ultima:0});
         x.n++; x.ultima = dataParaChave(r.data);
       });
-      e.registros.push({id:r.id, data:r.data, loja:r.loja, presenca:p.presenca, transferidoPara:p.transferidoPara, recebidoDe:p.recebidoDe, setores:setorDe[k] || []});
+      e.registros.push({id:r.id, data:r.data, loja:r.loja, presenca:p.presenca, transferidoPara:p.transferidoPara, recebidoDe:p.recebidoDe, atraso:p.atraso||0, chegada:p.chegada||'', setores:setorDe[k] || []});
     });
   });
   return est;
@@ -2412,6 +2976,7 @@ function renderDetalheHist(est){
 function rotuloHist(x){
   const d = STATUS[x.presenca];
   if(!d) return 'Pendente';
+  if(x.presenca==='presente' && x.atraso) return `Presente · atraso ${x.atraso} min`;
   return x.presenca==='transferido' && x.transferidoPara ? `Transferido → ${esc(x.transferidoPara)}` : d.rotulo;
 }
 function abrirDetalheHist(){ renderDetalheHist(); const el = document.getElementById('cardDetalheHist'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }
@@ -2493,7 +3058,7 @@ async function exportarHistoricoExcel(){
     const setorDe = {};
     Object.entries(r.setores||{}).forEach(([s,ns])=>ns.forEach(n=>{ const k = normalizarNome(n); (setorDe[k] = setorDe[k] || []).push(s); }));
     (r.pessoas||[]).forEach(p=> l2.push([r.data, r.loja, p.nome, p.coordenador ? 'SIM' : '', STATUS[p.presenca] ? STATUS[p.presenca].texto : 'PENDENTE', (setorDe[normalizarNome(p.nome)]||[]).join(', '),
-      p.transferidoPara ? 'Transferido para ' + p.transferidoPara : p.recebidoDe ? 'Veio de ' + p.recebidoDe : '']));
+      [p.transferidoPara ? 'Transferido para ' + p.transferidoPara : p.recebidoDe ? 'Veio de ' + p.recebidoDe : '', p.atraso ? `Atraso ${p.atraso} min (chegou ${p.chegada})` : ''].filter(Boolean).join(' · ')]));
   });
   tabelaExcel(ws2, r2, ['DATA','LOJA','NOME','COORD.','STATUS','SETOR(ES)','OBS.'], l2, {
     larguras:[12, larguraPara(l2.map(x=>x[1]), 24, 45), larguraPara(l2.map(x=>x[2]), 28, 50), 8, 13, larguraPara(l2.map(x=>x[5]), 16, 40), larguraPara(l2.map(x=>x[6]), 10, 50)],
@@ -2770,6 +3335,10 @@ async function gerarResumoViagem(){
   }
   msg.innerHTML = problemas.length ? `<div class="msg warn">Não consegui ler: ${problemas.map(esc).join(', ')} (use os arquivos de produtividade exportados pelo programa).</div>` : '';
   if(!lojas.length) return;
+  calcularResumo(lojas);
+}
+// lojas: [{label, data, horas, pessoas:{chave:{nome, pecas, horas?}}}] — horas da pessoa (atraso) vale no lugar das da loja
+function calcularResumo(lojas){
   // ordena as lojas pela data da contagem (as sem data vão para o fim)
   const chaveData = d=>{ const m = (d||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? +(m[3]+m[2].padStart(2,'0')+m[1].padStart(2,'0')) : 99999999; };
   lojas.sort((x,y)=>chaveData(x.data)-chaveData(y.data));
@@ -2777,10 +3346,11 @@ async function gerarResumoViagem(){
   const total = {};
   lojas.forEach((lj, idx)=>{
     Object.entries(lj.pessoas).forEach(([k,p])=>{
+      const h = p.horas || lj.horas;
       if(!total[k]) total[k] = {nome:p.nome, pecas:0, horas:0, porLoja:{}};
       total[k].pecas += p.pecas;
-      total[k].horas += lj.horas;
-      total[k].porLoja[idx] = p.pecas / lj.horas;
+      total[k].horas += h;
+      total[k].porLoja[idx] = p.pecas / h;
     });
   });
   const pessoas = Object.values(total);
@@ -2892,9 +3462,9 @@ function salvarLinkRobo(){
   }
   robo.link = v; salvarRobo(); marcarAlterado('robo');
   document.getElementById('boxLinkRobo').open = !v;
-  if(v){ toast('Link salvo. Buscando as lojas do robô…'); atualizarDoRobo(true); } else renderRobo();
+  if(v){ toast('Link salvo. Buscando as lojas do robô…'); atualizarDoRobo(true); if(!nuvemLigada) iniciarNuvem(); } else renderRobo();
 }
-async function atualizarDoRobo(manual){
+async function atualizarDoRobo(manual, soConvites){
   if(!robo.link){ if(manual) toast('Cole o link do robô primeiro (toque em "Link do robô").'); renderRobo(); return; }
   if(roboBuscando) return;
   roboBuscando = true; roboPedidoManual = !!manual; renderRobo();
@@ -2912,10 +3482,14 @@ async function atualizarDoRobo(manual){
     robo.lojas = (j.lojas||[]).map(normLojaRobo).filter(l=>l.id);
     robo.pessoas = (j.pessoas||[]).map(normPessoaRobo).filter(p=>p.id && p.nome);
     aplicarNomesRobo();
+    if(Array.isArray(j.convites)) robo.convites = j.convites;
     robo.atualizadoEm = Date.now(); robo.ultimoErro = '';
     salvarRobo();
+    const respostas = (typeof aplicarRespostasConvites === 'function') ? aplicarRespostasConvites() : [];
+    if(respostas.length) toast('Convites: ' + respostas.join(' · '), 6000);
+    else if(soConvites) toast(Array.isArray(j.convites) ? 'Nenhuma resposta nova.' : 'O robô ainda está com a versão antiga (sem convites).');
     const novas = robo.lojas.filter(l=>!antes.has(l.id)).length;
-    if(manual || (novas && antes.size)) toast(novas ? `${novas} loja(s) nova(s) do robô.` : 'Tudo em dia: nenhuma loja nova no Gmail.');
+    if(!soConvites && (manual || (novas && antes.size))) toast(novas ? `${novas} loja(s) nova(s) do robô.` : 'Tudo em dia: nenhuma loja nova no Gmail.');
     if(manual && j.processamento && /erro|consegui/i.test(j.processamento)) toast(j.processamento, 6000);
   }catch(e){
     const m = (e && e.message) || '';
@@ -2923,14 +3497,47 @@ async function atualizarDoRobo(manual){
       : (/fetch|network|load failed|cors/i.test(m) || !m) ? 'Não consegui falar com o robô agora (sem internet, ou esta tela bloqueia o acesso). Mostrando o que já foi baixado.'
       : m;
     salvarRobo();
-    if(manual) toast(robo.ultimoErro, 6000);
+    if(manual || soConvites) toast(robo.ultimoErro, 6000);
   }finally{
     roboBuscando = false;
     renderRobo();
+    if(soConvites && typeof renderEscala === 'function') renderEscala();
   }
 }
+// Atrasos marcados na Presença ajustam a produtividade do robô: quem chegou atrasado conta a partir da chegada
+function registrosComAtraso(){
+  const regs = historicoAtivo().map(r=>({codigo:r.codigo, data:r.data, pessoas:r.pessoas||[]}));
+  if(loja.pessoas.length) regs.push({codigo:loja.codigo, data: dataParaChave(loja.data) ? chaveParaBR(dataParaChave(loja.data)) : hojeBR(), pessoas:loja.pessoas});
+  return regs.filter(r=>r.codigo && r.pessoas.some(p=>p.atraso && p.chegada));
+}
+function diaDe(d){ const k = String(dataParaChave(d) || ''); return k.length===8 ? Date.UTC(+k.slice(0,4), +k.slice(4,6)-1, +k.slice(6,8))/86400000 : null; }
+function mesmoNomeFlex(a, b){
+  const x = normalizarNome(a), y = normalizarNome(b);
+  return x === y || (Math.min(x.length, y.length) >= 12 && (x.startsWith(y) || y.startsWith(x)));
+}
+function ajustarAtrasosRobo(){
+  robo.pessoas.forEach(p=>{
+    if(p.horasRobo === undefined){ p.horasRobo = p.horas; p.ihRobo = p.ih; }
+    p.horas = p.horasRobo; p.ih = p.ihRobo; delete p.atraso; delete p.chegada;
+  });
+  const regs = registrosComAtraso(); if(!regs.length) return;
+  robo.lojas.forEach(l=>{
+    if(!l.num || !l.inicio) return;
+    const dl = diaDe(l.data); if(dl === null) return;
+    const reg = regs.find(r=>(+r.codigo === +l.num) && diaDe(r.data) !== null && Math.abs(diaDe(r.data) - dl) <= 1);
+    if(!reg) return;
+    robo.pessoas.filter(p=>p.id===l.id).forEach(p=>{
+      const x = reg.pessoas.find(q=>q.atraso && q.chegada && mesmoNomeFlex(q.nome, p.nome)); if(!x) return;
+      const perdido = minutosApos(l.inicio, x.chegada) / 60;   // tempo da contagem que a pessoa não estava
+      if(perdido <= 0) return;
+      const h = Math.max(0.25, p.horasRobo - perdido);
+      p.horas = Math.round(h*100)/100; p.ih = Math.round(p.pecas / h); p.atraso = x.atraso; p.chegada = x.chegada;
+    });
+  });
+}
 function lojasRoboOrdenadas(){ return robo.lojas.slice().sort((a,b)=>dataParaChave(b.data)-dataParaChave(a.data) || b.id.localeCompare(a.id)); }
-function pessoasDaLojaRobo(id){ return robo.pessoas.filter(p=>p.id===id).sort((a,b)=>a.pos-b.pos || b.pecas-a.pecas); }
+function pessoasDaLojaRobo(id){ return robo.pessoas.filter(p=>p.id===id).sort((a,b)=>b.ih-a.ih || a.pos-b.pos); }
+const marcaAtrasoRobo = p => p.atraso ? ` <span class="hint" style="color:var(--danger)">⏰ chegou ${esc(p.chegada)}</span>` : '';
 function porConferenteRobo(){
   const est = {};
   robo.pessoas.forEach(p=>{
@@ -2946,6 +3553,7 @@ function porConferenteRobo(){
 const fmtN = n => Number(n||0).toLocaleString('pt-BR');
 function renderRobo(){
   const st = document.getElementById('statusRobo'); if(!st) return;
+  ajustarAtrasosRobo();
   const inp = document.getElementById('linkRobo'); if(inp && document.activeElement !== inp) inp.value = robo.link || '';
   const box = document.getElementById('boxLinkRobo'); if(box && !robo.link) box.open = true;
   const quando = robo.atualizadoEm ? new Date(robo.atualizadoEm).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
@@ -2984,7 +3592,7 @@ function detalheConferenteRobo(){
   if(!regs.length) return '';
   return `<div class="card" id="cardConfRobo" style="margin-top:10px;background:var(--accent-soft)"><h2 style="font-size:1rem">${esc(regs[0].p.nome)} · ${regs.length} loja(s)</h2>
     <div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th></tr></thead><tbody>${
-      regs.map(({p,l})=>`<tr><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</td><td>${p.pos}º de ${pessoasDaLojaRobo(l.id).length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`).join('')
+      regs.map(({p,l})=>{ const lista = pessoasDaLojaRobo(l.id); return `<tr><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${lista.indexOf(p)+1}º de ${lista.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`; }).join('')
     }</tbody></table></div>
     <div class="acoes"><button class="btn secondary small" onclick="roboConfAberto=null;renderRobo()">Fechar</button></div></div>`;
 }
@@ -3001,8 +3609,9 @@ function renderDetalheRobo(){
   div.innerHTML = `<div class="card" id="cardRankingRobo"><h2>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''} · ${esc(l.data)}</h2>
     <p class="hint">${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h líquidas · ${fmtN(l.fora)} peça(s) fora das faixas</p>
     <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th></tr></thead><tbody>${
-      ps.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.nome)}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`).join('')
+      ps.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.nome)}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`).join('')
     }</tbody></table></div>
+    ${ps.some(p=>p.atraso) ? '<p class="hint">⏰ = chegou atrasado (marcado na Presença): itens/hora contados a partir da chegada.</p>' : ''}
     <div class="acoes">
       <button class="btn secondary" onclick="exportarRankingRoboPNG()">Imagem (PNG)</button>
       <button class="btn secondary" onclick="exportarRankingRoboExcel()">Excel</button>
@@ -3015,13 +3624,44 @@ document.getElementById('listaRobo').addEventListener('click', e=>{
   roboLojaAberta = b.dataset.robo; renderDetalheRobo();
   const el = document.getElementById('cardRankingRobo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'});
 });
+// Resumo da viagem direto das lojas que o robô recebeu (sem precisar subir Excel)
+function abrirResumoRobo(){
+  const lojas = lojasRoboOrdenadas();
+  if(!lojas.length){ toast('Ainda não chegou nenhuma loja pelo robô.'); return; }
+  const recente = diaDe(lojas[0].data);
+  const box = abrirFolha('Resumo da viagem — escolha as lojas',
+    `<div class="acoes" style="margin-bottom:6px"><button class="btn small secondary" type="button" data-marcar="7">Últimos 7 dias</button>
+       <button class="btn small secondary" type="button" data-marcar="0" style="margin-left:6px">Desmarcar todas</button></div>
+     <div class="checklist-estag" style="max-height:50vh;overflow:auto">${lojas.map((l,ix)=>
+       `<label><input type="checkbox" data-ix="${ix}" ${recente!==null && diaDe(l.data)!==null && recente - diaDe(l.data) <= 6 ? 'checked' : ''}> ${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</label>`).join('')}</div>
+     <p class="hint">Gera o ranking agrupado (peças e horas somadas) e a média por loja, com PNG e Excel. Quem chegou atrasado conta a partir da chegada.</p>`,
+    'Gerar resumo', b=>{
+      const escolhidas = [...b.querySelectorAll('input[data-ix]:checked')].map(cb=>lojas[+cb.dataset.ix]);
+      if(!escolhidas.length) return 'Marque pelo menos uma loja.';
+      ajustarAtrasosRobo();
+      calcularResumo(escolhidas.map(l=>{
+        const pessoas = {};
+        pessoasDaLojaRobo(l.id).forEach(p=>{
+          const k = normalizarNome(p.nome);
+          if(pessoas[k]){ pessoas[k].pecas += p.pecas; return; }
+          pessoas[k] = {nome:p.nome, pecas:p.pecas, horas:p.horas || l.horas};
+        });
+        return {label: [l.data, l.num, l.loja].filter(Boolean).join(' - '), data:l.data, horas:l.horas, pessoas};
+      }));
+      setTimeout(()=>{ const el = document.getElementById('resultadoResumo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+    });
+  box.querySelectorAll('[data-marcar]').forEach(bt=>bt.onclick = ()=>{
+    const dias = +bt.dataset.marcar;
+    box.querySelectorAll('input[data-ix]').forEach(cb=>{ const l = lojas[+cb.dataset.ix]; cb.checked = dias > 0 && recente!==null && diaDe(l.data)!==null && recente - diaDe(l.data) < dias; });
+  });
+}
 function nomeArquivoRobo(l, ext){ return [String(l.data).replace(/\//g,'.'), l.num, limpaNomeArquivo(l.loja)].filter(Boolean).join(' - ') + '.' + ext; }
 async function exportarRankingRoboExcel(){
   const l = robo.lojas.find(x=>x.id===roboLojaAberta); if(!l || !excelDisponivel()) return;
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Produtividade');
   const r = blocoInfo(ws, 1, [['Loja', [l.num, l.loja].filter(Boolean).join(' - ')], ['Data', l.data], ['Horas líquidas', l.horas, '0.00'], ['Peças fora das faixas', l.fora]]);
-  const linhas = pessoasDaLojaRobo(l.id).map((p,i)=>[i+1, p.nome, p.pecas, p.ih]);
+  const linhas = pessoasDaLojaRobo(l.id).map((p,i)=>[i+1, p.nome + (p.atraso ? ` (CHEGOU ${p.chegada})` : ''), p.pecas, p.ih]);
   tabelaExcel(ws, r, ['Posição','Nome','Peças','Itens/hora'], linhas, {
     larguras:[20, larguraPara(linhas.map(x=>x[1]), 30, 50), 10, 11], alinhar:['center', null, 'right', 'right'], formatos:[null, null, '#,##0', '#,##0'], congelar:true });
   await salvarExcel(wb, nomeArquivoRobo(l, 'xlsx'));
@@ -3034,7 +3674,7 @@ function exportarRankingRoboPNG(){
     <table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="background:#e7e0f5;font-weight:700">
       <td style="padding:6px 8px">#</td><td style="padding:6px 8px">Nome</td><td style="padding:6px 8px;text-align:right">Peças</td><td style="padding:6px 8px;text-align:right">Itens/h</td></tr>`;
   ps.forEach((p,i)=>{ h += `<tr style="background:${i%2?'#faf8fd':'#ffffff'}"><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0">${i+1}</td>
-    <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0">${esc(p.nome)}</td><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right">${fmtN(p.pecas)}</td>
+    <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0">${esc(p.nome)}${p.atraso ? ` <span style="font-size:11px;color:#9C0006;font-weight:700">⏰ ${esc(p.chegada)}</span>` : ''}</td><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right">${fmtN(p.pecas)}</td>
     <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right;font-weight:700">${fmtN(p.ih)}</td></tr>`; });
   h += '</table>';
   gerarImagem(h, nomeArquivoRobo(l, 'png'));
@@ -3056,6 +3696,172 @@ async function exportarConferentesRobo(){
     larguras:[12, 7, larguraPara(l2.map(x=>x[2]), 26, 45), 8, 8, 8, 13, 10, 16], alinhar:['center','center',null,'center','center','right','center','right','right'],
     formatos:[null, null, null, null, null, '0.00', null, '#,##0', '#,##0'], congelar:true });
   await salvarExcel(wb, `Produtividade por conferente - ${dataHojeArquivo()}.xlsx`);
+}
+
+/* =====================================================================
+   VIAGEM: FICHAS E NOTA DE DESEMPENHO (robô + histórico + convites)
+   ===================================================================== */
+let cacheInd = null, cacheIndChave = '';
+// recalcula só quando algo mudou (robô, histórico, cadastro ou convites)
+function mapaIndicadores(){
+  const chave = [robo.atualizadoEm, robo.pessoas.length, historico.length, historico.reduce((m,r)=>Math.max(m, r.atualizadoEm||0), 0),
+    db.clt.length + db.fl.length, (robo.convites||[]).length, (robo.convites||[]).filter(c=>c.resposta).length,
+    loja.pessoas.length, loja.pessoas.filter(p=>p.atraso).length, loja.codigo||''].join('|');
+  if(cacheInd && chave === cacheIndChave) return cacheInd;
+  ajustarAtrasosRobo();
+  const conf = porConferenteRobo();
+  const est = estatisticasHistorico();
+  const convites = {};
+  (robo.convites||[]).forEach(c=>{ if(!c.resposta) return; const k = normalizarNome(c.nome); const x = convites[k] || (convites[k] = {sim:0, nao:0}); if(c.resposta==='SIM') x.sim++; else x.nao++; });
+  // percentil dos itens/hora entre quem tem produtividade no robô
+  const ihs = conf.filter(c=>c.ih > 0).map(c=>c.ih).sort((a,b)=>a-b);
+  const pct = v => ihs.length > 1 ? Math.round(100 * ihs.filter(x=>x < v).length / (ihs.length - 1)) : 50;
+  const mapa = {};
+  const pegar = nome => { const k = normalizarNome(nome); return mapa[k] || (mapa[k] = {nome, chave:k}); };
+  conf.forEach(c=>Object.assign(pegar(c.nome), {ih:c.ih, media:c.media, lojasRobo:c.lojas, pecas:c.pecas, horas:c.horas, melhor:c.melhor, ihPct:pct(c.ih)}));
+  Object.values(est).forEach(e=>{
+    const x = pegar(e.nome);
+    const base = e.lojas - e.transferido;
+    Object.assign(x, {lojasHist:e.lojas, presente:e.presente, faltas:e.falta, atestados:e.atestado, atrasos:e.atrasos||0, minAtraso:e.minAtraso||0,
+      presPct: base > 0 ? Math.round(100 * e.presente / base) : null, setores:setoresMaisFrequentes(e, 3), registros:e.registros});
+  });
+  Object.entries(convites).forEach(([k,v])=>{ const x = mapa[k] || (mapa[k] = {nome:k, chave:k}); x.convSim = v.sim; x.convNao = v.nao; });
+  cacheInd = mapa; cacheIndChave = chave;
+  return mapa;
+}
+const NOTA_PREF = {1:60, 2:45, 3:30, 4:15};
+function indicadoresDe(nome){
+  const mapa = mapaIndicadores();
+  const k = normalizarNome(nome);
+  let x = mapa[k];
+  if(!x){ const alt = Object.values(mapa).find(v=>mesmoNomeFlex(v.nome, nome)); x = alt || {nome, chave:k}; }
+  const cad = [...db.clt, ...db.fl, ...db.rj].find(p=>normalizarNome(p.nome)===k);
+  const pref = cad ? cad.prioridade : 99;
+  // presença: % de lojas em que esteve presente, menos 5 pontos por atraso (até 20); com menos de 2 lojas no histórico não pesa
+  const pres = (x.presPct !== null && x.presPct !== undefined && (x.lojasHist||0) >= 2) ? Math.max(0, x.presPct - Math.min(20, 5*(x.atrasos||0))) : null;
+  let nota, base;
+  if(x.ih){ nota = 0.7 * x.ihPct + 0.3 * (pres ?? 85); base = 'robô'; }
+  else { nota = 0.7 * (NOTA_PREF[pref] ?? 40) + 0.3 * (pres ?? 85); base = 'preferência'; }
+  return Object.assign({}, x, {nota: Math.round(nota), baseNota: base, presAjust: pres, cad});
+}
+function resumoIndicadores(ind){
+  const partes = ['nota ' + ind.nota];
+  if(ind.ih) partes.push(fmtN(ind.ih) + ' itens/h'); else partes.push('sem produtividade no robô');
+  if(ind.presPct !== null && ind.presPct !== undefined && ind.lojasHist) partes.push(ind.presPct + '% presença');
+  if(ind.faltas) partes.push(ind.faltas + ' falta(s)');
+  if(ind.atrasos) partes.push(ind.atrasos + ' atraso(s)');
+  return partes.join(' · ');
+}
+function rotuloNota(p){ return modoEscala() === 'desempenho' ? ` · nota ${indicadoresDe(p.nome).nota}` : ''; }
+
+// ---- ordem da escala dentro de cada nível
+const MODO_ESCALA_KEY = 'central_modoEscala';
+function modoEscala(){ const el = document.getElementById('modoEscala'); return (el && el.value) || 'desempenho'; }
+function ordenadorEscala(tipo){
+  if(modoEscala() !== 'desempenho') return (a,b)=>a.prioridade-b.prioridade;
+  // freelancer com preferência 4 (quase nunca consegue viajar) continua por último
+  return (a,b)=> (tipo==='fl' ? ((a.prioridade===4) - (b.prioridade===4)) : 0)
+    || (indicadoresDe(b.nome).nota - indicadoresDe(a.nome).nota) || (a.prioridade - b.prioridade);
+}
+function dicaModoEscala(){
+  const el = document.getElementById('dicaModoEscala'); if(!el) return;
+  if(modoEscala() !== 'desempenho'){ el.textContent = 'Usa só a coluna PREFERÊNCIA (1 = melhor).'; return; }
+  const comDados = [...db.clt, ...db.fl].filter(p=>!p.afastado && indicadoresDe(p.nome).ih).length;
+  el.textContent = `Nota = itens/hora do robô (70%) + presença do histórico (30%). ${comDados} pessoa(s) já têm produtividade no robô; quem ainda não tem usa a preferência. Freelancer com preferência 4 fica por último.`;
+}
+(function(){
+  const el = document.getElementById('modoEscala');
+  el.value = lsGet(MODO_ESCALA_KEY, 'desempenho') || 'desempenho';
+  el.addEventListener('change', ()=>{ lsSet(MODO_ESCALA_KEY, el.value); dicaModoEscala(); if(ultimaEscala) renderEscala(); });
+})();
+
+// ---- tela Fichas
+let fichaAberta = null;
+function pessoasDasFichas(){
+  const lista = [];
+  const visto = new Set();
+  const add = (nome, tipo, cad)=>{ const k = normalizarNome(nome); if(!k || visto.has(k)) return; visto.add(k); lista.push({nome, tipo, cad}); };
+  db.clt.forEach(p=>add(p.nome, 'clt', p)); db.fl.forEach(p=>add(p.nome, 'fl', p)); db.rj.forEach(p=>add(p.nome, 'rj', p));
+  Object.values(mapaIndicadores()).forEach(x=>{ if(x.ih || x.lojasHist) add(x.nome, 'fora', null); });
+  return lista.map(x=>Object.assign(x, {ind: indicadoresDe(x.nome)}));
+}
+function rotuloTipo(x){
+  if(x.tipo==='clt') return 'CONFERENTE ' + (x.cad.nivel || '');
+  if(x.tipo==='fl') return 'Freelancer' + (x.cad.novo ? ' (novo)' : '');
+  if(x.tipo==='rj') return 'RJ';
+  return 'fora do cadastro';
+}
+function renderFichas(){
+  const div = document.getElementById('listaFichas'); if(!div) return;
+  const busca = normalizarNome(document.getElementById('buscaFicha').value);
+  const filtro = document.getElementById('filtroFicha').value;
+  const ordem = document.getElementById('ordemFicha').value;
+  const todas = pessoasDasFichas();
+  const rankNota = todas.filter(x=>x.tipo!=='fora').slice().sort((a,b)=>b.ind.nota-a.ind.nota);
+  let lista = todas.filter(x=>(!busca || normalizarNome(x.nome).includes(busca)) && (filtro==='todos' || x.tipo===filtro));
+  const cmp = {nota:(a,b)=>b.ind.nota-a.ind.nota, ih:(a,b)=>(b.ind.ih||0)-(a.ind.ih||0), faltas:(a,b)=>(b.ind.faltas||0)-(a.ind.faltas||0),
+    atrasos:(a,b)=>(b.ind.atrasos||0)-(a.ind.atrasos||0), nome:(a,b)=>a.nome.localeCompare(b.nome,'pt-BR')}[ordem];
+  lista.sort((a,b)=>cmp(a,b) || a.nome.localeCompare(b.nome,'pt-BR'));
+  div.innerHTML = lista.length ? `<table><thead><tr><th>Nome</th><th>Nota</th><th>Itens/h</th><th>Pres.</th><th>Faltas</th><th>Atrasos</th></tr></thead><tbody>${
+    lista.map(x=>`<tr class="linha-clicavel" data-ficha="${esc(normalizarNome(x.nome))}"><td>${esc(x.nome)}${x.cad && x.cad.afastado ? ' <span class="hint">(afastado)</span>' : ''}<small class="hint" style="display:block">${esc(rotuloTipo(x))}</small></td>
+      <td><b>${x.ind.nota}</b></td><td>${x.ind.ih ? fmtN(x.ind.ih) : '—'}</td><td>${x.ind.presPct!=null && x.ind.lojasHist ? x.ind.presPct + '%' : '—'}</td><td>${x.ind.faltas||0}</td><td>${x.ind.atrasos||0}</td></tr>`).join('')
+  }</tbody></table>` : '<p class="hint">Ninguém encontrado.</p>';
+  renderFichaAberta(todas, rankNota);
+}
+function renderFichaAberta(todas, rankNota){
+  const div = document.getElementById('fichaAberta');
+  if(!fichaAberta){ div.innerHTML = ''; return; }
+  todas = todas || pessoasDasFichas();
+  rankNota = rankNota || todas.filter(x=>x.tipo!=='fora').slice().sort((a,b)=>b.ind.nota-a.ind.nota);
+  const x = todas.find(t=>normalizarNome(t.nome)===fichaAberta);
+  if(!x){ fichaAberta = null; div.innerHTML = ''; return; }
+  const ind = x.ind, pos = rankNota.indexOf(x);
+  const lojasRobo = robo.pessoas.filter(p=>mesmoNomeFlex(p.nome, x.nome)).map(p=>({p, l:robo.lojas.find(l=>l.id===p.id)})).filter(r=>r.l)
+    .sort((a,b)=>dataParaChave(b.l.data)-dataParaChave(a.l.data));
+  const tiles = blocosFicha(ind);
+  const whats = x.cad && x.cad.whats ? `<a style="text-decoration:none;display:inline-block;background:#1e8e3e;color:#fff;border-radius:7px;padding:6px 10px;font-size:.8rem;font-weight:600" href="https://wa.me/${whatsDigitos(x.cad)}" target="_blank" rel="noopener">WhatsApp ${esc(x.cad.whats)}</a>` : '';
+  div.innerHTML = `<div class="card" id="cardFicha" style="background:var(--accent-soft)">
+    <h2 style="margin-bottom:2px">${esc(x.nome)}</h2>
+    <p class="hint" style="margin-top:0">${esc(rotuloTipo(x))}${x.cad && x.cad.genero ? ' · ' + esc(x.cad.genero.slice(0,1)) : ''}${x.cad && x.cad.prioridade !== 99 && x.cad ? ' · preferência ' + x.cad.prioridade : ''}${x.cad && x.cad.afastado ? ' · AFASTADO' : ''}</p>
+    <div class="resumo" style="--n:4">${tiles.map(([k,v,det])=>`<div class="item" style="--span:2">${k}<b>${v}</b>${det ? `<small>${det}</small>` : ''}</div>`).join('')}</div>
+    <p class="hint">Nota ${ind.nota} (base: ${ind.baseNota})${pos >= 0 ? ` · ${pos+1}º de ${rankNota.length} no cadastro` : ''}${ind.setores && ind.setores.length ? ' · setores: ' + ind.setores.map(s=>`${esc(s.nome)} (${s.n}×)`).join(', ') : ''}</p>
+    ${whats}
+    ${lojasRobo.length ? `<div class="section-title">Produtividade por loja (robô)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th></tr></thead><tbody>${
+      lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`; }).join('')}</tbody></table></div>` : ''}
+    ${ind.registros && ind.registros.length ? `<div class="section-title">Presença (histórico das lojas)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Status</th><th>Setor</th></tr></thead><tbody>${
+      ind.registros.slice().reverse().map(r=>`<tr><td>${esc(r.data)}</td><td>${esc(r.loja)}</td><td>${rotuloHist(r)}</td><td>${(r.setores||[]).map(esc).join(', ') || '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${!lojasRobo.length && !(ind.registros||[]).length ? '<p class="hint">Ainda não há lojas do robô nem do histórico com esse nome.</p>' : ''}
+    <div class="acoes"><button class="btn secondary" onclick="exportarFichaPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="fichaAberta=null;renderFichas()">Fechar</button></div>
+  </div>`;
+}
+function blocosFicha(ind){
+  return [
+    ['Nota', ind.nota, ind.baseNota === 'robô' ? 'itens/h + presença' : 'sem robô: pela preferência'],
+    ['Itens/hora', ind.ih ? fmtN(ind.ih) : '—', ind.lojasRobo ? `${ind.lojasRobo} loja(s) · média ${fmtN(ind.media)}` : ''],
+    ['Presença', ind.presPct!=null && ind.lojasHist ? ind.presPct + '%' : '—', ind.lojasHist ? `${ind.presente||0} de ${ind.lojasHist} loja(s)` : ''],
+    ['Faltas', (ind.faltas||0) + (ind.atestados||0), ind.atestados ? `${ind.faltas||0} falta · ${ind.atestados} atestado` : ''],
+    ['Atrasos', ind.atrasos||0, ind.atrasos ? `média ${Math.round(ind.minAtraso/ind.atrasos)} min` : ''],
+    ['Peças', ind.pecas ? fmtN(ind.pecas) : '—', ind.melhor ? `melhor loja ${fmtN(ind.melhor)}/h` : ''],
+    ['Viagens', (ind.convSim||ind.convNao) ? `✅ ${ind.convSim||0} · ❌ ${ind.convNao||0}` : '—', 'convites (90 dias)'],
+    ['Setor mais comum', ind.setores && ind.setores[0] ? esc(ind.setores[0].nome) : '—', ind.setores && ind.setores[0] ? ind.setores[0].n + '×' : '']];
+}
+document.getElementById('listaFichas').addEventListener('click', e=>{
+  const tr = e.target.closest('[data-ficha]'); if(!tr) return;
+  fichaAberta = tr.dataset.ficha; renderFichaAberta();
+  const el = document.getElementById('cardFicha'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'});
+});
+function abrirFicha(nome){ fichaAberta = normalizarNome(nome); abrirView('fichas'); setTimeout(()=>{ const el = document.getElementById('cardFicha'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50); }
+function exportarFichaPNG(){
+  const x = pessoasDasFichas().find(t=>normalizarNome(t.nome)===fichaAberta); if(!x) return;
+  const ind = x.ind;
+  const lojasRobo = robo.pessoas.filter(p=>mesmoNomeFlex(p.nome, x.nome)).map(p=>({p, l:robo.lojas.find(l=>l.id===p.id)})).filter(r=>r.l)
+    .sort((a,b)=>dataParaChave(b.l.data)-dataParaChave(a.l.data)).slice(0, 12);
+  let h = cabecalhoImagem(esc(x.nome), esc(rotuloTipo(x)) + ' · ficha de ' + esc(hojeBR()));
+  h += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">${blocosFicha(ind).map(([k,v,det])=>
+    `<div style="border:1px solid #ddd6ea;border-radius:8px;padding:6px 8px;font-size:12px;color:#62597a">${k}<div style="font-size:18px;font-weight:700;color:#1c1530">${v}</div>${det?`<div style="font-size:10px">${det}</div>`:''}</div>`).join('')}</div>`;
+  if(lojasRobo.length) h += `<div style="font-weight:700;margin:4px 0 6px">Produtividade por loja</div>` + tabelaImagem(['Data','Loja','Peças','Itens/h'],
+    lojasRobo.map(({p,l})=>[esc(l.data), esc(l.loja) + (p.atraso ? ` <span style="color:#9C0006;font-size:11px">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtN(p.ih)]), ['', '', 'right', 'right'], 3);
+  gerarImagem(h, `Ficha - ${limpaNomeArquivo(x.nome)}.png`);
 }
 
 /* =====================================================================
@@ -3107,7 +3913,7 @@ async function restaurarBackup(){
     atualizarTelasModelos();
   }
   restaurarHistoricoDoBackup(d.historico);
-  if(typeof d.roboLink === 'string' && d.roboLink){ robo.link = d.roboLink; salvarRobo(); marcarAlterado('robo'); renderRobo(); atualizarDoRobo(false); }
+  if(typeof d.roboLink === 'string' && d.roboLink){ robo.link = d.roboLink; salvarRobo(); marcarAlterado('robo'); renderRobo(); atualizarDoRobo(false); if(!nuvemLigada) iniciarNuvem(); }
   msg.innerHTML = `<div class="msg ok">Backup restaurado: ${db.clt.length} CLT, ${db.fl.length} freelancers, ${loja.pessoas.length} pessoa(s) na lista da loja, ${modelosProprios.length} modelo(s) de setores, ${historicoAtivo().length} loja(s) no histórico.</div>`;
 }
 
@@ -3118,6 +3924,7 @@ restaurarUltimaEscala();
 renderEquipe();
 renderEscala();
 document.getElementById('nomeLoja').value = loja.nome || '';
+document.getElementById('inicioLoja').value = loja.inicio || '';
 renderPresenca();
 renderSetores();
 abrirView(document.getElementById(ui.view) ? ui.view : 'equipe');
@@ -3134,7 +3941,7 @@ registrarSinc('escala', ()=>lsGet(ESCALA_KEY, null),
 registrarSinc('loja', ()=>loja,
   v=>{ loja = migrarLoja(Object.assign({nome:'', data:'', pessoas:[], setores:{}, modelo:'drogaria'}, (v && typeof v==='object') ? v : {}));
        if(!Array.isArray(loja.pessoas)) loja.pessoas = []; if(!loja.setores || typeof loja.setores!=='object') loja.setores = {};
-       lsSet(LOJA_KEY, loja); document.getElementById('nomeLoja').value = loja.nome || ''; renderPresenca(); renderSetores(); },
+       lsSet(LOJA_KEY, loja); document.getElementById('nomeLoja').value = loja.nome || ''; document.getElementById('inicioLoja').value = loja.inicio || ''; renderPresenca(); renderSetores(); },
   ()=>!loja.pessoas.length);
 registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
