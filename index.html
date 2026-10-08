@@ -232,6 +232,16 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .chip-atraso.ok{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);}
 .resumo .item.atraso{border-left:4px solid var(--danger);}
 .nome-ficha{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;}
+.selo-meta{display:inline-block;margin-top:4px;border-radius:10px;padding:2px 9px;font-size:.74rem;font-weight:700;border:1px solid var(--border);color:var(--muted);background:var(--bg);}
+.selo-meta.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-bg);}
+.selo-meta.nao{border-color:var(--danger);color:var(--danger);background:var(--danger-bg);}
+.caixa-equipe{border-radius:10px;padding:10px 12px;margin:8px 0 4px;border:1px solid var(--border);background:var(--bg);}
+.caixa-equipe.ok{border-color:var(--ok);background:var(--ok-bg);}
+.caixa-equipe.nao{border-color:var(--danger);background:var(--danger-bg);}
+.caixa-equipe b.n{display:block;font-size:1.35rem;}
+.metas-linha{display:flex;align-items:center;gap:10px;margin-top:8px;}
+.metas-linha span{flex:1;font-size:.88rem;font-weight:600;}
+.metas-linha input{width:120px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 9px;color:var(--text);font-size:.9rem;font-family:inherit;}
 .tag-novo{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--accent-soft);color:var(--accent);}
 .pessoa-nome{flex:1;font-size:.88rem;min-width:0;overflow-wrap:anywhere;}
 .pill-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
@@ -501,6 +511,11 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
       <h2>Produtividade automática</h2>
       <p class="hint" id="statusRobo">O robô do Gmail calcula cada loja assim que o e-mail chega. O app busca aqui quando você abre com internet.</p>
       <div id="avisoRobo"></div>
+      <details id="boxMetas" style="margin-top:8px">
+        <summary class="hint" style="cursor:pointer">Metas da equipe (itens/hora por conferente)</summary>
+        <div id="listaMetas"></div>
+        <p class="hint">Produtividade da equipe = peças da loja ÷ horas trabalhadas pelos conferentes (quem chegou atrasado conta só a partir da chegada). Deixe em branco o cliente sem meta.</p>
+      </details>
       <details id="boxLinkRobo" style="margin-top:8px">
         <summary class="hint" style="cursor:pointer">Link do robô</summary>
         <input type="text" id="linkRobo" placeholder="https://script.google.com/macros/s/.../exec?chave=..." autocomplete="off" spellcheck="false" style="margin-top:8px">
@@ -3224,12 +3239,17 @@ async function calcularProdutividade(){
   msg.innerHTML = '';
 }
 
+function equipeManual(p){
+  const pecas = p.resultados.reduce((t,r)=>t + r.pecas, 0);
+  return equipeDe(pecas, p.horas * p.resultados.length, clienteDe(p.loja), p.resultados.length);
+}
 function renderProdutividade(){
   const p = ultimaProdutividade;
   const div = document.getElementById('resultadoProdutividade');
   if(!p){ div.innerHTML=''; return; }
   let html = `<div class="card"><h2>Produtividade${p.loja?' — '+esc(p.loja):''}${p.data?' ('+esc(p.data)+')':''}</h2>`;
   html += `<p class="hint">Horas líquidas consideradas: ${p.horas.toFixed(2)}h. Peças fora de qualquer faixa cadastrada: ${p.naoIdentificado}.</p>`;
+  html += caixaEquipe(equipeManual(p));
   html += `<div class="acoes"><button class="btn secondary" onclick="exportarProdutividadePNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarProdutividade()">Excel</button></div>`;
   html += `<div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Coletor(es)</th><th>Peças</th><th>Itens/hora</th></tr></thead><tbody>`;
   p.resultados.forEach((r,i)=>{
@@ -3253,7 +3273,7 @@ function exportarProdutividadePNG(){
   const p = ultimaProdutividade; if(!p) return;
   const titulo = esc([p.loja, p.numLoja].filter(Boolean).join(' | ') || 'Produtividade');
   const sub = ['Produtividade', p.data ? esc(p.data) : '', p.horas.toFixed(2).replace('.', ',') + ' h líquidas'].filter(Boolean).join(' · ');
-  const h = cabecalhoImagem(titulo, sub) + tabelaImagem(['#','Nome','Peças','Itens/h'],
+  const h = cabecalhoImagem(titulo, sub) + caixaEquipeImagem(equipeManual(p)) + tabelaImagem(['#','Nome','Peças','Itens/h'],
     p.resultados.map((r,i)=>[i+1, esc(r.nome), fmtN(r.pecas), fmtN(Math.round(r.itemHora))]), ['', '', 'right', 'right'], 3);
   gerarImagem(h, nomeArquivoProdutividade(p).replace(/\.xlsx$/, '.png'));
 }
@@ -3262,6 +3282,7 @@ function exportarResumoPNG(){
   const datas = r.lojas.map(l=>l.data).filter(Boolean);
   const periodo = datas.length ? (datas[0] + (datas.length > 1 ? ' a ' + datas[datas.length-1] : '')) : '';
   let h = cabecalhoImagem(`Resumo da viagem — ${r.lojas.length} loja(s)`, ['Ranking por itens/hora', esc(periodo)].filter(Boolean).join(' · '));
+  (r.equipes||[]).forEach(eq=>{ h += caixaEquipeImagem(eq).replace('Produtividade da equipe', `Equipe na viagem · ${esc(eq.cliente)} · ${eq.lojas} loja(s)`); });
   h += `<div style="font-weight:700;margin:4px 0 6px">Agrupado (peças e horas somadas)</div>`;
   h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h'], r.agrupado.map((p,i)=>[i+1, esc(p.nome), p.lojas, fmtN(p.pecas), fmtN(Math.round(p.ih))]), ['', '', 'center', 'right', 'right'], 4);
   h += `<div style="font-weight:700;margin:16px 0 6px">Média (dos itens/hora de cada loja)</div>`;
@@ -3288,7 +3309,8 @@ async function exportarProdutividade(){
     ['Loja', [p.numLoja, p.loja].filter(Boolean).join(' - ')],
     ['Data', p.data || ''],
     ['Horas líquidas', Number(p.horas.toFixed(2)), '0.00'],
-    ['Peças fora das faixas', p.naoIdentificado]]);
+    ['Peças fora das faixas', p.naoIdentificado],
+    ...linhasExcelEquipe(equipeManual(p))]);
   const linhas = p.resultados.map((x,i)=>[i+1, x.nome, x.coletores, x.pecas, Math.round(x.itemHora)]);
   tabelaExcel(ws, r, ['Posição','Nome','Coletores','Peças','Itens/hora'], linhas, {
     larguras:[20, larguraPara(linhas.map(l=>l[1]), 30, 50), 12, 10, 11],
@@ -3365,7 +3387,16 @@ function calcularResumo(lojas){
     const ihs = Object.values(p.porLoja);
     return {nome:p.nome, lojas:ihs.length, media:ihs.reduce((x,y)=>x+y,0)/ihs.length, porLoja:p.porLoja};
   }).sort((a,b)=>b.media-a.media);
-  ultimoResumo = {lojas, agrupado, medio};
+  // produtividade da equipe na viagem, por cliente (peças ÷ horas somadas de todos os conferentes)
+  const porCliente = {};
+  lojas.forEach(lj=>{
+    const c = lj.cliente || clienteDe(lj.label);
+    const x = porCliente[c] || (porCliente[c] = {pecas:0, horas:0, lojas:0});
+    x.lojas++;
+    Object.values(lj.pessoas).forEach(p=>{ x.pecas += p.pecas; x.horas += (p.horas || lj.horas); });
+  });
+  const equipes = Object.entries(porCliente).map(([c,x])=>Object.assign(equipeDe(x.pecas, x.horas, c, 0), {lojas:x.lojas}));
+  ultimoResumo = {lojas, agrupado, medio, equipes};
   renderResumo();
 }
 
@@ -3375,6 +3406,7 @@ function renderResumo(){
   if(!r){ div.innerHTML=''; return; }
   let html = `<div class="card"><h2>Resumo da viagem — ${r.lojas.length} loja(s)</h2>`;
   html += `<div class="acoes"><button class="btn secondary" onclick="exportarResumoPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarResumo()">Excel</button></div>`;
+  (r.equipes||[]).forEach(eq=>{ html += caixaEquipe(eq).replace('Produtividade da equipe', `Equipe na viagem · ${esc(eq.cliente)} · ${eq.lojas} loja(s)`); });
   html += `<div class="section-title">Agrupado (peças e horas somadas)</div><div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Horas</th><th>Itens/hora</th></tr></thead><tbody>`;
   r.agrupado.forEach((p,i)=>{ html += `<tr><td>${i+1}</td><td>${esc(p.nome)}</td><td>${p.lojas}</td><td>${p.pecas}</td><td>${p.horas.toFixed(2)}</td><td>${Math.round(p.ih)}</td></tr>`; });
   html += `</tbody></table></div>`;
@@ -3389,7 +3421,8 @@ async function exportarResumo(){
   const wb = new ExcelJS.Workbook();
   const infoLojas = r.lojas.map(l=>`${l.label} (${l.horas.toFixed(2)} h)`);
   const ws1 = wb.addWorksheet('Agrupado');
-  const a = cabecalhoPlanilha(ws1, `Resumo da viagem — ${r.lojas.length} loja(s)`, ['Peças e horas somadas de todas as lojas', ...infoLojas]);
+  const a = cabecalhoPlanilha(ws1, `Resumo da viagem — ${r.lojas.length} loja(s)`, ['Peças e horas somadas de todas as lojas', ...infoLojas,
+    ...(r.equipes||[]).map(eq=>`Equipe na viagem (${eq.cliente}, ${eq.lojas} loja(s)): ` + textoMeta(eq).replace(/^Equipe /, ''))]);
   const l1 = r.agrupado.map((p,i)=>[i+1, p.nome, p.lojas, p.pecas, Number(p.horas.toFixed(2)), Math.round(p.ih)]);
   tabelaExcel(ws1, a, ['#','NOME','LOJAS','PEÇAS TOTAIS','HORAS TOTAIS','ITENS/HORA'], l1, {
     larguras:[6, larguraPara(l1.map(x=>x[1]), 30, 50), 8, 14, 14, 12],
@@ -3411,6 +3444,73 @@ async function exportarResumo(){
 /* =====================================================================
    PRODUTIVIDADE AUTOMÁTICA (robô do Gmail no Google Apps Script)
    ===================================================================== */
+/* ---- Meta da equipe: itens/hora por conferente, uma por cliente ---- */
+const CLIENTES_META = ['ARAUJO', 'DROGASIL', 'DROGA RAIA'];
+function clienteDe(texto){
+  const t = normalizarNome(texto);
+  if(/ARAUJO/.test(t)) return 'ARAUJO';
+  if(/DROGASIL/.test(t)) return 'DROGASIL';
+  if(/RAIA/.test(t)) return 'DROGA RAIA';
+  return 'OUTROS';
+}
+function metaDe(cliente){ const v = Number(((typeof robo !== 'undefined' && robo.metas) || {})[cliente]); return v > 0 ? v : 0; }
+// pecas ÷ horas somadas dos conferentes = itens/hora médio por conferente
+function equipeDe(pecas, horasPessoas, cliente, pessoas){
+  const ih = horasPessoas > 0 ? Math.round(pecas / horasPessoas) : 0;
+  const meta = metaDe(cliente);
+  return {ih, pecas, horasPessoas, pessoas, cliente, meta, pct: meta ? Math.round(100 * ih / meta) : null, bateu: meta ? ih >= meta : null};
+}
+function equipeLojaRobo(l){
+  const ps = pessoasDaLojaRobo(l.id);
+  const h = ps.reduce((t,p)=>t + (Number(p.horas)||0), 0);
+  const pecas = ps.reduce((t,p)=>t + (Number(p.pecas)||0), 0) || l.pecas;
+  return equipeDe(pecas, h, clienteDe((l.cliente||'') + ' ' + (l.loja||'')), ps.length);
+}
+function textoMeta(eq){
+  if(!eq.meta) return `Equipe ${fmtN(eq.ih)} itens/h por conferente · sem meta para ${eq.cliente}`;
+  return `Equipe ${fmtN(eq.ih)} itens/h por conferente · meta ${eq.cliente} ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '— META BATIDA' : '— abaixo da meta'}`;
+}
+function seloMeta(eq){
+  if(!eq.meta) return `<span class="selo-meta">Equipe ${fmtN(eq.ih)}/h · sem meta</span>`;
+  return `<span class="selo-meta ${eq.bateu?'ok':'nao'}">${eq.bateu?'✅':'❌'} Equipe ${fmtN(eq.ih)}/h · meta ${fmtN(eq.meta)} (${eq.pct}%)</span>`;
+}
+function caixaEquipe(eq){
+  const cls = eq.meta ? (eq.bateu ? 'ok' : 'nao') : '';
+  const falta = eq.meta && !eq.bateu ? ` · faltaram ${fmtN(eq.meta - eq.ih)} itens/h por conferente` : '';
+  return `<div class="caixa-equipe ${cls}"><span class="hint" style="margin:0">Produtividade da equipe${eq.pessoas ? ` (${eq.pessoas} conferente(s))` : ''}</span>
+    <b class="n">${fmtN(eq.ih)} itens/h ${eq.meta ? (eq.bateu ? '✅' : '❌') : ''}</b>
+    <span class="hint" style="margin:0">${eq.meta ? `Meta ${esc(eq.cliente)}: ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '· meta batida' : ''}${falta}` : `Sem meta para ${esc(eq.cliente)}. Defina em "Metas da equipe".`}</span></div>`;
+}
+// versão para imagem (cores fixas, fundo branco)
+function caixaEquipeImagem(eq){
+  const cor = eq.meta ? (eq.bateu ? ['#C6EFCE','#006100'] : ['#FFC7CE','#9C0006']) : ['#F3F1F8','#1c1530'];
+  return `<div style="background:${cor[0]};color:${cor[1]};border-radius:8px;padding:8px 10px;margin:0 0 12px">
+    <div style="font-size:12px">Produtividade da equipe${eq.pessoas ? ` (${eq.pessoas} conferentes)` : ''}</div>
+    <div style="font-size:20px;font-weight:700">${fmtN(eq.ih)} itens/h ${eq.meta ? (eq.bateu ? '✅' : '❌') : ''}</div>
+    <div style="font-size:12px">${eq.meta ? `Meta ${esc(eq.cliente)}: ${fmtN(eq.meta)} · ${eq.pct}%${eq.bateu ? ' · meta batida' : ''}` : 'Sem meta definida'}</div></div>`;
+}
+function linhasExcelEquipe(eq){
+  return [['Produtividade da equipe (itens/h por conferente)', eq.ih, '#,##0'], ['Meta ' + eq.cliente, eq.meta || 'sem meta', eq.meta ? '#,##0' : null],
+    ['Resultado', eq.meta ? `${eq.pct}% — ${eq.bateu ? 'META BATIDA' : 'abaixo da meta'}` : '—']];
+}
+function renderMetas(){
+  const div = document.getElementById('listaMetas'); if(!div) return;
+  const clientes = [...CLIENTES_META];
+  (robo.lojas||[]).forEach(l=>{ const c = clienteDe((l.cliente||'') + ' ' + (l.loja||'')); if(!clientes.includes(c)) clientes.push(c); });
+  const ativo = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.meta : null;
+  if(ativo) return;   // não redesenha enquanto a pessoa digita
+  div.innerHTML = clientes.map(c=>`<div class="metas-linha"><span>${esc(c)}</span>
+    <input type="number" inputmode="numeric" min="0" step="10" data-meta="${esc(c)}" value="${metaDe(c) || ''}" placeholder="ex.: 1200" onchange="definirMeta(this)"></div>`).join('');
+}
+function definirMeta(el){
+  const c = el.dataset.meta, v = Math.round(Number(el.value) || 0);
+  robo.metas = Object.assign({}, robo.metas || {});
+  if(v > 0) robo.metas[c] = v; else delete robo.metas[c];
+  salvarRobo(); marcarAlterado('robo');
+  el.blur(); renderRobo(); if(ultimaProdutividade) renderProdutividade(); if(ultimoResumo) renderResumo();
+  toast(v > 0 ? `Meta ${c}: ${fmtN(v)} itens/h por conferente.` : `Meta ${c} apagada.`);
+}
+
 const ROBO_KEY = 'central_robo_v1';
 let robo = Object.assign({link:'', lojas:[], pessoas:[], atualizadoEm:0, ultimoErro:''}, lsGet(ROBO_KEY, {}));
 let roboBuscando = false, roboLojaAberta = null, roboPedidoManual = false, roboBusca = '', roboConfAberto = null;
@@ -3573,9 +3673,12 @@ function renderRobo(){
   const lojas = busca ? todasLojas.filter(l=>normalizarNome(`${l.data} ${l.loja} ${l.num}`).includes(busca) || casaPessoa(l.id)) : todasLojas;
   const abrirLojas = roboUi.lojas || !!busca;
   const contLojas = busca ? `${lojas.length} de ${todasLojas.length}` : `${todasLojas.length}`;
-  document.getElementById('listaRobo').innerHTML = todasLojas.length ? `<div class="card"><button class="secao-toggle ${abrirLojas?'aberta':''}" onclick="alternarSecaoRobo('lojas')"><span class="seta">▶</span> Lojas recebidas <small>(${contLojas})</small></button>${
+  const comMeta = todasLojas.map(equipeLojaRobo).filter(eq=>eq.meta);
+  const placarMeta = comMeta.length ? ` · ✅ ${comMeta.filter(eq=>eq.bateu).length} de ${comMeta.length} na meta` : '';
+  renderMetas();
+  document.getElementById('listaRobo').innerHTML = todasLojas.length ? `<div class="card"><button class="secao-toggle ${abrirLojas?'aberta':''}" onclick="alternarSecaoRobo('lojas')"><span class="seta">▶</span> Lojas recebidas <small>(${contLojas}${placarMeta})</small></button>${
     !abrirLojas ? '' : !lojas.length ? '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>' : lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
-      <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small></span>
+      <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small>${seloMeta(equipeLojaRobo(l))}</span>
       <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('')}</div>` : '';
   renderDetalheRobo();
   const confTodos = porConferenteRobo().map((c,i)=>Object.assign({pos:i+1}, c));
@@ -3614,6 +3717,7 @@ function renderDetalheRobo(){
   const ps = pessoasDaLojaRobo(l.id);
   div.innerHTML = `<div class="card" id="cardRankingRobo"><h2>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''} · ${esc(l.data)}</h2>
     <p class="hint">${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h líquidas · ${fmtN(l.fora)} peça(s) fora das faixas</p>
+    ${caixaEquipe(equipeLojaRobo(l))}
     <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th></tr></thead><tbody>${
       ps.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.nome)}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`).join('')
     }</tbody></table></div>
@@ -3652,7 +3756,7 @@ function abrirResumoRobo(){
           if(pessoas[k]){ pessoas[k].pecas += p.pecas; return; }
           pessoas[k] = {nome:p.nome, pecas:p.pecas, horas:p.horas || l.horas};
         });
-        return {label: [l.data, l.num, l.loja].filter(Boolean).join(' - '), data:l.data, horas:l.horas, pessoas};
+        return {label: [l.data, l.num, l.loja].filter(Boolean).join(' - '), data:l.data, horas:l.horas, pessoas, cliente: clienteDe((l.cliente||'') + ' ' + (l.loja||''))};
       }));
       setTimeout(()=>{ const el = document.getElementById('resultadoResumo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
     });
@@ -3666,7 +3770,8 @@ async function exportarRankingRoboExcel(){
   const l = robo.lojas.find(x=>x.id===roboLojaAberta); if(!l || !excelDisponivel()) return;
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Produtividade');
-  const r = blocoInfo(ws, 1, [['Loja', [l.num, l.loja].filter(Boolean).join(' - ')], ['Data', l.data], ['Horas líquidas', l.horas, '0.00'], ['Peças fora das faixas', l.fora]]);
+  const r = blocoInfo(ws, 1, [['Loja', [l.num, l.loja].filter(Boolean).join(' - ')], ['Data', l.data], ['Horas líquidas', l.horas, '0.00'], ['Peças fora das faixas', l.fora],
+    ...linhasExcelEquipe(equipeLojaRobo(l))]);
   const linhas = pessoasDaLojaRobo(l.id).map((p,i)=>[i+1, p.nome + (p.atraso ? ` (CHEGOU ${p.chegada})` : ''), p.pecas, p.ih]);
   tabelaExcel(ws, r, ['Posição','Nome','Peças','Itens/hora'], linhas, {
     larguras:[20, larguraPara(linhas.map(x=>x[1]), 30, 50), 10, 11], alinhar:['center', null, 'right', 'right'], formatos:[null, null, '#,##0', '#,##0'], congelar:true });
@@ -3677,6 +3782,7 @@ function exportarRankingRoboPNG(){
   const ps = pessoasDaLojaRobo(l.id);
   let h = `<div style="font-size:20px;font-weight:700;margin-bottom:2px">${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</div>
     <div style="color:#62597a;font-size:13px;margin-bottom:12px">Produtividade · ${esc(l.data)} · ${String(l.horas).replace('.', ',')} h líquidas</div>
+    ${caixaEquipeImagem(equipeLojaRobo(l))}
     <table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="background:#e7e0f5;font-weight:700">
       <td style="padding:6px 8px">#</td><td style="padding:6px 8px">Nome</td><td style="padding:6px 8px;text-align:right">Peças</td><td style="padding:6px 8px;text-align:right">Itens/h</td></tr>`;
   ps.forEach((p,i)=>{ h += `<tr style="background:${i%2?'#faf8fd':'#ffffff'}"><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0">${i+1}</td>
@@ -3891,7 +3997,7 @@ function restaurarHistoricoDoBackup(lista){
 function fazerBackup(){
   const dados = {
     app:'central-inventario', versao:1, geradoEm:new Date().toISOString(),
-    dados:{ equipe:db, escala:lsGet(ESCALA_KEY, null), loja, quartos:lsGet(QUARTOS_KEY, {}), modelos:modelosProprios, historico, roboLink: robo.link }
+    dados:{ equipe:db, escala:lsGet(ESCALA_KEY, null), loja, quartos:lsGet(QUARTOS_KEY, {}), modelos:modelosProprios, historico, roboLink: robo.link, roboMetas: robo.metas || {} }
   };
   const d = new Date(), dd = n=>String(n).padStart(2,'0');
   const nome = `Backup Central - ${dd(d.getDate())}.${dd(d.getMonth()+1)}.${d.getFullYear()} ${dd(d.getHours())}h${dd(d.getMinutes())}.json`;
@@ -3919,6 +4025,7 @@ async function restaurarBackup(){
     atualizarTelasModelos();
   }
   restaurarHistoricoDoBackup(d.historico);
+  if(d.roboMetas && typeof d.roboMetas === 'object'){ robo.metas = d.roboMetas; salvarRobo(); marcarAlterado('robo'); renderRobo(); }
   if(typeof d.roboLink === 'string' && d.roboLink){ robo.link = d.roboLink; salvarRobo(); marcarAlterado('robo'); renderRobo(); atualizarDoRobo(false); if(!nuvemLigada) iniciarNuvem(); }
   msg.innerHTML = `<div class="msg ok">Backup restaurado: ${db.clt.length} CLT, ${db.fl.length} freelancers, ${loja.pessoas.length} pessoa(s) na lista da loja, ${modelosProprios.length} modelo(s) de setores, ${historicoAtivo().length} loja(s) no histórico.</div>`;
 }
@@ -3952,8 +4059,9 @@ registrarSinc('loja', ()=>loja,
 registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
   ()=>{ const q = lsGet(QUARTOS_KEY, {}); return !(q.coord || q.lider || q.motorista); });
-registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}}),
+registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}, metas: robo.metas || {}}),
   v=>{ if(!v || typeof v !== 'object') return;
+       if(v.metas && typeof v.metas === 'object'){ robo.metas = v.metas; salvarRobo(); renderRobo(); }
        if(v.nomes && typeof v.nomes === 'object'){ robo.nomes = v.nomes; aplicarNomesRobo(); salvarRobo(); renderRobo(); }
        if(typeof v.link === 'string' && v.link !== robo.link){ robo.link = v.link; salvarRobo(); renderRobo(); atualizarDoRobo(false); } },
   ()=>!robo.link);
