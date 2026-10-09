@@ -114,7 +114,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   --header-bg:linear-gradient(135deg,#2a1760 0%,#4a2a96 58%,#23336e 100%); --header-ink:#ffffff; --header-muted:rgba(255,255,255,.72); --header-ok:#b8f0c8;
   --ok:#1f6b3a; --ok-bg:#e3f2e7; --warn:#7a5200; --warn-bg:#fcf0cc;
   --danger:#a3262a; --danger-bg:#fbe3e3;
-  --atest:#1f4e8c; --atest-bg:#dfeaf8; --direto:#0e6b62; --direto-bg:#d9f2ef; --transf:#3f3f46; --transf-bg:#e7e7ea;
+  --atest:#1f4e8c; --atest-bg:#dfeaf8; --direto:#0e6b62; --direto-bg:#d9f2ef; --transf:#3f3f46; --transf-bg:#e7e7ea; --pegar:#7a3e00; --pegar-bg:#fde7cf;
   color-scheme:light;
   box-sizing:border-box;
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -126,7 +126,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   --header-bg:linear-gradient(135deg,#1c1238 0%,#2e1a5e 58%,#1a2350 100%); --header-ink:#ffffff; --header-muted:rgba(255,255,255,.68); --header-ok:#9fe0b4;
   --ok:#86d6a0; --ok-bg:#15301f; --warn:#f0c46a; --warn-bg:#352806;
   --danger:#f39a95; --danger-bg:#3a1719;
-  --atest:#9cc3f5; --atest-bg:#15294a; --direto:#7fded2; --direto-bg:#123a36; --transf:#d4d4dc; --transf-bg:#33323b;
+  --atest:#9cc3f5; --atest-bg:#15294a; --direto:#7fded2; --direto-bg:#123a36; --transf:#d4d4dc; --transf-bg:#33323b; --pegar:#ffb878; --pegar-bg:#3d2410;
     color-scheme:dark;
   }
 }
@@ -136,7 +136,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   --header-bg:linear-gradient(135deg,#1c1238 0%,#2e1a5e 58%,#1a2350 100%); --header-ink:#ffffff; --header-muted:rgba(255,255,255,.68); --header-ok:#9fe0b4;
   --ok:#86d6a0; --ok-bg:#15301f; --warn:#f0c46a; --warn-bg:#352806;
   --danger:#f39a95; --danger-bg:#3a1719;
-  --atest:#9cc3f5; --atest-bg:#15294a; --direto:#7fded2; --direto-bg:#123a36; --transf:#d4d4dc; --transf-bg:#33323b;
+  --atest:#9cc3f5; --atest-bg:#15294a; --direto:#7fded2; --direto-bg:#123a36; --transf:#d4d4dc; --transf-bg:#33323b; --pegar:#ffb878; --pegar-bg:#3d2410;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -152,7 +152,38 @@ header #statusNuvem.ok{color:var(--header-ok);}
 .btn-tema svg{width:16px;height:16px;}
 h1{font-size:1.35rem;margin:0 0 2px;font-weight:700;letter-spacing:-.01em;}
 header p{margin:0;font-size:.86rem;}
-main{max-width:760px;margin:0 auto;padding:0 16px 80px;}
+main{max-width:760px;margin:0 auto;padding:0 16px calc(104px + env(safe-area-inset-bottom,0px));}
+/* menu de ícones embaixo */
+nav#barra{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--panel);border-top:1px solid var(--border);padding:4px 6px calc(6px + env(safe-area-inset-bottom,0px));}
+nav#barra .itens{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));max-width:560px;margin:0 auto;}
+nav#barra button{background:none;border:none;color:var(--muted);font-family:inherit;font-size:.68rem;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;cursor:pointer;position:relative;}
+nav#barra .ic{display:flex;padding:4px 16px;border-radius:14px;transition:background .25s,color .25s;}
+nav#barra svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+nav#barra button.active{color:var(--accent);}
+nav#barra button.active .ic{background:var(--accent-soft);}
+nav#barra .badge{position:absolute;top:0;left:calc(50% + 8px);min-width:17px;height:17px;border-radius:9px;background:var(--danger);color:#fff;font-size:10px;line-height:17px;padding:0 4px;text-align:center;}
+/* painel do dia */
+.hero{background:var(--header-bg);color:#fff;border-radius:18px;padding:16px 16px 14px;margin:14px 0 12px;cursor:pointer;position:relative;overflow:hidden;}
+.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:140px;height:140px;border-radius:50%;border:1px solid rgba(255,255,255,.14);}
+.hero .rot{font-size:.76rem;color:rgba(255,255,255,.78);}
+.hero .big{font-size:2.1rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15;margin:4px 0 2px;}
+.hero .big span{font-size:.95rem;font-weight:600;}
+.barra-meta{height:10px;border-radius:6px;background:rgba(255,255,255,.18);overflow:hidden;margin-top:10px;}
+.barra-meta i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,#b69cff,#7fded2);transition:width 1s cubic-bezier(.2,.8,.2,1);}
+.hero.ruim .barra-meta i{background:linear-gradient(90deg,#f39a95,#ffb878);}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px;}
+.tile{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:11px 12px;cursor:pointer;min-width:0;}
+.tile .rot{font-size:.74rem;color:var(--muted);}
+.tile .n{font-size:1.35rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tile small{display:block;font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pend{display:flex;align-items:center;gap:10px;padding:11px 2px;border-top:1px solid var(--border);cursor:pointer;font-size:.88rem;}
+.pend:first-of-type{border-top:none;}
+.pend .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--warn);}
+.pend .dot.danger{background:var(--danger);} .pend .dot.ok{background:var(--ok);}
+.pend span{flex:1;min-width:0;}
+.pend .seta{color:var(--muted);}
+.atalhos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.atalhos button{margin:0;}
 .grupos{display:flex;gap:4px;margin:16px 0 4px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:4px;}
 .grupos button{flex:1;background:none;border:none;border-radius:7px;padding:9px 6px;font-size:.88rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;}
 .grupos button.active{background:var(--accent-fill);color:var(--accent-ink);}
@@ -188,6 +219,7 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
 @media (min-width:620px){ .resumo{grid-template-columns:repeat(var(--n,6),1fr);} .resumo .item{grid-column:auto;} }
 .resumo .item.transferido{border-left:4px solid var(--transf);}
 .resumo .item.direto{border-left:4px solid var(--direto);}
+.resumo .item.pegar{border-left:4px solid var(--pegar);}
 .chave-linha{display:flex;align-items:flex-start;gap:10px;margin:14px 0 4px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--bg);cursor:pointer;color:var(--text);font-size:.9rem;}
 .chave-linha input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent-fill);flex:none;}
 .chave-linha .hint{margin-top:2px;}
@@ -241,6 +273,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .caixa-equipe b.n{display:block;font-size:1.35rem;}
 .metas-linha{display:flex;align-items:center;gap:10px;margin-top:8px;}
 .metas-linha span{flex:1;font-size:.88rem;font-weight:600;}
+.metas-linha select{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 9px;color:var(--text);font-size:.88rem;font-family:inherit;}
 .metas-linha input{width:120px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 9px;color:var(--text);font-size:.9rem;font-family:inherit;}
 .tag-novo{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;background:var(--accent-soft);color:var(--accent);}
 .pessoa-nome{flex:1;font-size:.88rem;min-width:0;overflow-wrap:anywhere;}
@@ -251,6 +284,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .pill.caminho.on{background:var(--warn-bg);color:var(--warn);border-color:var(--warn);}
 .pill.atestado.on{background:var(--atest-bg);color:var(--atest);border-color:var(--atest);}
 .pill.direto.on{background:var(--direto-bg);color:var(--direto);border-color:var(--direto);}
+.pill.pegar.on{background:var(--pegar-bg);color:var(--pegar);border-color:var(--pegar);}
 .pill.transf-on{background:var(--transf-bg);color:var(--transf);border-color:var(--transf);}
 .pill.transferir{color:var(--accent);border-color:var(--accent);}
 .folha label{margin-top:10px;}
@@ -266,6 +300,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
   .pill-btns{flex:1 1 100%;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
   .pill-btns .pill{flex:1 1 0;min-width:0;padding:8px 4px;text-align:center;white-space:nowrap;}
   .pill-btns .pill.largo{grid-column:1 / -1;}
+  .pill-btns .pill.pegar{grid-column:span 2;}
 }
 .setor-row{display:flex;gap:8px;align-items:center;margin-top:6px;}
 .setor-row select,.setor-row input[type=text]{flex:1;min-width:0;width:auto;padding:8px 9px;font-size:.88rem;border-radius:7px;}
@@ -273,7 +308,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .setor-card h2{display:flex;justify-content:space-between;align-items:center;}
 .setor-card h2 small{font-weight:600;color:var(--muted);font-size:.75rem;}
 .acoes{display:flex;flex-wrap:wrap;}
-.sheet{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 6px 24px rgba(0,0,0,.3);max-width:560px;margin:0 auto;max-height:75vh;overflow:auto;}
+.sheet{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:60;max-height:calc(100vh - 140px);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 6px 24px rgba(0,0,0,.3);max-width:560px;margin:0 auto;max-height:75vh;overflow:auto;}
 .sheet .titulo{font-weight:700;font-size:.95rem;}
 .pessoa-nome small.hist{display:block;font-size:.72rem;font-weight:400;color:var(--muted);margin-top:2px;}
 .sugestoes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:.75rem;color:var(--muted);}
@@ -283,7 +318,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .aviso-local{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);border-radius:10px;padding:10px 12px;font-size:.82rem;margin:12px 0 0;line-height:1.35;}
 .aviso-local b{display:block;margin-bottom:2px;}
 .aviso-local button{margin-top:8px;background:transparent;color:var(--warn);border:1px solid var(--warn);border-radius:7px;padding:6px 10px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:inherit;}
-.toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--text);color:var(--bg);border-radius:9px;padding:10px 12px;font-size:.82rem;max-width:520px;margin:0 auto;}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--text);color:var(--bg);border-radius:9px;padding:10px 12px;font-size:.82rem;max-width:520px;margin:0 auto;}
 </style>
 </head>
 <body>
@@ -298,12 +333,10 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
   </div>
 </header>
 <main>
-  <div class="grupos">
-    <button data-grupo="viagem">Viagem</button>
-    <button data-grupo="loja">Loja</button>
-    <button data-grupo="prod">Produtividade</button>
-  </div>
   <nav id="subnav"></nav>
+
+  <!-- ================= INÍCIO: PAINEL DO DIA ================= -->
+  <section id="inicio" class="view"><div id="painel"></div></section>
 
   <!-- ================= VIAGEM: EQUIPE ================= -->
   <section id="equipe" class="view">
@@ -351,14 +384,14 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
   <section id="fichas" class="view">
     <div class="card">
       <h2>Ficha do conferente</h2>
-      <p class="hint">Junta numa tela só: cadastro, produtividade do robô, presença, atrasos, setores e convites de viagem. A nota (0 a 100) mistura itens/hora (70%) e presença (30%).</p>
+      <p class="hint">Junta numa tela só: cadastro, produtividade do robô, erros, presença, atrasos, setores e convites de viagem. A nota (0 a 100) mistura itens/hora (60%), presença (25%) e erros (15%).</p>
       <div class="busca-robo"><span class="lupa" aria-hidden="true">🔍</span>
         <input type="text" inputmode="search" id="buscaFicha" placeholder="Pesquisar nome" autocomplete="off" oninput="renderFichas()"></div>
       <div class="row">
         <div><label>Mostrar</label><select id="filtroFicha" class="full" onchange="renderFichas()">
           <option value="todos">Todos</option><option value="clt">Só CLT</option><option value="fl">Só freelancers</option></select></div>
         <div><label>Ordenar por</label><select id="ordemFicha" class="full" onchange="renderFichas()">
-          <option value="nota">Nota</option><option value="ih">Itens/hora</option><option value="faltas">Mais faltas</option><option value="atrasos">Mais atrasos</option><option value="nome">Nome (A-Z)</option></select></div>
+          <option value="nota">Nota</option><option value="ih">Itens/hora</option><option value="erros">Mais erros</option><option value="faltas">Mais faltas</option><option value="atrasos">Mais atrasos</option><option value="nome">Nome (A-Z)</option></select></div>
       </div>
     </div>
     <div id="fichaAberta"></div>
@@ -439,7 +472,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
       <label>Início programado (para os atrasos)</label>
       <input type="text" id="inicioLoja" inputmode="numeric" placeholder="22:00" style="max-width:120px">
       <label class="chave-linha"><input type="checkbox" id="bateVolta" onchange="alternarBateVolta(this.checked)">
-        <span><b>Bate e volta</b><span class="hint" style="display:block">Liga o status "Vai direto" para quem vai direto para a loja.</span></span></label>
+        <span><b>Bate e volta</b><span class="hint" style="display:block">Liga os status "Vai direto" (vai sozinho para a loja) e "Pegar no caminho" (a van pega no trajeto).</span></span></label>
       <p class="hint">Depois de carregar, toque em "Coord." ao lado de quem for coordenador — a planilha nem sempre marca isso de forma consistente.</p>
     </div>
     <div id="listaPresenca"></div>
@@ -512,9 +545,9 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
       <p class="hint" id="statusRobo">O robô do Gmail calcula cada loja assim que o e-mail chega. O app busca aqui quando você abre com internet.</p>
       <div id="avisoRobo"></div>
       <details id="boxMetas" style="margin-top:8px">
-        <summary class="hint" style="cursor:pointer">Metas da equipe (itens/hora por conferente)</summary>
+        <summary class="hint" style="cursor:pointer">Metas da equipe (itens/hora por conferente: drogaria 850 · supermercado 1.200)</summary>
         <div id="listaMetas"></div>
-        <p class="hint">Produtividade da equipe = peças da loja ÷ horas trabalhadas pelos conferentes (quem chegou atrasado conta só a partir da chegada). Deixe em branco o cliente sem meta.</p>
+        <p class="hint">Produtividade da equipe = peças da loja ÷ horas trabalhadas pelos conferentes (quem chegou atrasado conta só a partir da chegada). Se apagar o valor, volta para o padrão (drogaria 850, supermercado 1.200).</p>
       </details>
       <details id="boxLinkRobo" style="margin-top:8px">
         <summary class="hint" style="cursor:pointer">Link do robô</summary>
@@ -530,6 +563,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
     <div id="listaRobo"></div>
     <div id="detalheRobo"></div>
     <div id="conferentesRobo"></div>
+    <div id="rankingMes"></div>
 
     <h2 style="font-size:1rem;margin:22px 0 8px">Calcular manualmente</h2>
     <p class="hint" style="margin-bottom:10px">Para uma loja que não veio por e-mail: escolha os 3 arquivos abaixo.</p>
@@ -571,6 +605,13 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
     <div id="resultadoResumo"></div>
   </section>
 </main>
+<nav id="barra" aria-label="Menu principal"><div class="itens">
+      <button data-grupo="inicio"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></span>Início<span class="badge" id="badge-inicio" hidden></span></button>
+      <button data-grupo="viagem"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2.5"/><path d="M3 11h18"/><circle cx="7.5" cy="19" r="1.6"/><circle cx="16.5" cy="19" r="1.6"/></svg></span>Viagem<span class="badge" id="badge-viagem" hidden></span></button>
+      <button data-grupo="loja"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9l1.6-5h13.8l1.6 5"/><path d="M4.5 9v11h15V9"/><path d="M9.5 20v-5.5h5V20"/><path d="M3.5 9h17"/></svg></span>Loja<span class="badge" id="badge-loja" hidden></span></button>
+      <button data-grupo="prod"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V11"/><path d="M10 20V5"/><path d="M16 20v-7"/><path d="M21 20H3"/></svg></span>Produção<span class="badge" id="badge-prod" hidden></span></button>
+      <button data-grupo="fichas"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="11" r="2.4"/><path d="M5.6 16.5c.8-1.5 2-2.2 3.4-2.2s2.6.7 3.4 2.2"/><path d="M14.5 10h4M14.5 13.5h4"/></svg></span>Fichas<span class="badge" id="badge-fichas" hidden></span></button>
+</div></nav>
 
 <script>
 /* =====================================================================
@@ -813,9 +854,11 @@ function mostrarAvisoArquivo(){
    NAVEGAÇÃO (3 grupos + subabas)
    ===================================================================== */
 const GRUPOS = {
-  viagem: [['equipe','Equipe'],['fichas','Fichas'],['escala','Nova escala'],['quartos','Quartos']],
+  inicio: [['inicio','Início']],
+  viagem: [['equipe','Equipe'],['escala','Nova escala'],['quartos','Quartos']],
   loja:   [['presenca','Presença'],['setores','Setores'],['modelos','Modelos'],['historico','Histórico']],
-  prod:   [['produtividade','Produtividade']]
+  prod:   [['produtividade','Produtividade']],
+  fichas: [['fichas','Fichas']]
 };
 const UI_KEY = 'central_ui_v1';
 let ui = lsGet(UI_KEY, {view:'equipe', ultimaPorGrupo:{}});
@@ -824,13 +867,15 @@ function grupoDaView(id){ return Object.keys(GRUPOS).find(g=>GRUPOS[g].some(v=>v
 
 function abrirView(id){
   const g = grupoDaView(id);
-  document.querySelectorAll('.grupos button').forEach(b=>b.classList.toggle('active', b.dataset.grupo===g));
+  document.querySelectorAll('#barra button').forEach(b=>b.classList.toggle('active', b.dataset.grupo===g));
   const sub = document.getElementById('subnav');
   sub.innerHTML = GRUPOS[g].length>1 ? GRUPOS[g].map(([v,rot])=>`<button data-view="${v}" class="${v===id?'active':''}">${rot}</button>`).join('') : '';
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active', s.id===id));
   ui.view = id; ui.ultimaPorGrupo[g] = id; lsSet(UI_KEY, ui);
   if(id==='quartos') renderRJQuartosOptions();
   if(id==='fichas') renderFichas();
+  if(id==='inicio' && typeof renderPainel==='function') renderPainel();
+  if(typeof atualizarBadges==='function') atualizarBadges();
   if(id==='escala' && typeof dicaModoEscala==='function') dicaModoEscala();
   if(id==='escala' && typeof aplicarRespostasConvites==='function' && ultimaEscala && robo.link
      && [...ultimaEscala.selecionados, ...ultimaEscala.freelancers].some(p=>p.convite && p.convite.enviadoEm && !p.convite.resp)
@@ -841,10 +886,11 @@ function abrirView(id){
   if(id==='historico') renderHistorico();
   if(id==='produtividade' && typeof renderRobo==='function'){ renderRobo(); if(robo.link && Date.now() - (robo.atualizadoEm||0) > 5*60*1000) atualizarDoRobo(false); }
 }
-document.querySelector('.grupos').addEventListener('click', e=>{
-  const b = e.target.closest('button'); if(!b) return;
+document.getElementById('barra').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-grupo]'); if(!b) return;
   const g = b.dataset.grupo;
   abrirView(ui.ultimaPorGrupo[g] || GRUPOS[g][0][0]);
+  window.scrollTo({top:0, behavior:'smooth'});
 });
 document.getElementById('subnav').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(b) abrirView(b.dataset.view);
@@ -1355,7 +1401,8 @@ function renderEscala(){
   let html = `<div class="card"><h2>Equipe sugerida</h2>`;
   html += `<p class="hint">Escala ${e.menor14?'< 14':'≥ 14'} pessoas${e.isAraujo?' · viagem ARAUJO':''} — ${e.selecionados.length} conferente(s) + ${e.freelancers.length} freelancer(s)</p>`;
   html += `<div class="acoes"><button class="btn secondary" onclick="exportarEscala()">Exportar escala (Excel)</button>
-    <button class="btn" onclick="levarEscalaParaPresenca()">Levar para Presença</button></div>`;
+    <button class="btn" onclick="levarEscalaParaPresenca()">Levar para Presença</button>
+    <button class="btn secondary" onclick="exportarListaViagemPNG()">Lista final (imagem)</button></div>`;
   e.avisos.forEach(a=> html += `<div class="msg warn">${esc(a)}</div>`);
   html += painelConvites();
   html += `<div class="section-title">Conferentes CLT</div><div class="wrap-table"><table><thead><tr><th>Nome</th><th>Nível</th><th>Status</th><th>Trocar por</th></tr></thead><tbody>`;
@@ -1699,9 +1746,7 @@ const QUARTOS_KEY = 'central_quartosNomes_v1';
   });
 })();
 
-function montarQuartos(){
-  const div = document.getElementById('resultadoQuartos');
-  if(!ultimaEscala){ div.innerHTML = '<div class="msg warn">Gere uma escala na aba "Nova escala" primeiro.</div>'; return; }
+function calcularQuartos(){
   const coord = document.getElementById('nomeCoord').value.trim();
   const lider = document.getElementById('nomeLider').value.trim();
   const motorista = document.getElementById('nomeMotorista').value.trim();
@@ -1709,7 +1754,13 @@ function montarQuartos(){
   const grupo = [...ultimaEscala.selecionados, ...ultimaEscala.freelancers, ...rjSelecionados].filter(p=>p.status!=='Recusado');
   const homens = grupo.filter(p=>(p.genero||'').startsWith('M'));
   const mulheres = grupo.filter(p=>(p.genero||'').startsWith('F'));
-  ultimoQuartos = {coord, lider, motorista, homens, mulheres};
+  return {coord, lider, motorista, homens, mulheres};
+}
+function montarQuartos(){
+  const div = document.getElementById('resultadoQuartos');
+  if(!ultimaEscala){ div.innerHTML = '<div class="msg warn">Gere uma escala na aba "Nova escala" primeiro.</div>'; return; }
+  ultimoQuartos = calcularQuartos();
+  const {coord, lider, motorista, homens, mulheres} = ultimoQuartos;
 
   let html = '<div class="card"><h2>Quartos individuais</h2><ul>';
   [['Coordenador(a)',coord],['Líder Araújo',lider],['Motorista',motorista]].forEach(([label,nome])=>{
@@ -1779,7 +1830,7 @@ function corrigirModelos(lista){
 function migrarLoja(l){
   (l.pessoas||[]).forEach(p=>{ if(p.presenca==='ausente' || p.presenca==='suspensao') p.presenca = 'falta'; });
   corrigirChavesSetores(l.setores);
-  if(l.bateVolta === undefined) l.bateVolta = (l.pessoas||[]).some(p=>p.presenca==='direto');
+  if(l.bateVolta === undefined) l.bateVolta = (l.pessoas||[]).some(p=>p.presenca==='direto' || p.presenca==='pegar');
   return l;
 }
 migrarLoja(loja);
@@ -2046,7 +2097,7 @@ function usarModeloNaLoja(){
   if(loja.modelo===modeloEditando) abrirView('setores');
 }
 
-function salvarLoja(){ lsSet(LOJA_KEY, loja); marcarAlterado('loja'); }
+function salvarLoja(){ lsSet(LOJA_KEY, loja); marcarAlterado('loja'); if(typeof atualizarBadges === 'function') atualizarBadges(); }
 let editandoLista = false;
 let aoaAtual = null;
 let lojasDetectadas = [];
@@ -2465,6 +2516,7 @@ const STATUS = {
   presente: {rotulo:'Presente',  texto:'PRESENTE',  fundo:'#C6EFCE', tinta:'#006100'},
   caminho:  {rotulo:'A caminho', texto:'A CAMINHO', fundo:'#FFEB9C', tinta:'#9C5700'},
   direto:   {rotulo:'Vai direto', texto:'VAI DIRETO', fundo:'#D9F2EF', tinta:'#0E6B62'},
+  pegar:    {rotulo:'Pegar no caminho', texto:'PEGAR NO CAMINHO', fundo:'#FDE7CF', tinta:'#7A3E00'},
   falta:    {rotulo:'Falta',     texto:'FALTA',     fundo:'#FFC7CE', tinta:'#9C0006', contaFalta:true},
   atestado: {rotulo:'Atestado',  texto:'ATESTADO',  fundo:'#DDEBF7', tinta:'#1F4E79', contaFalta:true},
   transferido:{rotulo:'Transferido', texto:'TRANSFERIDO', fundo:'#E7E7EA', tinta:'#3F3F46', especial:true}
@@ -2487,7 +2539,7 @@ function contagemPresenca(){
   const estagPresentes = estagiarios.filter(p=>p.presenca==='presente').length;
   const estagFaltas = estagiarios.filter(p=>STATUS_FALTA.includes(p.presenca)).length;
   const conta = st => equipe.filter(p=>p.presenca===st).length;
-  const presentes = conta('presente'), caminho = conta('caminho'), direto = conta('direto');
+  const presentes = conta('presente'), caminho = conta('caminho'), direto = conta('direto'), pegar = conta('pegar');
   const faltaSimples = conta('falta'), atestados = conta('atestado');
   const faltas = faltaSimples + atestados; // atestado conta como falta
   const transferidos = conta('transferido'); // continuam nos Escalados, com caixa própria
@@ -2498,8 +2550,8 @@ function contagemPresenca(){
   // "Vai direto": ainda não chegou — vira Presente quando chegar na loja
   return {coordenadores: loja.pessoas.filter(p=>p.coordenador).length, escalados: equipe.length,
     instrutores, estagiarios: estagiarios.length, estagPresentes, estagFaltas,
-    presentes, presFree, presCLT: presentes - presFree, faltas, faltaSimples, atestados, caminho, direto, transferidos, recebidos, atrasos,
-    pendentes: equipe.length - presentes - faltas - caminho - direto - transferidos};
+    presentes, presFree, presCLT: presentes - presFree, faltas, faltaSimples, atestados, caminho, direto, pegar, transferidos, recebidos, atrasos,
+    pendentes: equipe.length - presentes - faltas - caminho - direto - pegar - transferidos};
 }
 function detalhePresentes(c){ return `${c.presCLT} CLT · ${c.presFree} free`; }
 function detalheFaltas(c){
@@ -2510,7 +2562,7 @@ function caixasResumo(c){
           ['Escalados',c.escalados,'',c.recebidos ? `inclui ${c.recebidos} recebido(s)` : ''],
           ...(c.estagiarios ? [['Estagiários',c.estagiarios,'',[c.estagPresentes ? c.estagPresentes + ' presente(s)' : '', c.estagFaltas ? c.estagFaltas + ' falta(s)' : ''].filter(Boolean).join(' · ')]] : []),
           ['Presentes',c.presentes,'presente',[c.presentes ? detalhePresentes(c) : '', c.atrasos ? `${c.atrasos} com atraso` : ''].filter(Boolean).join(' · ')],
-          ['A caminho',c.caminho,'caminho'], ...(loja.bateVolta ? [['Vai direto',c.direto,'direto']] : []),
+          ['A caminho',c.caminho,'caminho'], ...(loja.bateVolta ? [['Vai direto',c.direto,'direto'], ['Pegar no caminho',c.pegar,'pegar']] : []),
           ['Faltas',c.faltas,'falta',detalheFaltas(c)],
           ...(c.transferidos ? [['Transferidos',c.transferidos,'transferido']] : []),
           ['Pendentes',c.pendentes,'']];
@@ -2527,13 +2579,13 @@ function spansCaixas(n){
   return s;
 }
 // "Vai direto" só existe em loja de bate e volta
-function statusVisiveis(){ return Object.entries(STATUS).filter(([k,d])=>!d.especial && (k!=='direto' || loja.bateVolta)); }
+function statusVisiveis(){ return Object.entries(STATUS).filter(([k,d])=>!d.especial && ((k!=='direto' && k!=='pegar') || loja.bateVolta)); }
 function alternarBateVolta(ligar){
   const el = document.getElementById('bateVolta');
   if(!ligar){
-    const n = loja.pessoas.filter(p=>p.presenca==='direto').length;
-    if(n && !confirm(`${n} pessoa(s) marcada(s) como "Vai direto" voltarão para Pendente. Desligar o bate e volta?`)){ if(el) el.checked = true; return; }
-    loja.pessoas.forEach(p=>{ if(p.presenca==='direto') p.presenca = null; });
+    const n = loja.pessoas.filter(p=>p.presenca==='direto' || p.presenca==='pegar').length;
+    if(n && !confirm(`${n} pessoa(s) marcada(s) como "Vai direto" ou "Pegar no caminho" voltarão para Pendente. Desligar o bate e volta?`)){ if(el) el.checked = true; return; }
+    loja.pessoas.forEach(p=>{ if(p.presenca==='direto' || p.presenca==='pegar') p.presenca = null; });
   }
   loja.bateVolta = !!ligar;
   salvarLoja(); renderPresenca();
@@ -2587,6 +2639,7 @@ function renderPresenca(){
       <button class="btn" onclick="salvarNoHistorico()">Salvar no histórico</button>
       <button class="btn secondary" onclick="exportarPresencaPNG()">Imagem (PNG)</button>
       <button class="btn secondary" onclick="exportarPresencaExcel()">Excel</button>
+      <button class="btn secondary" onclick="exportarRelatorioFinalPNG()">Relatório final (imagem)</button>
       <button class="btn secondary" onclick="alternarEdicaoLista()">${editandoLista?'Concluir edição':'Editar lista'}</button>
       <button class="btn danger" onclick="limparPresenca()">Limpar lista</button>
     </div>`;
@@ -2798,8 +2851,8 @@ function salvarNoHistorico(){
   if(!nomeLoja){ toast('Coloque o nome da loja (aba Presença) antes de salvar.'); return false; }
   const chave = dataParaChave(loja.data) || dataParaChave(hojeBR());
   const c = contagemPresenca();
-  const semFinal = c.caminho + c.direto + c.pendentes;
-  if(semFinal && !confirm(`${semFinal} pessoa(s) ainda sem status final (a caminho, vai direto ou pendente). Salvar assim mesmo?`)) return false;
+  const semFinal = c.caminho + c.direto + c.pegar + c.pendentes;
+  if(semFinal && !confirm(`${semFinal} pessoa(s) ainda sem status final (a caminho, vai direto, pegar no caminho ou pendente). Salvar assim mesmo?`)) return false;
   const id = idRegistro(nomeLoja, chave);
   const existente = historico.find(r=>r.id===id && !r.excluido);
   if(existente && !confirm(`Já existe "${nomeLoja}" de ${chaveParaBR(chave)} no histórico. Substituir pelo registro atual?`)) return false;
@@ -3241,7 +3294,7 @@ async function calcularProdutividade(){
 
 function equipeManual(p){
   const pecas = p.resultados.reduce((t,r)=>t + r.pecas, 0);
-  return equipeDe(pecas, p.horas * p.resultados.length, clienteDe(p.loja), p.resultados.length);
+  return equipeDe(pecas, p.horas * p.resultados.length, clienteDe('', p.loja), p.resultados.length);
 }
 function renderProdutividade(){
   const p = ultimaProdutividade;
@@ -3295,8 +3348,8 @@ function exportarConferentesRoboPNG(){
   const conf = porConferenteRobo(); if(!conf.length) return;
   const lojas = lojasRoboOrdenadas();
   let h = cabecalhoImagem('Produtividade por conferente', `${lojas.length} loja(s) de ${esc(lojas[lojas.length-1].data)} a ${esc(lojas[0].data)}`);
-  h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h','Média'], conf.map((c,i)=>[i+1, esc(c.nome), c.lojas, fmtN(c.pecas), fmtN(c.ih), fmtN(c.media)]), ['', '', 'center', 'right', 'right', 'right'], 4);
-  h += `<div style="color:#62597a;font-size:11px;margin-top:10px">Itens/h = peças somadas ÷ horas somadas · Média = média dos itens/hora de cada loja</div>`;
+  h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h','Erros','Precisão'], conf.map((c,i)=>[i+1, esc(c.nome), c.lojas, fmtN(c.pecas), fmtN(c.ih), c.lojasComRel ? c.erros : '—', fmtPct(c.precisao)]), ['', '', 'center', 'right', 'right', 'center', 'right'], 4);
+  h += `<div style="color:#62597a;font-size:11px;margin-top:10px">Itens/h = peças somadas ÷ horas somadas · Erros = itens ajustados nas seções da pessoa · Precisão = peças sem ajuste ÷ peças contadas (lojas com relatório de ajustes)</div>`;
   gerarImagem(h, `Produtividade por conferente - ${dataHojeArquivo()}.png`);
 }
 
@@ -3390,7 +3443,7 @@ function calcularResumo(lojas){
   // produtividade da equipe na viagem, por cliente (peças ÷ horas somadas de todos os conferentes)
   const porCliente = {};
   lojas.forEach(lj=>{
-    const c = lj.cliente || clienteDe(lj.label);
+    const c = lj.cliente || clienteDe('', lj.label);
     const x = porCliente[c] || (porCliente[c] = {pecas:0, horas:0, lojas:0});
     x.lojas++;
     Object.values(lj.pessoas).forEach(p=>{ x.pecas += p.pecas; x.horas += (p.horas || lj.horas); });
@@ -3445,32 +3498,57 @@ async function exportarResumo(){
    PRODUTIVIDADE AUTOMÁTICA (robô do Gmail no Google Apps Script)
    ===================================================================== */
 /* ---- Meta da equipe: itens/hora por conferente, uma por cliente ---- */
-const CLIENTES_META = ['ARAUJO', 'DROGASIL', 'DROGA RAIA'];
-function clienteDe(texto){
-  const t = normalizarNome(texto);
+const SEGMENTOS = {DROGARIA:{rotulo:'Drogaria', padrao:850}, SUPERMERCADO:{rotulo:'Supermercado', padrao:1200}, OUTRO:{rotulo:'Outro (sem meta)', padrao:0, semMeta:true}};
+const RE_DROGARIA = /ARAUJO|DROGASIL|RAIA|DROGARIA|DROGA |FARMA|PACHECO|PAGUE MENOS|PANVEL|NISSEI|VENANCIO|SAO JOAO|INDIANA/;
+const RE_SUPER = /SUPERMERCADO|SUPER |HIPER|ATACAD|MERCADO|MART|ASSAI|CARREFOUR|VERDEMAR|EPA |APOIO|BAHAMAS|DMA|BH /;
+// nome do cliente (o que aparece na tela)
+function clienteDe(cliente, loja){
+  const t = normalizarNome((cliente||'') + ' ' + (loja||'')) + ' ';
   if(/ARAUJO/.test(t)) return 'ARAUJO';
   if(/DROGASIL/.test(t)) return 'DROGASIL';
   if(/RAIA/.test(t)) return 'DROGA RAIA';
-  return 'OUTROS';
+  if(/PACHECO|DPSP/.test(t)) return 'DROGARIA PACHECO';
+  if(/CALVIN KLEIN/.test(t)) return 'CALVIN KLEIN';
+  const c = normalizarNome(cliente);
+  if(c) return c;
+  // sem cliente no robô: as duas primeiras palavras do nome da loja ("FARID MARIANA JARDINS" → "FARID MARIANA")
+  const pal = normalizarNome(loja).split(' ').filter(Boolean);
+  return pal.slice(0, 2).join(' ') || 'OUTROS';
 }
-function metaDe(cliente){ const v = Number(((typeof robo !== 'undefined' && robo.metas) || {})[cliente]); return v > 0 ? v : 0; }
+// drogaria ou supermercado: o que ele escolheu para o cliente vale primeiro; senão, pelo nome
+function segmentoDe(cliente){
+  const esc = (typeof robo !== 'undefined' && robo.segmentos) ? robo.segmentos[cliente] : null;
+  if(esc && SEGMENTOS[esc]) return esc;
+  const t = ' ' + normalizarNome(cliente) + ' ';
+  if(RE_DROGARIA.test(t)) return 'DROGARIA';
+  if(RE_SUPER.test(t)) return 'SUPERMERCADO';
+  return 'OUTRO';   // cliente desconhecido fica sem meta até ele escolher em "Cada cliente é…"
+}
+function metaDe(cliente){
+  const seg = segmentoDe(cliente);
+  if(SEGMENTOS[seg].semMeta) return 0;
+  const v = Number(((typeof robo !== 'undefined' && robo.metas) || {})[seg]);
+  return v > 0 ? v : SEGMENTOS[seg].padrao;
+}
 // pecas ÷ horas somadas dos conferentes = itens/hora médio por conferente
 function equipeDe(pecas, horasPessoas, cliente, pessoas){
   const ih = horasPessoas > 0 ? Math.round(pecas / horasPessoas) : 0;
-  const meta = metaDe(cliente);
-  return {ih, pecas, horasPessoas, pessoas, cliente, meta, pct: meta ? Math.round(100 * ih / meta) : null, bateu: meta ? ih >= meta : null};
+  const meta = ih > 0 ? metaDe(cliente) : 0;   // sem horário da contagem não dá para comparar com a meta
+  const segmento = SEGMENTOS[segmentoDe(cliente)].rotulo.toLowerCase();
+  return {ih, pecas, horasPessoas, pessoas, cliente, segmento, meta, pct: meta ? Math.round(100 * ih / meta) : null, bateu: meta ? ih >= meta : null};
 }
 function equipeLojaRobo(l){
   const ps = pessoasDaLojaRobo(l.id);
   const h = ps.reduce((t,p)=>t + (Number(p.horas)||0), 0);
   const pecas = ps.reduce((t,p)=>t + (Number(p.pecas)||0), 0) || l.pecas;
-  return equipeDe(pecas, h, clienteDe((l.cliente||'') + ' ' + (l.loja||'')), ps.length);
+  return equipeDe(pecas, h, clienteDe(l.cliente, l.loja), ps.length);
 }
 function textoMeta(eq){
   if(!eq.meta) return `Equipe ${fmtN(eq.ih)} itens/h por conferente · sem meta para ${eq.cliente}`;
-  return `Equipe ${fmtN(eq.ih)} itens/h por conferente · meta ${eq.cliente} ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '— META BATIDA' : '— abaixo da meta'}`;
+  return `Equipe ${fmtN(eq.ih)} itens/h por conferente · meta ${eq.segmento} ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '— META BATIDA' : '— abaixo da meta'}`;
 }
 function seloMeta(eq){
+  if(!eq.ih) return `<span class="selo-meta">Sem horário da contagem: itens/h não calculado</span>`;
   if(!eq.meta) return `<span class="selo-meta">Equipe ${fmtN(eq.ih)}/h · sem meta</span>`;
   return `<span class="selo-meta ${eq.bateu?'ok':'nao'}">${eq.bateu?'✅':'❌'} Equipe ${fmtN(eq.ih)}/h · meta ${fmtN(eq.meta)} (${eq.pct}%)</span>`;
 }
@@ -3479,7 +3557,7 @@ function caixaEquipe(eq){
   const falta = eq.meta && !eq.bateu ? ` · faltaram ${fmtN(eq.meta - eq.ih)} itens/h por conferente` : '';
   return `<div class="caixa-equipe ${cls}"><span class="hint" style="margin:0">Produtividade da equipe${eq.pessoas ? ` (${eq.pessoas} conferente(s))` : ''}</span>
     <b class="n">${fmtN(eq.ih)} itens/h ${eq.meta ? (eq.bateu ? '✅' : '❌') : ''}</b>
-    <span class="hint" style="margin:0">${eq.meta ? `Meta ${esc(eq.cliente)}: ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '· meta batida' : ''}${falta}` : `Sem meta para ${esc(eq.cliente)}. Defina em "Metas da equipe".`}</span></div>`;
+    <span class="hint" style="margin:0">${eq.meta ? `Meta ${esc(eq.segmento)} (${esc(eq.cliente)}): ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '· meta batida' : ''}${falta}` : `Sem meta para ${esc(eq.cliente)}. Defina em "Metas da equipe".`}</span></div>`;
 }
 // versão para imagem (cores fixas, fundo branco)
 function caixaEquipeImagem(eq){
@@ -3487,32 +3565,41 @@ function caixaEquipeImagem(eq){
   return `<div style="background:${cor[0]};color:${cor[1]};border-radius:8px;padding:8px 10px;margin:0 0 12px">
     <div style="font-size:12px">Produtividade da equipe${eq.pessoas ? ` (${eq.pessoas} conferentes)` : ''}</div>
     <div style="font-size:20px;font-weight:700">${fmtN(eq.ih)} itens/h ${eq.meta ? (eq.bateu ? '✅' : '❌') : ''}</div>
-    <div style="font-size:12px">${eq.meta ? `Meta ${esc(eq.cliente)}: ${fmtN(eq.meta)} · ${eq.pct}%${eq.bateu ? ' · meta batida' : ''}` : 'Sem meta definida'}</div></div>`;
+    <div style="font-size:12px">${eq.meta ? `Meta ${esc(eq.segmento)}: ${fmtN(eq.meta)} · ${eq.pct}%${eq.bateu ? ' · meta batida' : ''}` : 'Sem meta definida'}</div></div>`;
 }
 function linhasExcelEquipe(eq){
-  return [['Produtividade da equipe (itens/h por conferente)', eq.ih, '#,##0'], ['Meta ' + eq.cliente, eq.meta || 'sem meta', eq.meta ? '#,##0' : null],
+  return [['Produtividade da equipe (itens/h por conferente)', eq.ih, '#,##0'], ['Meta ' + eq.segmento + ' (' + eq.cliente + ')', eq.meta || 'sem meta', eq.meta ? '#,##0' : null],
     ['Resultado', eq.meta ? `${eq.pct}% — ${eq.bateu ? 'META BATIDA' : 'abaixo da meta'}` : '—']];
 }
 function renderMetas(){
   const div = document.getElementById('listaMetas'); if(!div) return;
-  const clientes = [...CLIENTES_META];
-  (robo.lojas||[]).forEach(l=>{ const c = clienteDe((l.cliente||'') + ' ' + (l.loja||'')); if(!clientes.includes(c)) clientes.push(c); });
-  const ativo = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.meta : null;
+  const ativo = document.activeElement && document.activeElement.dataset ? (document.activeElement.dataset.meta || document.activeElement.dataset.seg) : null;
   if(ativo) return;   // não redesenha enquanto a pessoa digita
-  div.innerHTML = clientes.map(c=>`<div class="metas-linha"><span>${esc(c)}</span>
-    <input type="number" inputmode="numeric" min="0" step="10" data-meta="${esc(c)}" value="${metaDe(c) || ''}" placeholder="ex.: 1200" onchange="definirMeta(this)"></div>`).join('');
+  const clientes = ['ARAUJO', 'DROGASIL', 'DROGA RAIA'];
+  (robo.lojas||[]).forEach(l=>{ const c = clienteDe(l.cliente, l.loja); if(!clientes.includes(c)) clientes.push(c); });
+  div.innerHTML = Object.entries(SEGMENTOS).filter(([k,sg])=>!sg.semMeta).map(([k,sg])=>`<div class="metas-linha"><span>${sg.rotulo}</span>
+      <input type="number" inputmode="numeric" min="0" step="10" data-meta="${k}" value="${(robo.metas && robo.metas[k]) || sg.padrao}" onchange="definirMeta(this)"></div>`).join('')
+    + `<div class="section-title" style="margin-top:12px">Cada cliente é…</div>`
+    + clientes.map(c=>`<div class="metas-linha"><span>${esc(c)}</span>
+      <select data-seg="${esc(c)}" onchange="definirSegmento(this)">${Object.entries(SEGMENTOS).map(([k,sg])=>`<option value="${k}" ${segmentoDe(c)===k?'selected':''}>${sg.rotulo}</option>`).join('')}</select></div>`).join('');
 }
 function definirMeta(el){
-  const c = el.dataset.meta, v = Math.round(Number(el.value) || 0);
+  const seg = el.dataset.meta, v = Math.round(Number(el.value) || 0);
   robo.metas = Object.assign({}, robo.metas || {});
-  if(v > 0) robo.metas[c] = v; else delete robo.metas[c];
+  if(v > 0) robo.metas[seg] = v; else delete robo.metas[seg];
   salvarRobo(); marcarAlterado('robo');
   el.blur(); renderRobo(); if(ultimaProdutividade) renderProdutividade(); if(ultimoResumo) renderResumo();
-  toast(v > 0 ? `Meta ${c}: ${fmtN(v)} itens/h por conferente.` : `Meta ${c} apagada.`);
+  toast(`Meta ${SEGMENTOS[seg].rotulo.toLowerCase()}: ${fmtN(v > 0 ? v : SEGMENTOS[seg].padrao)} itens/h por conferente.`);
+}
+function definirSegmento(el){
+  robo.segmentos = Object.assign({}, robo.segmentos || {}); robo.segmentos[el.dataset.seg] = el.value;
+  salvarRobo(); marcarAlterado('robo');
+  el.blur(); renderRobo(); if(ultimaProdutividade) renderProdutividade(); if(ultimoResumo) renderResumo();
 }
 
 const ROBO_KEY = 'central_robo_v1';
 let robo = Object.assign({link:'', lojas:[], pessoas:[], atualizadoEm:0, ultimoErro:''}, lsGet(ROBO_KEY, {}));
+if(robo.metas) Object.keys(robo.metas).forEach(k=>{ if(!SEGMENTOS[k]) delete robo.metas[k]; });
 let roboBuscando = false, roboLojaAberta = null, roboPedidoManual = false, roboBusca = '', roboConfAberto = null;
 const ROBO_UI_KEY = 'central_robo_ui_v1';
 let roboUi = Object.assign({lojas:false, conf:false}, lsGet(ROBO_UI_KEY, {}));
@@ -3541,7 +3628,14 @@ function normLojaRobo(o){
   const m = id.match(/^p(\d{4})(\d{2})(\d{2})_(.+)$/);
   return {id, data: m ? `${m[3]}/${m[2]}/${m[1]}` : dataRobo(o['DATA']), cliente:String(o['CLIENTE']||''), num: m ? m[4] : String(o['Nº LOJA']||''), loja:String(o['LOJA']||''),
     inicio:horaRobo(o['INÍCIO']), fim:horaRobo(o['FIM']), horas:Number(o['HORAS LÍQUIDAS'])||0, pecas:Number(o['PEÇAS'])||0,
-    fora:Number(o['FORA DAS FAIXAS'])||0, conferentes:Number(o['CONFERENTES'])||0, obs:String(o['OBS.']||'')};
+    fora:Number(o['FORA DAS FAIXAS'])||0, conferentes:Number(o['CONFERENTES'])||0, obs:String(o['OBS.']||''),
+    // erros (relatório de itens ajustados): vazio = a loja veio sem esse relatório
+    errosItens:numOuNulo(o['ERROS (ITENS)']), pecasAjustadas:numOuNulo(o['PEÇAS AJUSTADAS'])};
+}
+function numOuNulo(v){ return (v === '' || v === null || v === undefined) ? null : (Number(v) || 0); }
+function normErroRobo(o){
+  return {id:String(o['ID']||''), nome:nomeCompletoCadastro(o['NOME']), secao:String(o['SEÇÃO']||''), setor:String(o['SETOR']||''), codigo:String(o['CÓDIGO']||''),
+    descricao:String(o['DESCRIÇÃO']||''), q1:Number(o['QTD 1ª CONTAGEM'])||0, qa:Number(o['QTD AJUSTADA'])||0, dif:Number(o['DIFERENÇA'])||0, motivo:String(o['MOTIVO']||'')};
 }
 // o PENDCTL corta o nome em 30 letras ("THIAGO EVANGELISTA JESUS DA SI"): completa pelo cadastro quando só um nome bate
 function nomeCompletoCadastro(nome){
@@ -3554,7 +3648,8 @@ function nomeCompletoCadastro(nome){
 }
 function normPessoaRobo(o){
   return {id:String(o['ID']||''), pos:Number(o['POSIÇÃO'])||0, nome:nomeCompletoCadastro(o['NOME']), pecas:Number(o['PEÇAS'])||0,
-    horas:Number(o['HORAS LÍQUIDAS'])||0, ih:Number(o['ITENS/HORA'])||0};
+    horas:Number(o['HORAS LÍQUIDAS'])||0, ih:Number(o['ITENS/HORA'])||0,
+    erros:numOuNulo(o['ERROS']), pecasErro:numOuNulo(o['PEÇAS AJUSTADAS']), secoesErro:String(o['SEÇÕES COM ERRO']||'')};
 }
 function salvarLinkRobo(){
   const v = (document.getElementById('linkRobo').value || '').trim();
@@ -3587,6 +3682,7 @@ async function atualizarDoRobo(manual, soConvites){
     const antes = new Set(robo.lojas.map(l=>l.id));
     robo.lojas = (j.lojas||[]).map(normLojaRobo).filter(l=>l.id);
     robo.pessoas = (j.pessoas||[]).map(normPessoaRobo).filter(p=>p.id && p.nome);
+    if(Array.isArray(j.erros)) robo.erros = j.erros.map(normErroRobo).filter(e=>e.id);
     aplicarNomesRobo();
     if(Array.isArray(j.convites)) robo.convites = j.convites;
     robo.atualizadoEm = Date.now(); robo.ultimoErro = '';
@@ -3596,6 +3692,13 @@ async function atualizarDoRobo(manual, soConvites){
     else if(soConvites) toast(Array.isArray(j.convites) ? 'Nenhuma resposta nova.' : 'O robô ainda está com a versão antiga (sem convites).');
     const novas = robo.lojas.filter(l=>!antes.has(l.id)).length;
     if(!soConvites && (manual || (novas && antes.size))) toast(novas ? `${novas} loja(s) nova(s) do robô.` : 'Tudo em dia: nenhuma loja nova no Gmail.');
+    // aviso: loja nova que ficou abaixo da meta da equipe
+    if(antes.size){
+      ajustarAtrasosRobo();
+      const abaixo = robo.lojas.filter(l=>!antes.has(l.id)).map(l=>({l, eq:equipeLojaRobo(l)})).filter(x=>x.eq.meta && !x.eq.bateu);
+      if(abaixo.length) setTimeout(()=>toast('⚠️ Abaixo da meta: ' + abaixo.map(x=>`${x.l.loja} ${fmtN(x.eq.ih)}/h (${x.eq.pct}%)`).join(' · '), 9000), manual ? 2500 : 0);
+    }
+    if(typeof renderPainel === 'function' && document.getElementById('inicio').classList.contains('active')) renderPainel();
     if(manual && j.processamento && /erro|consegui/i.test(j.processamento)) toast(j.processamento, 6000);
   }catch(e){
     const m = (e && e.message) || '';
@@ -3644,19 +3747,46 @@ function ajustarAtrasosRobo(){
 function lojasRoboOrdenadas(){ return robo.lojas.slice().sort((a,b)=>dataParaChave(b.data)-dataParaChave(a.data) || b.id.localeCompare(a.id)); }
 function pessoasDaLojaRobo(id){ return robo.pessoas.filter(p=>p.id===id).sort((a,b)=>b.ih-a.ih || a.pos-b.pos); }
 const marcaAtrasoRobo = p => p.atraso ? ` <span class="hint" style="color:var(--danger)">⏰ chegou ${esc(p.chegada)}</span>` : '';
-function porConferenteRobo(){
+function porConferenteRobo(ids){
   const est = {};
   robo.pessoas.forEach(p=>{
+    if(ids && !ids.has(p.id)) return;
     const k = normalizarNome(p.nome);
-    const e = est[k] || (est[k] = {nome:p.nome, lojas:new Set(), pecas:0, horas:0, ihs:[], melhor:0});
+    const e = est[k] || (est[k] = {nome:p.nome, lojas:new Set(), pecas:0, horas:0, ihs:[], melhor:0, erros:0, pecasErro:0, pecasComRel:0, lojasComRel:0});
     e.lojas.add(p.id); e.pecas += p.pecas; e.horas += p.horas;
+    if(p.erros !== null && p.erros !== undefined){ e.erros += p.erros; e.pecasErro += (p.pecasErro||0); e.pecasComRel += p.pecas; e.lojasComRel++; }
     if(p.ih){ e.ihs.push(p.ih); e.melhor = Math.max(e.melhor, p.ih); }
   });
   return Object.values(est).map(e=>({nome:e.nome, lojas:e.lojas.size, pecas:e.pecas, horas:e.horas,
-      ih: e.horas ? Math.round(e.pecas / e.horas) : 0, media: e.ihs.length ? Math.round(e.ihs.reduce((a,b)=>a+b,0) / e.ihs.length) : 0, melhor:e.melhor}))
+      ih: e.horas ? Math.round(e.pecas / e.horas) : 0, media: e.ihs.length ? Math.round(e.ihs.reduce((a,b)=>a+b,0) / e.ihs.length) : 0, melhor:e.melhor,
+      erros:e.erros, pecasErro:e.pecasErro, pecasComRel:e.pecasComRel, lojasComRel:e.lojasComRel, precisao: precisaoDe(e.pecasComRel, e.pecasErro)}))
     .sort((a,b)=>b.ih-a.ih);
 }
 const fmtN = n => Number(n||0).toLocaleString('pt-BR');
+// precisão = peças que não precisaram de ajuste ÷ peças contadas (só lojas que mandaram o relatório de itens ajustados)
+function precisaoDe(pecas, pecasErro){ return pecas > 0 ? Math.max(0, 100 - 100 * (pecasErro||0) / pecas) : null; }
+const fmtPct = v => v === null || v === undefined ? '—' : v.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + '%';
+function errosDaPessoa(id, nome){ return (robo.erros||[]).filter(e=>e.id===id && mesmoNomeFlex(e.nome, nome)); }
+function textoErrosLoja(l){
+  if(l.errosItens === null || l.errosItens === undefined) return 'Sem relatório de itens ajustados nesta loja (erros não calculados).';
+  return `Erros da equipe: ${fmtN(l.errosItens)} item(ns) · ${fmtN(l.pecasAjustadas)} peça(s) ajustada(s).`;
+}
+function celulaErros(p){
+  if(p.erros === null || p.erros === undefined) return '<td class="hint">—</td>';
+  return `<td>${p.erros ? `<b style="color:var(--danger)">${p.erros}</b>` : '<span style="color:var(--ok)">0</span>'}</td>`;
+}
+// lista de erros de uma pessoa numa loja (ou de toda a loja)
+function abrirErros(id, nome){
+  const l = robo.lojas.find(x=>x.id===id); if(!l) return;
+  const lista = nome ? errosDaPessoa(id, nome) : (robo.erros||[]).filter(e=>e.id===id);
+  const titulo = nome ? `Erros de ${esc(nome)}` : `Erros da equipe na loja`;
+  const p = nome ? robo.pessoas.find(x=>x.id===id && mesmoNomeFlex(x.nome, nome)) : null;
+  const corpo = `<p class="hint">${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''} · ${esc(l.data)}${p ? ` · ${fmtN(p.pecas)} peças contadas · precisão ${fmtPct(precisaoDe(p.pecas, p.pecasErro))}` : ''}</p>
+    ${!lista.length ? '<p class="hint">Nenhum item ajustado.</p>' : `<div class="wrap-table" style="max-height:45vh;overflow:auto"><table><thead><tr>${nome ? '' : '<th>Quem</th>'}<th>Seção</th><th>Produto</th><th>1ª</th><th>Ajust.</th><th>Motivo</th></tr></thead><tbody>${
+      lista.map(e=>`<tr>${nome ? '' : `<td>${esc(e.nome)}</td>`}<td>${esc(e.secao)}</td><td>${esc(e.descricao)}<small class="hint" style="display:block">${esc(e.codigo)}</small></td><td>${e.q1}</td><td>${e.qa}</td><td class="hint">${esc(e.motivo)}</td></tr>`).join('')}</tbody></table></div>`}`;
+  const box = abrirFolha(titulo, corpo, nome ? 'Abrir ficha' : 'Fechar', ()=>{ if(nome) abrirFicha(nome); });
+  return box;
+}
 function renderRobo(){
   const st = document.getElementById('statusRobo'); if(!st) return;
   ajustarAtrasosRobo();
@@ -3678,7 +3808,7 @@ function renderRobo(){
   renderMetas();
   document.getElementById('listaRobo').innerHTML = todasLojas.length ? `<div class="card"><button class="secao-toggle ${abrirLojas?'aberta':''}" onclick="alternarSecaoRobo('lojas')"><span class="seta">▶</span> Lojas recebidas <small>(${contLojas}${placarMeta})</small></button>${
     !abrirLojas ? '' : !lojas.length ? '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>' : lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
-      <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small>${seloMeta(equipeLojaRobo(l))}</span>
+      <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças${l.errosItens !== null && l.errosItens !== undefined ? ` · ${l.errosItens} erro(s)` : ''} · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small>${seloMeta(equipeLojaRobo(l))}</span>
       <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('')}</div>` : '';
   renderDetalheRobo();
   const confTodos = porConferenteRobo().map((c,i)=>Object.assign({pos:i+1}, c));
@@ -3686,12 +3816,14 @@ function renderRobo(){
   const abrirConf = roboUi.conf || !!busca;
   const contConf = busca ? `${conf.length} de ${confTodos.length}` : `${confTodos.length}`;
   document.getElementById('conferentesRobo').innerHTML = confTodos.length ? `<div class="card"><button class="secao-toggle ${abrirConf?'aberta':''}" onclick="alternarSecaoRobo('conf')"><span class="seta">▶</span> Por conferente <small>(${contConf})</small></button>
-    ${!abrirConf ? '' : `<p class="hint" style="margin-top:6px">Todas as lojas recebidas do robô. Itens/hora (agrupado) = peças somadas ÷ horas somadas. Toque num nome para ver as lojas dele(a).</p>
-    ${!conf.length ? '<p class="hint">Nenhum conferente encontrado.</p>' : `<div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Média</th></tr></thead><tbody>${
-      conf.map(c=>`<tr class="linha-clicavel" data-conf="${esc(normalizarNome(c.nome))}"><td>${c.pos}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtN(c.ih)}</td><td>${fmtN(c.media)}</td></tr>`).join('')
+    ${!abrirConf ? '' : `<p class="hint" style="margin-top:6px">Relatório completo de todas as lojas do robô: peças, itens/hora (peças somadas ÷ horas somadas), erros e precisão (peças sem ajuste ÷ peças contadas, só nas lojas com relatório de itens ajustados). Toque num nome para ver as lojas e os erros dele(a).</p>
+    ${!conf.length ? '<p class="hint">Nenhum conferente encontrado.</p>' : `<div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Erros</th><th>Precisão</th></tr></thead><tbody>${
+      conf.map(c=>`<tr class="linha-clicavel" data-conf="${esc(normalizarNome(c.nome))}"><td>${c.pos}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtN(c.ih)}</td><td>${c.lojasComRel ? (c.erros ? `<b style="color:var(--danger)">${c.erros}</b>` : '0') : '—'}</td><td>${fmtPct(c.precisao)}</td></tr>`).join('')
     }</tbody></table></div>`}
     ${detalheConferenteRobo()}`}
     ${abrirConf ? `<div class="acoes"><button class="btn secondary" onclick="exportarConferentesRoboPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarConferentesRobo()">Excel</button></div>` : ''}</div>` : '';
+  if(typeof renderRankingMes === 'function') renderRankingMes();
+  if(typeof atualizarBadges === 'function') atualizarBadges();
 }
 function detalheConferenteRobo(){
   if(!roboConfAberto) return '';
@@ -3700,12 +3832,14 @@ function detalheConferenteRobo(){
     .sort((a,b)=>dataParaChave(b.l.data)-dataParaChave(a.l.data));
   if(!regs.length) return '';
   return `<div class="card" id="cardConfRobo" style="margin-top:10px;background:var(--accent-soft)"><h2 style="font-size:1rem">${esc(regs[0].p.nome)} · ${regs.length} loja(s)</h2>
-    <div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th></tr></thead><tbody>${
-      regs.map(({p,l})=>{ const lista = pessoasDaLojaRobo(l.id); return `<tr><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${lista.indexOf(p)+1}º de ${lista.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`; }).join('')
+    <div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
+      regs.map(({p,l})=>{ const lista = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${lista.indexOf(p)+1}º de ${lista.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')
     }</tbody></table></div>
-    <div class="acoes"><button class="btn secondary small" onclick="roboConfAberto=null;renderRobo()">Fechar</button></div></div>`;
+    <div class="acoes"><button class="btn secondary small" onclick="abrirFicha(${esc(JSON.stringify(regs[0].p.nome))})">Abrir ficha</button><button class="btn secondary small" style="margin-left:6px" onclick="roboConfAberto=null;renderRobo()">Fechar</button></div></div>`;
 }
 document.getElementById('conferentesRobo').addEventListener('click', e=>{
+  const te = e.target.closest('[data-erros-loja]');
+  if(te){ const l = robo.lojas.find(x=>x.id===te.dataset.errosLoja); if(l && l.errosItens !== null && l.errosItens !== undefined) abrirErros(te.dataset.errosLoja, te.dataset.errosNome); return; }
   const tr = e.target.closest('[data-conf]'); if(!tr) return;
   roboConfAberto = roboConfAberto === tr.dataset.conf ? null : tr.dataset.conf; renderRobo();
   const el = document.getElementById('cardConfRobo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'nearest'});
@@ -3718,17 +3852,25 @@ function renderDetalheRobo(){
   div.innerHTML = `<div class="card" id="cardRankingRobo"><h2>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''} · ${esc(l.data)}</h2>
     <p class="hint">${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h líquidas · ${fmtN(l.fora)} peça(s) fora das faixas</p>
     ${caixaEquipe(equipeLojaRobo(l))}
-    <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th></tr></thead><tbody>${
-      ps.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.nome)}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`).join('')
+    <p class="hint">${esc(textoErrosLoja(l))}${l.errosItens !== null && l.errosItens !== undefined ? ' Toque num nome para ver os itens ajustados.' : ''}</p>
+    <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th>${l.errosItens !== null && l.errosItens !== undefined ? '<th>Erros</th>' : ''}</tr></thead><tbody>${
+      ps.map((p,i)=>`<tr class="linha-clicavel" data-erros-nome="${esc(p.nome)}"><td>${i+1}</td><td>${esc(p.nome)}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${l.errosItens !== null && l.errosItens !== undefined ? celulaErros(p) : ''}</tr>`).join('')
     }</tbody></table></div>
     ${ps.some(p=>p.atraso) ? '<p class="hint">⏰ = chegou atrasado (marcado na Presença): itens/hora contados a partir da chegada.</p>' : ''}
     <div class="acoes">
       <button class="btn secondary" onclick="exportarRankingRoboPNG()">Imagem (PNG)</button>
       <button class="btn secondary" onclick="exportarRankingRoboExcel()">Excel</button>
+      ${l.errosItens !== null && l.errosItens !== undefined ? `<button class="btn secondary" onclick="abrirErros(roboLojaAberta)">Todos os erros</button>` : ''}
       <button class="btn secondary" onclick="corrigirNomeLojaRobo()">Corrigir nome</button>
       <button class="btn secondary" onclick="roboLojaAberta=null;renderDetalheRobo()">Fechar</button>
     </div></div>`;
 }
+document.getElementById('detalheRobo').addEventListener('click', e=>{
+  const tr = e.target.closest('[data-erros-nome]'); if(!tr || !roboLojaAberta) return;
+  const l = robo.lojas.find(x=>x.id===roboLojaAberta);
+  if(l && l.errosItens !== null && l.errosItens !== undefined) abrirErros(roboLojaAberta, tr.dataset.errosNome);
+  else abrirFicha(tr.dataset.errosNome);
+});
 document.getElementById('listaRobo').addEventListener('click', e=>{
   const b = e.target.closest('[data-robo]'); if(!b) return;
   roboLojaAberta = b.dataset.robo; renderDetalheRobo();
@@ -3756,7 +3898,7 @@ function abrirResumoRobo(){
           if(pessoas[k]){ pessoas[k].pecas += p.pecas; return; }
           pessoas[k] = {nome:p.nome, pecas:p.pecas, horas:p.horas || l.horas};
         });
-        return {label: [l.data, l.num, l.loja].filter(Boolean).join(' - '), data:l.data, horas:l.horas, pessoas, cliente: clienteDe((l.cliente||'') + ' ' + (l.loja||''))};
+        return {label: [l.data, l.num, l.loja].filter(Boolean).join(' - '), data:l.data, horas:l.horas, pessoas, cliente: clienteDe(l.cliente, l.loja)};
       }));
       setTimeout(()=>{ const el = document.getElementById('resultadoResumo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
     });
@@ -3772,9 +3914,19 @@ async function exportarRankingRoboExcel(){
   const ws = wb.addWorksheet('Produtividade');
   const r = blocoInfo(ws, 1, [['Loja', [l.num, l.loja].filter(Boolean).join(' - ')], ['Data', l.data], ['Horas líquidas', l.horas, '0.00'], ['Peças fora das faixas', l.fora],
     ...linhasExcelEquipe(equipeLojaRobo(l))]);
-  const linhas = pessoasDaLojaRobo(l.id).map((p,i)=>[i+1, p.nome + (p.atraso ? ` (CHEGOU ${p.chegada})` : ''), p.pecas, p.ih]);
-  tabelaExcel(ws, r, ['Posição','Nome','Peças','Itens/hora'], linhas, {
-    larguras:[20, larguraPara(linhas.map(x=>x[1]), 30, 50), 10, 11], alinhar:['center', null, 'right', 'right'], formatos:[null, null, '#,##0', '#,##0'], congelar:true });
+  const comErros = l.errosItens !== null && l.errosItens !== undefined;
+  const linhas = pessoasDaLojaRobo(l.id).map((p,i)=>[i+1, p.nome + (p.atraso ? ` (CHEGOU ${p.chegada})` : ''), p.pecas, p.ih,
+    ...(comErros ? [p.erros||0, p.pecasErro||0, p.secoesErro||''] : [])]);
+  tabelaExcel(ws, r, ['Posição','Nome','Peças','Itens/hora', ...(comErros ? ['Erros','Peças ajustadas','Seções com erro'] : [])], linhas, {
+    larguras:[20, larguraPara(linhas.map(x=>x[1]), 30, 50), 10, 11, 9, 15, 24], alinhar:['center', null, 'right', 'right', 'center', 'right', null],
+    formatos:[null, null, '#,##0', '#,##0'], estilo:(i,j,ln)=> (j===4 && ln[4]) ? {fundo:'FFFFC7CE', fonte:{bold:true, color:{argb:'FF9C0006'}}} : null, congelar:true });
+  if(comErros){
+    const ws2 = wb.addWorksheet('Erros');
+    const r2 = cabecalhoPlanilha(ws2, 'Erros da equipe', [textoErrosLoja(l)]);
+    const l2 = (robo.erros||[]).filter(e=>e.id===l.id).map(e=>[e.nome, e.secao, e.setor, e.codigo, e.descricao, e.q1, e.qa, e.dif, e.motivo]);
+    tabelaExcel(ws2, r2, ['QUEM','SEÇÃO','SETOR','CÓDIGO','DESCRIÇÃO','1ª CONTAGEM','AJUSTADA','DIFERENÇA','MOTIVO'], l2, {
+      larguras:[larguraPara(l2.map(x=>x[0]), 22, 45), 8, 18, 15, larguraPara(l2.map(x=>x[4]), 24, 45), 12, 10, 10, 20], congelar:true });
+  }
   await salvarExcel(wb, nomeArquivoRobo(l, 'xlsx'));
 }
 function exportarRankingRoboPNG(){
@@ -3784,11 +3936,12 @@ function exportarRankingRoboPNG(){
     <div style="color:#62597a;font-size:13px;margin-bottom:12px">Produtividade · ${esc(l.data)} · ${String(l.horas).replace('.', ',')} h líquidas</div>
     ${caixaEquipeImagem(equipeLojaRobo(l))}
     <table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="background:#e7e0f5;font-weight:700">
-      <td style="padding:6px 8px">#</td><td style="padding:6px 8px">Nome</td><td style="padding:6px 8px;text-align:right">Peças</td><td style="padding:6px 8px;text-align:right">Itens/h</td></tr>`;
+      <td style="padding:6px 8px">#</td><td style="padding:6px 8px">Nome</td><td style="padding:6px 8px;text-align:right">Peças</td><td style="padding:6px 8px;text-align:right">Itens/h</td>${l.errosItens !== null && l.errosItens !== undefined ? '<td style="padding:6px 8px;text-align:center">Erros</td>' : ''}</tr>`;
   ps.forEach((p,i)=>{ h += `<tr style="background:${i%2?'#faf8fd':'#ffffff'}"><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0">${i+1}</td>
     <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0">${esc(p.nome)}${p.atraso ? ` <span style="font-size:11px;color:#9C0006;font-weight:700">⏰ ${esc(p.chegada)}</span>` : ''}</td><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right">${fmtN(p.pecas)}</td>
-    <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right;font-weight:700">${fmtN(p.ih)}</td></tr>`; });
+    <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right;font-weight:700">${fmtN(p.ih)}</td>${l.errosItens !== null && l.errosItens !== undefined ? `<td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:center;${p.erros ? 'color:#9C0006;font-weight:700' : 'color:#006100'}">${p.erros||0}</td>` : ''}</tr>`; });
   h += '</table>';
+  if(l.errosItens !== null && l.errosItens !== undefined) h += `<div style="color:#62597a;font-size:11px;margin-top:8px">${esc(textoErrosLoja(l))}</div>`;
   gerarImagem(h, nomeArquivoRobo(l, 'png'));
 }
 async function exportarConferentesRobo(){
@@ -3797,10 +3950,19 @@ async function exportarConferentesRobo(){
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Por conferente');
   const r = cabecalhoPlanilha(ws, 'Produtividade por conferente', [`${lojas.length} loja(s) de ${lojas[lojas.length-1].data} a ${lojas[0].data}`]);
-  const linhas = conf.map((c,i)=>[i+1, c.nome, c.lojas, c.pecas, Math.round(c.horas*100)/100, c.ih, c.media, c.melhor]);
-  tabelaExcel(ws, r, ['#','NOME','LOJAS','PEÇAS','HORAS','ITENS/HORA (AGRUPADO)','MÉDIA ITENS/HORA','MELHOR LOJA'], linhas, {
-    larguras:[5, larguraPara(linhas.map(x=>x[1]), 30, 50), 8, 11, 9, 20, 17, 13],
-    alinhar:['center', null, 'center', 'right', 'right', 'right', 'right', 'right'], formatos:[null, null, null, '#,##0', '0.00', '#,##0', '#,##0', '#,##0'], congelar:true });
+  const linhas = conf.map((c,i)=>[i+1, c.nome, c.lojas, c.pecas, Math.round(c.horas*100)/100, c.ih, c.media, c.melhor,
+    c.lojasComRel ? c.erros : '—', c.lojasComRel ? c.pecasErro : '—', c.precisao === null ? '—' : Math.round(c.precisao*10)/1000]);
+  tabelaExcel(ws, r, ['#','NOME','LOJAS','PEÇAS','HORAS','ITENS/HORA (AGRUPADO)','MÉDIA ITENS/HORA','MELHOR LOJA','ERROS','PEÇAS AJUSTADAS','PRECISÃO'], linhas, {
+    larguras:[5, larguraPara(linhas.map(x=>x[1]), 30, 50), 8, 11, 9, 20, 17, 13, 9, 16, 11],
+    alinhar:['center', null, 'center', 'right', 'right', 'right', 'right', 'right', 'center', 'right', 'right'], formatos:[null, null, null, '#,##0', '0.00', '#,##0', '#,##0', '#,##0', null, '#,##0', '0.0%'], congelar:true });
+  if((robo.erros||[]).length){
+    const ws3 = wb.addWorksheet('Erros');
+    const r3 = cabecalhoPlanilha(ws3, 'Erros da equipe (todas as lojas)', []);
+    const lojaDe = id => { const l = robo.lojas.find(x=>x.id===id); return l ? [l.data, l.num, l.loja] : ['', '', id]; };
+    const l3 = robo.erros.map(e=>[...lojaDe(e.id), e.nome, e.secao, e.descricao, e.q1, e.qa, e.dif, e.motivo]);
+    tabelaExcel(ws3, r3, ['DATA','Nº','LOJA','QUEM','SEÇÃO','DESCRIÇÃO','1ª CONTAGEM','AJUSTADA','DIFERENÇA','MOTIVO'], l3, {
+      larguras:[12, 7, larguraPara(l3.map(x=>x[2]), 20, 40), larguraPara(l3.map(x=>x[3]), 22, 45), 8, larguraPara(l3.map(x=>x[5]), 24, 45), 12, 10, 10, 20], congelar:true });
+  }
   const ws2 = wb.addWorksheet('Lojas');
   const r2 = cabecalhoPlanilha(ws2, 'Lojas recebidas do robô', []);
   const l2 = lojas.map(l=>[l.data, l.num, l.loja, l.inicio, l.fim, l.horas, l.conferentes, l.pecas, l.fora]);
@@ -3830,7 +3992,8 @@ function mapaIndicadores(){
   const pct = v => ihs.length > 1 ? Math.round(100 * ihs.filter(x=>x < v).length / (ihs.length - 1)) : 50;
   const mapa = {};
   const pegar = nome => { const k = normalizarNome(nome); return mapa[k] || (mapa[k] = {nome, chave:k}); };
-  conf.forEach(c=>Object.assign(pegar(c.nome), {ih:c.ih, media:c.media, lojasRobo:c.lojas, pecas:c.pecas, horas:c.horas, melhor:c.melhor, ihPct:pct(c.ih)}));
+  conf.forEach(c=>Object.assign(pegar(c.nome), {ih:c.ih, media:c.media, lojasRobo:c.lojas, pecas:c.pecas, horas:c.horas, melhor:c.melhor, ihPct:pct(c.ih),
+    erros:c.erros, pecasErro:c.pecasErro, lojasComRel:c.lojasComRel, precisao:c.precisao}));
   Object.values(est).forEach(e=>{
     const x = pegar(e.nome);
     const base = e.lojas - e.transferido;
@@ -3851,9 +4014,11 @@ function indicadoresDe(nome){
   const pref = cad ? cad.prioridade : 99;
   // presença: % de lojas em que esteve presente, menos 5 pontos por atraso (até 20); com menos de 2 lojas no histórico não pesa
   const pres = (x.presPct !== null && x.presPct !== undefined && (x.lojasHist||0) >= 2) ? Math.max(0, x.presPct - Math.min(20, 5*(x.atrasos||0))) : null;
+  // qualidade: 0,5% das peças ajustadas = 90 pontos; 5% ou mais = 0 (sem relatório de ajustes: neutro, 85)
+  const qual = (x.precisao !== null && x.precisao !== undefined) ? Math.max(0, Math.min(100, 100 - 20 * (100 - x.precisao))) : null;
   let nota, base;
-  if(x.ih){ nota = 0.7 * x.ihPct + 0.3 * (pres ?? 85); base = 'robô'; }
-  else { nota = 0.7 * (NOTA_PREF[pref] ?? 40) + 0.3 * (pres ?? 85); base = 'preferência'; }
+  if(x.ih){ nota = 0.6 * x.ihPct + 0.25 * (pres ?? 85) + 0.15 * (qual ?? 85); base = 'robô'; }
+  else { nota = 0.6 * (NOTA_PREF[pref] ?? 40) + 0.25 * (pres ?? 85) + 0.15 * (qual ?? 85); base = 'preferência'; }
   return Object.assign({}, x, {nota: Math.round(nota), baseNota: base, presAjust: pres, cad});
 }
 function resumoIndicadores(ind){
@@ -3879,7 +4044,7 @@ function dicaModoEscala(){
   const el = document.getElementById('dicaModoEscala'); if(!el) return;
   if(modoEscala() !== 'desempenho'){ el.textContent = 'Usa só a coluna PREFERÊNCIA (1 = melhor).'; return; }
   const comDados = [...db.clt, ...db.fl].filter(p=>!p.afastado && indicadoresDe(p.nome).ih).length;
-  el.textContent = `Nota = itens/hora do robô (70%) + presença do histórico (30%). ${comDados} pessoa(s) já têm produtividade no robô; quem ainda não tem usa a preferência. Freelancer com preferência 4 fica por último.`;
+  el.textContent = `Nota = itens/hora do robô (60%) + presença do histórico (25%) + erros (15%). ${comDados} pessoa(s) já têm produtividade no robô; quem ainda não tem usa a preferência. Freelancer com preferência 4 fica por último.`;
 }
 (function(){
   const el = document.getElementById('modoEscala');
@@ -3911,12 +4076,12 @@ function renderFichas(){
   const todas = pessoasDasFichas();
   const rankNota = todas.filter(x=>x.tipo!=='fora').slice().sort((a,b)=>b.ind.nota-a.ind.nota);
   let lista = todas.filter(x=>(!busca || normalizarNome(x.nome).includes(busca)) && (filtro==='todos' || x.tipo===filtro));
-  const cmp = {nota:(a,b)=>b.ind.nota-a.ind.nota, ih:(a,b)=>(b.ind.ih||0)-(a.ind.ih||0), faltas:(a,b)=>(b.ind.faltas||0)-(a.ind.faltas||0),
+  const cmp = {nota:(a,b)=>b.ind.nota-a.ind.nota, ih:(a,b)=>(b.ind.ih||0)-(a.ind.ih||0), erros:(a,b)=>(b.ind.erros||0)-(a.ind.erros||0), faltas:(a,b)=>(b.ind.faltas||0)-(a.ind.faltas||0),
     atrasos:(a,b)=>(b.ind.atrasos||0)-(a.ind.atrasos||0), nome:(a,b)=>a.nome.localeCompare(b.nome,'pt-BR')}[ordem];
   lista.sort((a,b)=>cmp(a,b) || a.nome.localeCompare(b.nome,'pt-BR'));
-  div.innerHTML = lista.length ? `<table><thead><tr><th>Nome</th><th>Nota</th><th>Itens/h</th><th>Pres.</th><th>Faltas</th><th>Atrasos</th></tr></thead><tbody>${
+  div.innerHTML = lista.length ? `<table><thead><tr><th>Nome</th><th>Nota</th><th>Itens/h</th><th>Erros</th><th>Pres.</th><th>Faltas</th><th>Atrasos</th></tr></thead><tbody>${
     lista.map(x=>`<tr class="linha-clicavel" data-ficha="${esc(normalizarNome(x.nome))}"><td>${esc(x.nome)}${x.cad && x.cad.afastado ? ' <span class="hint">(afastado)</span>' : ''}<small class="hint" style="display:block">${esc(rotuloTipo(x))}</small></td>
-      <td><b>${x.ind.nota}</b></td><td>${x.ind.ih ? fmtN(x.ind.ih) : '—'}</td><td>${x.ind.presPct!=null && x.ind.lojasHist ? x.ind.presPct + '%' : '—'}</td><td>${x.ind.faltas||0}</td><td>${x.ind.atrasos||0}</td></tr>`).join('')
+      <td><b>${x.ind.nota}</b></td><td>${x.ind.ih ? fmtN(x.ind.ih) : '—'}</td><td>${x.ind.lojasComRel ? (x.ind.erros||0) : '—'}</td><td>${x.ind.presPct!=null && x.ind.lojasHist ? x.ind.presPct + '%' : '—'}</td><td>${x.ind.faltas||0}</td><td>${x.ind.atrasos||0}</td></tr>`).join('')
   }</tbody></table>` : '<p class="hint">Ninguém encontrado.</p>';
   renderFichaAberta(todas, rankNota);
 }
@@ -3938,8 +4103,8 @@ function renderFichaAberta(todas, rankNota){
     <div class="resumo" style="--n:4">${tiles.map(([k,v,det])=>`<div class="item" style="--span:2">${k}<b>${v}</b>${det ? `<small>${det}</small>` : ''}</div>`).join('')}</div>
     <p class="hint">Nota ${ind.nota} (base: ${ind.baseNota})${pos >= 0 ? ` · ${pos+1}º de ${rankNota.length} no cadastro` : ''}${ind.setores && ind.setores.length ? ' · setores: ' + ind.setores.map(s=>`${esc(s.nome)} (${s.n}×)`).join(', ') : ''}</p>
     ${whats}
-    ${lojasRobo.length ? `<div class="section-title">Produtividade por loja (robô)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th></tr></thead><tbody>${
-      lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td></tr>`; }).join('')}</tbody></table></div>` : ''}
+    ${lojasRobo.length ? `<div class="section-title">Produtividade por loja (robô)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
+      lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')}</tbody></table></div>` : ''}
     ${ind.registros && ind.registros.length ? `<div class="section-title">Presença (histórico das lojas)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Status</th><th>Setor</th></tr></thead><tbody>${
       ind.registros.slice().reverse().map(r=>`<tr><td>${esc(r.data)}</td><td>${esc(r.loja)}</td><td>${rotuloHist(r)}</td><td>${(r.setores||[]).map(esc).join(', ') || '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
     ${!lojasRobo.length && !(ind.registros||[]).length ? '<p class="hint">Ainda não há lojas do robô nem do histórico com esse nome.</p>' : ''}
@@ -3948,15 +4113,21 @@ function renderFichaAberta(todas, rankNota){
 }
 function blocosFicha(ind){
   return [
-    ['Nota', ind.nota, ind.baseNota === 'robô' ? 'itens/h + presença' : 'sem robô: pela preferência'],
+    ['Nota', ind.nota, ind.baseNota === 'robô' ? 'itens/h + presença + erros' : 'sem robô: pela preferência'],
     ['Itens/hora', ind.ih ? fmtN(ind.ih) : '—', ind.lojasRobo ? `${ind.lojasRobo} loja(s) · média ${fmtN(ind.media)}` : ''],
     ['Presença', ind.presPct!=null && ind.lojasHist ? ind.presPct + '%' : '—', ind.lojasHist ? `${ind.presente||0} de ${ind.lojasHist} loja(s)` : ''],
     ['Faltas', (ind.faltas||0) + (ind.atestados||0), ind.atestados ? `${ind.faltas||0} falta · ${ind.atestados} atestado` : ''],
     ['Atrasos', ind.atrasos||0, ind.atrasos ? `média ${Math.round(ind.minAtraso/ind.atrasos)} min` : ''],
     ['Peças', ind.pecas ? fmtN(ind.pecas) : '—', ind.melhor ? `melhor loja ${fmtN(ind.melhor)}/h` : ''],
+    ['Erros', ind.lojasComRel ? (ind.erros||0) : '—', ind.lojasComRel ? `precisão ${fmtPct(ind.precisao)} · ${fmtN(ind.pecasErro||0)} pç ajust.` : 'sem relatório de ajustes'],
     ['Viagens', (ind.convSim||ind.convNao) ? `✅ ${ind.convSim||0} · ❌ ${ind.convNao||0}` : '—', 'convites (90 dias)'],
     ['Setor mais comum', ind.setores && ind.setores[0] ? esc(ind.setores[0].nome) : '—', ind.setores && ind.setores[0] ? ind.setores[0].n + '×' : '']];
 }
+document.getElementById('fichaAberta').addEventListener('click', e=>{
+  const te = e.target.closest('[data-erros-loja]'); if(!te) return;
+  const l = robo.lojas.find(x=>x.id===te.dataset.errosLoja);
+  if(l && l.errosItens !== null && l.errosItens !== undefined) abrirErros(te.dataset.errosLoja, te.dataset.errosNome);
+});
 document.getElementById('listaFichas').addEventListener('click', e=>{
   const tr = e.target.closest('[data-ficha]'); if(!tr) return;
   fichaAberta = tr.dataset.ficha; renderFichaAberta();
@@ -3974,6 +4145,216 @@ function exportarFichaPNG(){
   if(lojasRobo.length) h += `<div style="font-weight:700;margin:4px 0 6px">Produtividade por loja</div>` + tabelaImagem(['Data','Loja','Peças','Itens/h'],
     lojasRobo.map(({p,l})=>[esc(l.data), esc(l.loja) + (p.atraso ? ` <span style="color:#9C0006;font-size:11px">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtN(p.ih)]), ['', '', 'right', 'right'], 3);
   gerarImagem(h, `Ficha - ${limpaNomeArquivo(x.nome)}.png`);
+}
+
+/* =====================================================================
+   INÍCIO: PAINEL DO DIA, RANKING DO MÊS, RELATÓRIO FINAL DA LOJA, LISTA DA VIAGEM
+   ===================================================================== */
+function abrirLojaRobo(id){
+  abrirView('produtividade'); roboLojaAberta = id; renderDetalheRobo();
+  setTimeout(()=>{ const el = document.getElementById('cardRankingRobo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 60);
+}
+function nomeCurto(n){ const p = String(n||'').trim().split(/\s+/); return p.length > 1 ? primeiroNome(n) + ' ' + p[p.length-1].charAt(0) + '.' : primeiroNome(n); }
+function mesDe(d){ const k = String(dataParaChave(d) || ''); return k.length === 8 ? k.slice(4,6) + '/' + k.slice(0,4) : ''; }
+function mesesRobo(){ return [...new Set(lojasRoboOrdenadas().map(l=>mesDe(l.data)).filter(Boolean))]; }
+function lojasDoMes(mes){ return robo.lojas.filter(l=>mesDe(l.data) === mes); }
+// conferente do mês: maior itens/hora entre quem fez pelo menos 2 lojas no mês (se ninguém fez 2, vale 1)
+function rankingDoMes(mes){
+  ajustarAtrasosRobo();
+  const lojas = lojasDoMes(mes);
+  const conf = porConferenteRobo(new Set(lojas.map(l=>l.id)));
+  const minimo = conf.some(c=>c.lojas >= 2) ? 2 : 1;
+  const elegiveis = conf.filter(c=>c.lojas >= minimo && c.ih > 0).sort((a,b)=>(b.ih-a.ih) || ((b.precisao||0)-(a.precisao||0)));
+  const metas = lojas.map(equipeLojaRobo).filter(e=>e.meta);
+  return {mes, lojas, conf, minimo, elegiveis, campeao: elegiveis[0] || null, naMeta: metas.filter(e=>e.bateu).length, comMeta: metas.length};
+}
+// pendências do dia (também viram o número vermelho no ícone Início)
+function pendencias(){
+  const lista = [];
+  if(loja.pessoas.length){
+    const c = contagemPresenca();
+    if(loja.assinaturaSalva !== assinaturaLoja()) lista.push({tipo:'warn', txt:`${loja.nome || 'Loja atual'} ainda não foi salva no histórico`, ir:()=>abrirView('presenca')});
+    if(c.pendentes) lista.push({tipo:'warn', txt:`${c.pendentes} pessoa(s) sem status na presença`, ir:()=>abrirView('presenca')});
+  }
+  if(ultimaEscala){
+    const todos = [...ultimaEscala.selecionados, ...ultimaEscala.freelancers];
+    const aguardando = todos.filter(p=>p.convite && p.convite.enviadoEm && !p.convite.resp && p.status !== 'Confirmado' && p.status !== 'Recusado').length;
+    const naoConv = todos.filter(p=>!(p.convite && p.convite.enviadoEm) && p.status === 'Convocado').length;
+    if(aguardando) lista.push({tipo:'warn', txt:`${aguardando} convite(s) de viagem sem resposta`, ir:()=>abrirView('escala')});
+    if(naoConv && todos.some(p=>p.convite && p.convite.enviadoEm)) lista.push({tipo:'warn', txt:`${naoConv} pessoa(s) da escala ainda não convidada(s)`, ir:()=>abrirView('escala')});
+  }
+  const lojas = lojasRoboOrdenadas(); const recente = lojas.length ? diaDe(lojas[0].data) : null;
+  lojas.filter(l=>recente !== null && diaDe(l.data) !== null && recente - diaDe(l.data) <= 6).forEach(l=>{
+    const eq = equipeLojaRobo(l);
+    if(eq.meta && !eq.bateu) lista.push({tipo:'danger', txt:`${l.loja} ficou abaixo da meta: ${fmtN(eq.ih)}/h (${eq.pct}%)`, ir:()=>abrirLojaRobo(l.id)});
+  });
+  if(!robo.link) lista.push({tipo:'warn', txt:'Robô da produtividade não ligado (cole o link)', ir:()=>abrirView('produtividade')});
+  else if(robo.ultimoErro) lista.push({tipo:'danger', txt:robo.ultimoErro, ir:()=>abrirView('produtividade')});
+  return lista;
+}
+function atualizarBadges(){
+  try{
+    const n = pendencias().length;
+    const b = document.getElementById('badge-inicio'); if(!b) return;
+    b.hidden = !n; b.textContent = n > 9 ? '9+' : String(n);
+  }catch(e){}
+}
+let painelPend = [];
+function renderPainel(){
+  const div = document.getElementById('painel'); if(!div) return;
+  ajustarAtrasosRobo();
+  const hoje = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'2-digit'});
+  const lojas = lojasRoboOrdenadas(), ult = lojas[0];
+  let h = `<p class="hint" style="margin:14px 2px 0;text-transform:capitalize">${esc(hoje)}</p>`;
+  // destaque: última loja que chegou pelo robô x meta
+  if(ult){
+    const eq = equipeLojaRobo(ult);
+    h += `<div class="hero ${eq.meta && !eq.bateu ? 'ruim' : ''}" onclick="abrirLojaRobo('${esc(ult.id)}')">
+      <div class="rot">Última loja · ${esc(ult.data)} · ${esc(ult.loja)}${ult.num ? ' | ' + esc(ult.num) : ''}</div>
+      <div class="big">${fmtN(eq.ih)} <span>itens/h por conferente</span></div>
+      <div class="rot">${eq.meta ? `Meta ${esc(eq.segmento)} ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '· meta batida ✅' : '· abaixo da meta'}` : 'Sem meta para este cliente'}</div>
+      <div class="barra-meta"><i data-w="${eq.meta ? Math.min(100, eq.pct) : 0}"></i></div></div>`;
+  } else {
+    h += `<div class="hero" onclick="abrirView('produtividade')"><div class="rot">Produtividade</div><div class="big" style="font-size:1.3rem">Nenhuma loja do robô ainda</div><div class="rot">${robo.link ? 'Assim que um e-mail de arquivos chegar, ela aparece aqui.' : 'Ligue o robô em Produção.'}</div></div>`;
+  }
+  // blocos
+  const t = [];
+  if(loja.pessoas.length){
+    const c = contagemPresenca();
+    t.push({rot:'Presentes · ' + (loja.nome || 'loja atual'), n:`${c.presentes} de ${c.escalados}`, s:`${c.presCLT} CLT · ${c.presFree} free${c.faltas ? ' · ' + c.faltas + ' falta(s)' : ''}`, ir:"abrirView('presenca')"});
+    t.push({rot:'Atrasos hoje', n:String(c.atrasos), s:loja.inicio ? 'início ' + loja.inicio : 'sem início programado', ir:"abrirView('presenca')"});
+  }
+  if(ult){
+    const ps = pessoasDaLojaRobo(ult.id), melhor = ps[0];
+    t.push({rot:'Erros na última loja', n: ult.errosItens === null || ult.errosItens === undefined ? '—' : String(ult.errosItens),
+      s: ult.errosItens === null || ult.errosItens === undefined ? 'sem relatório de ajustes' : `${ps.filter(p=>p.erros).length} conferente(s) · ${fmtN(ult.pecasAjustadas||0)} pç`, ir:`abrirLojaRobo('${esc(ult.id)}')`});
+    if(melhor) t.push({rot:'Melhor da última loja', n:esc(nomeCurto(melhor.nome)), s:`${fmtN(melhor.ih)} itens/h`, ir:`abrirFicha(${esc(JSON.stringify(melhor.nome))})`});
+    const mes = mesDe(ult.data), rm = rankingDoMes(mes);
+    t.push({rot:'Metas em ' + mes, n: rm.comMeta ? `${rm.naMeta} de ${rm.comMeta}` : '—', s:`${rm.lojas.length} loja(s) no mês`, ir:"abrirView('produtividade');setTimeout(()=>{const e=document.getElementById('rankingMes');if(e)e.scrollIntoView({behavior:'smooth'});},80)"});
+    if(rm.campeao) t.push({rot:'Conferente do mês', n:'🏆 ' + esc(nomeCurto(rm.campeao.nome)), s:`${fmtN(rm.campeao.ih)} itens/h · ${rm.campeao.lojas} loja(s)`, ir:`abrirFicha(${esc(JSON.stringify(rm.campeao.nome))})`});
+  }
+  if(t.length) h += `<div class="tiles">${t.map(x=>`<div class="tile" onclick="${x.ir}"><div class="rot">${x.rot}</div><div class="n">${x.n}</div><small>${esc(x.s)}</small></div>`).join('')}</div>`;
+  // pendências
+  painelPend = pendencias();
+  h += `<div class="card"><h2>Pendências</h2>${painelPend.length
+    ? painelPend.map((x,i)=>`<div class="pend" data-pend="${i}"><i class="dot ${x.tipo}"></i><span>${esc(x.txt)}</span><b class="seta">›</b></div>`).join('')
+    : '<div class="pend"><i class="dot ok"></i><span>Tudo em dia.</span></div>'}</div>`;
+  // atalhos
+  h += `<div class="card"><h2>Atalhos</h2><div class="atalhos">
+    <button class="btn secondary" onclick="abrirView('presenca')">Carregar loja</button>
+    <button class="btn secondary" onclick="abrirView('escala')">Nova escala</button>
+    <button class="btn secondary" onclick="abrirView('produtividade');atualizarDoRobo(true)">Atualizar robô</button>
+    <button class="btn secondary" onclick="exportarRelatorioFinalPNG()">Relatório da loja</button></div></div>`;
+  div.innerHTML = h;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>div.querySelectorAll('.barra-meta i').forEach(i=>{ i.style.width = (i.dataset.w || 0) + '%'; })));
+  atualizarBadges();
+}
+document.getElementById('painel').addEventListener('click', e=>{
+  const p = e.target.closest('[data-pend]'); if(!p) return;
+  const x = painelPend[+p.dataset.pend]; if(x && x.ir) x.ir();
+});
+
+// ---- Ranking do mês / conferente do mês (Produção)
+function renderRankingMes(){
+  const div = document.getElementById('rankingMes'); if(!div) return;
+  const meses = mesesRobo();
+  if(!meses.length){ div.innerHTML = ''; return; }
+  if(!roboUi.mes || !meses.includes(roboUi.mes)) roboUi.mes = meses[0];
+  const aberto = !!roboUi.mesAberto;
+  const rm = rankingDoMes(roboUi.mes);
+  div.innerHTML = `<div class="card"><button class="secao-toggle ${aberto?'aberta':''}" onclick="roboUi.mesAberto=!roboUi.mesAberto;lsSet(ROBO_UI_KEY, roboUi);renderRankingMes()"><span class="seta">▶</span> Ranking do mês <small>(${esc(rm.mes)}${rm.campeao ? ' · 🏆 ' + esc(nomeCurto(rm.campeao.nome)) : ''})</small></button>
+    ${!aberto ? '' : `<div class="row" style="margin-top:8px"><div><select class="full" onchange="roboUi.mes=this.value;lsSet(ROBO_UI_KEY, roboUi);renderRankingMes()">${meses.map(m=>`<option ${m===rm.mes?'selected':''}>${m}</option>`).join('')}</select></div></div>
+    ${rm.campeao ? `<div class="caixa-equipe ok"><span class="hint" style="margin:0">Conferente do mês</span><b class="n">🏆 ${esc(rm.campeao.nome)}</b>
+      <span class="hint" style="margin:0">${fmtN(rm.campeao.ih)} itens/h · ${rm.campeao.lojas} loja(s) · ${fmtN(rm.campeao.pecas)} peças${rm.campeao.lojasComRel ? ' · ' + rm.campeao.erros + ' erro(s) · precisão ' + fmtPct(rm.campeao.precisao) : ''}</span></div>` : ''}
+    <p class="hint">${rm.lojas.length} loja(s) no mês${rm.comMeta ? ` · ${rm.naMeta} de ${rm.comMeta} bateram a meta da equipe` : ''}. Conferente do mês: maior itens/hora entre quem fez ${rm.minimo === 2 ? 'pelo menos 2 lojas' : '1 loja ou mais'}.</p>
+    <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Erros</th><th>Precisão</th></tr></thead><tbody>${
+      rm.elegiveis.concat(rm.conf.filter(c=>!rm.elegiveis.includes(c) && c.ih > 0).sort((a,b)=>b.ih-a.ih)).map((c,i)=>`<tr class="linha-clicavel" onclick="abrirFicha(${esc(JSON.stringify(c.nome))})"><td>${rm.elegiveis.includes(c) ? (i===0 ? '🏆' : i+1) : '—'}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtN(c.ih)}</td><td>${c.lojasComRel ? c.erros : '—'}</td><td>${fmtPct(c.precisao)}</td></tr>`).join('')
+    }</tbody></table></div>
+    <div class="acoes"><button class="btn secondary" onclick="exportarRankingMesPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarRankingMesExcel()">Excel</button></div>`}</div>`;
+}
+function exportarRankingMesPNG(){
+  const rm = rankingDoMes(roboUi.mes); if(!rm.conf.length) return;
+  let h = cabecalhoImagem(`Ranking do mês · ${esc(rm.mes)}`, `${rm.lojas.length} loja(s)${rm.comMeta ? ` · ${rm.naMeta} de ${rm.comMeta} na meta da equipe` : ''}`);
+  if(rm.campeao) h += `<div style="background:#C6EFCE;color:#006100;border-radius:8px;padding:8px 10px;margin:0 0 12px"><div style="font-size:12px">Conferente do mês</div><div style="font-size:20px;font-weight:700">🏆 ${esc(rm.campeao.nome)}</div><div style="font-size:12px">${fmtN(rm.campeao.ih)} itens/h · ${rm.campeao.lojas} loja(s)${rm.campeao.lojasComRel ? ' · precisão ' + fmtPct(rm.campeao.precisao) : ''}</div></div>`;
+  h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h','Erros','Precisão'], rm.elegiveis.map((c,i)=>[i===0?'🏆':i+1, esc(c.nome), c.lojas, fmtN(c.pecas), fmtN(c.ih), c.lojasComRel ? c.erros : '—', fmtPct(c.precisao)]), ['', '', 'center', 'right', 'right', 'center', 'right'], 4);
+  h += `<div style="color:#62597a;font-size:11px;margin-top:10px">Ranking por itens/hora (peças somadas ÷ horas somadas) entre quem fez ${rm.minimo === 2 ? 'pelo menos 2 lojas' : '1 loja ou mais'} no mês.</div>`;
+  gerarImagem(h, `Ranking do mes ${rm.mes.replace('/', '-')}.png`);
+}
+async function exportarRankingMesExcel(){
+  const rm = rankingDoMes(roboUi.mes); if(!rm.conf.length || !excelDisponivel()) return;
+  const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('Ranking do mês');
+  const r = cabecalhoPlanilha(ws, 'Ranking do mês · ' + rm.mes, [`${rm.lojas.length} loja(s)`, rm.campeao ? 'Conferente do mês: ' + rm.campeao.nome : '']);
+  const linhas = rm.conf.slice().sort((a,b)=>b.ih-a.ih).map((c,i)=>[i+1, c.nome, c.lojas, c.pecas, c.ih, c.lojasComRel ? c.erros : '—', c.precisao === null ? '—' : Math.round(c.precisao*10)/1000]);
+  tabelaExcel(ws, r, ['#','NOME','LOJAS','PEÇAS','ITENS/HORA','ERROS','PRECISÃO'], linhas, {larguras:[5, larguraPara(linhas.map(x=>x[1]), 30, 50), 8, 11, 12, 9, 11],
+    alinhar:['center', null, 'center', 'right', 'right', 'center', 'right'], formatos:[null, null, null, '#,##0', '#,##0', null, '0.0%'], congelar:true });
+  await salvarExcel(wb, `Ranking do mes ${rm.mes.replace('/', '-')}.xlsx`);
+}
+
+// ---- Relatório final da loja (uma imagem com presença, produtividade, meta, erros e setores)
+function lojaRoboDaPresenca(){
+  if(!loja.pessoas.length) return null;
+  const dia = diaDe(dataParaChave(loja.data) ? chaveParaBR(dataParaChave(loja.data)) : hojeBR());
+  const nome = normalizarNome(loja.nome);
+  return lojasRoboOrdenadas().find(l=>{
+    const dl = diaDe(l.data); if(dl === null || dia === null || Math.abs(dl - dia) > 1) return false;
+    if(loja.codigo && l.num) return +l.num === +loja.codigo;
+    const ln = normalizarNome(l.loja);
+    return ln && nome && (ln.includes(nome) || nome.includes(ln));
+  }) || null;
+}
+function exportarRelatorioFinalPNG(){
+  if(!loja.pessoas.length){ toast('Carregue a loja na Presença primeiro.'); abrirView('presenca'); return; }
+  const c = contagemPresenca();
+  const lr = lojaRoboDaPresenca();
+  const caixa = (k, v, det, cor) => `<div style="border:1px solid #ddd6ea;${cor ? 'border-left:5px solid ' + cor + ';' : ''}border-radius:8px;padding:6px 8px;font-size:12px;color:#62597a">${k}<div style="font-size:18px;font-weight:700;color:#1c1530">${v}</div>${det ? `<div style="font-size:10px">${det}</div>` : ''}</div>`;
+  let h = cabecalhoImagem(esc(loja.nome || 'Loja'), ['Relatório final', loja.data ? esc(loja.data) : '', loja.inicio ? 'início ' + esc(loja.inicio) : ''].filter(Boolean).join(' · '));
+  h += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+    ${caixa('Escalados', c.escalados, c.coordenadores ? c.coordenadores + ' coord.' : '')}
+    ${caixa('Presentes', c.presentes, `${c.presCLT} CLT · ${c.presFree} free`, '#006100')}
+    ${caixa('Faltas', c.faltas, c.atestados ? detalheFaltas(c) : '', '#9C0006')}
+    ${caixa('Atrasos', c.atrasos, '', '#9C5700')}</div>`;
+  const lista = (titulo, ps, fn) => ps.length ? `<div style="font-size:13px;margin:0 0 8px"><b>${titulo}:</b> ${ps.map(fn).join(' · ')}</div>` : '';
+  h += lista('Faltas', loja.pessoas.filter(p=>!p.coordenador && p.presenca==='falta'), p=>esc(p.nome));
+  h += lista('Atestados', loja.pessoas.filter(p=>!p.coordenador && p.presenca==='atestado'), p=>esc(p.nome));
+  h += lista('Atrasos', loja.pessoas.filter(p=>!p.coordenador && p.presenca==='presente' && p.atraso), p=>`${esc(p.nome)} (${p.atraso} min)`);
+  h += lista('Transferidos', loja.pessoas.filter(p=>p.presenca==='transferido'), p=>`${esc(p.nome)} → ${esc(p.transferidoPara||'')}`);
+  if(lr){
+    const ps = pessoasDaLojaRobo(lr.id), temErros = lr.errosItens !== null && lr.errosItens !== undefined;
+    h += `<div style="font-weight:700;margin:12px 0 6px">Produtividade</div>` + caixaEquipeImagem(equipeLojaRobo(lr));
+    h += tabelaImagem(['#','Nome','Peças','Itens/h', ...(temErros ? ['Erros'] : [])], ps.map((p,i)=>[i+1, esc(p.nome) + (p.atraso ? ` <span style="font-size:11px;color:#9C0006">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtN(p.ih), ...(temErros ? [p.erros ? `<b style="color:#9C0006">${p.erros}</b>` : '0'] : [])]),
+      ['', '', 'right', 'right', 'center'], 3);
+    if(temErros) h += `<div style="color:#62597a;font-size:11px;margin-top:6px">${esc(textoErrosLoja(lr))}</div>`;
+  } else h += `<div style="color:#62597a;font-size:12px;margin:10px 0">Produtividade ainda não chegou pelo robô.</div>`;
+  const comGente = setoresAtuais().filter(s=>nomesDoSetor(s).length);
+  if(comGente.length){
+    h += `<div style="font-weight:700;margin:14px 0 6px">Setores</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${comGente.map(s=>
+      `<div style="border:1px solid #ddd6ea;border-radius:8px;padding:6px 8px;font-size:12px"><div style="font-weight:700;color:#4a2a96;font-size:11px;text-transform:uppercase">${esc(s)}</div>${nomesDoSetor(s).map(esc).join('<br>')}</div>`).join('')}</div>`;
+  }
+  gerarImagem(h, `Relatorio final - ${nomeBaseLoja()}.png`);
+}
+
+// ---- Lista final da viagem (confirmados, funções e quartos)
+function exportarListaViagemPNG(){
+  if(!ultimaEscala){ toast('Gere a escala primeiro.'); return; }
+  const v = ultimaEscala.viagem || {};
+  const todos = [...ultimaEscala.selecionados.map(p=>({p, tipo:'CONFERENTE ' + (p.nivel||'')})), ...ultimaEscala.freelancers.map(p=>({p, tipo:'Freelancer'}))];
+  const temConfirmacao = todos.some(x=>x.p.status === 'Confirmado');
+  const vao = todos.filter(x=>temConfirmacao ? x.p.status === 'Confirmado' : x.p.status !== 'Recusado');
+  const aguardando = temConfirmacao ? todos.filter(x=>x.p.status !== 'Confirmado' && x.p.status !== 'Recusado') : [];
+  const q = calcularQuartos();
+  const conf = new Set(vao.map(x=>x.p));
+  const homens = q.homens.filter(p=>conf.has(p) || db.rj.includes(p)), mulheres = q.mulheres.filter(p=>conf.has(p) || db.rj.includes(p));
+  let h = cabecalhoImagem(esc([v.cidades, v.cliente ? '(' + v.cliente + ')' : ''].filter(Boolean).join(' ') || 'Viagem'),
+    ['Lista final da viagem', v.datas ? esc(v.datas) : '', v.saida ? 'saída ' + esc(v.saida) : ''].filter(Boolean).join(' · '));
+  const funcoes = [['Coordenador(a)', q.coord], ['Líder Araújo', q.lider], ['Motorista', q.motorista]].filter(x=>x[1]);
+  if(funcoes.length) h += `<div style="font-size:13px;margin-bottom:10px">${funcoes.map(([k,n])=>`<b>${k}:</b> ${esc(n)}`).join(' · ')}</div>`;
+  h += tabelaImagem(['#','Nome','Função','Gên.'], vao.map((x,i)=>[i+1, esc(x.p.nome), esc(x.tipo), esc((x.p.genero||'').slice(0,1))]), ['', '', '', 'center'], -1);
+  h += `<div style="font-size:12px;color:#62597a;margin:6px 0 12px">${vao.length} pessoa(s)${temConfirmacao ? ' confirmada(s)' : ' (escala sem confirmações ainda)'} · ${vao.filter(x=>x.tipo==='Freelancer').length} freelancer(s)</div>`;
+  if(aguardando.length) h += `<div style="font-size:12px;color:#9C5700;margin-bottom:10px"><b>Aguardando resposta:</b> ${aguardando.map(x=>esc(x.p.nome)).join(' · ')}</div>`;
+  const pares = (lista, rot) => { let o = `<div style="font-weight:700;margin:8px 0 4px">${rot} (${lista.length})</div>`; for(let i=0;i<lista.length;i+=2) o += `<div style="font-size:13px">Quarto ${i/2+1}: ${esc(lista[i].nome)}${lista[i+1] ? ' + ' + esc(lista[i+1].nome) : ' — avaliar (individual ou triplo)'}</div>`; return o; };
+  if(homens.length || mulheres.length) h += `<div style="font-weight:700;margin-top:6px">Quartos</div>` + (homens.length ? pares(homens, 'Masculinos') : '') + (mulheres.length ? pares(mulheres, 'Femininos') : '')
+    + `<div style="font-size:11px;color:#62597a;margin-top:6px">Casais não são detectados automaticamente — confira antes de mandar ao hotel.</div>`;
+  gerarImagem(h, `Lista da viagem - ${dataHojeArquivo()}.png`);
 }
 
 /* =====================================================================
@@ -3997,7 +4378,7 @@ function restaurarHistoricoDoBackup(lista){
 function fazerBackup(){
   const dados = {
     app:'central-inventario', versao:1, geradoEm:new Date().toISOString(),
-    dados:{ equipe:db, escala:lsGet(ESCALA_KEY, null), loja, quartos:lsGet(QUARTOS_KEY, {}), modelos:modelosProprios, historico, roboLink: robo.link, roboMetas: robo.metas || {} }
+    dados:{ equipe:db, escala:lsGet(ESCALA_KEY, null), loja, quartos:lsGet(QUARTOS_KEY, {}), modelos:modelosProprios, historico, roboLink: robo.link, roboMetas: robo.metas || {}, roboSegmentos: robo.segmentos || {} }
   };
   const d = new Date(), dd = n=>String(n).padStart(2,'0');
   const nome = `Backup Central - ${dd(d.getDate())}.${dd(d.getMonth()+1)}.${d.getFullYear()} ${dd(d.getHours())}h${dd(d.getMinutes())}.json`;
@@ -4025,7 +4406,7 @@ async function restaurarBackup(){
     atualizarTelasModelos();
   }
   restaurarHistoricoDoBackup(d.historico);
-  if(d.roboMetas && typeof d.roboMetas === 'object'){ robo.metas = d.roboMetas; salvarRobo(); marcarAlterado('robo'); renderRobo(); }
+  if(d.roboMetas && typeof d.roboMetas === 'object'){ robo.metas = d.roboMetas; robo.segmentos = d.roboSegmentos || robo.segmentos || {}; salvarRobo(); marcarAlterado('robo'); renderRobo(); }
   if(typeof d.roboLink === 'string' && d.roboLink){ robo.link = d.roboLink; salvarRobo(); marcarAlterado('robo'); renderRobo(); atualizarDoRobo(false); if(!nuvemLigada) iniciarNuvem(); }
   msg.innerHTML = `<div class="msg ok">Backup restaurado: ${db.clt.length} CLT, ${db.fl.length} freelancers, ${loja.pessoas.length} pessoa(s) na lista da loja, ${modelosProprios.length} modelo(s) de setores, ${historicoAtivo().length} loja(s) no histórico.</div>`;
 }
@@ -4040,7 +4421,9 @@ document.getElementById('nomeLoja').value = loja.nome || '';
 document.getElementById('inicioLoja').value = loja.inicio || '';
 renderPresenca();
 renderSetores();
-abrirView(document.getElementById(ui.view) ? ui.view : 'equipe');
+// a partir desta versão o app abre no painel do dia (uma vez; depois lembra a última tela)
+if(!ui.nav2){ ui.nav2 = true; ui.view = 'inicio'; lsSet(UI_KEY, ui); }
+abrirView(document.getElementById(ui.view) ? ui.view : 'inicio');
 
 function preencherQuartosNomes(v){
   [['nomeCoord','coord'],['nomeLider','lider'],['nomeMotorista','motorista']].forEach(([id,k])=>{ document.getElementById(id).value = (v||{})[k] || ''; });
@@ -4059,9 +4442,9 @@ registrarSinc('loja', ()=>loja,
 registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
   ()=>{ const q = lsGet(QUARTOS_KEY, {}); return !(q.coord || q.lider || q.motorista); });
-registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}, metas: robo.metas || {}}),
+registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}, metas: robo.metas || {}, segmentos: robo.segmentos || {}}),
   v=>{ if(!v || typeof v !== 'object') return;
-       if(v.metas && typeof v.metas === 'object'){ robo.metas = v.metas; salvarRobo(); renderRobo(); }
+       if(v.metas && typeof v.metas === 'object'){ robo.metas = v.metas; robo.segmentos = (v.segmentos && typeof v.segmentos === 'object') ? v.segmentos : (robo.segmentos || {}); salvarRobo(); renderRobo(); }
        if(v.nomes && typeof v.nomes === 'object'){ robo.nomes = v.nomes; aplicarNomesRobo(); salvarRobo(); renderRobo(); }
        if(typeof v.link === 'string' && v.link !== robo.link){ robo.link = v.link; salvarRobo(); renderRobo(); atualizarDoRobo(false); } },
   ()=>!robo.link);
