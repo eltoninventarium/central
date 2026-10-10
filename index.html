@@ -228,6 +228,21 @@ select{background:var(--bg);color:var(--text);border:1px solid var(--border);bor
 .resumo .item.caminho{border-left:4px solid var(--warn);}
 .resumo .item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:.74rem;color:var(--muted);}
 .resumo .item b{display:block;font-size:1.1rem;color:var(--text);}
+.resumo .item.clicavel{cursor:pointer;position:relative;transition:transform .12s, background .2s;}
+.resumo .item.clicavel::after{content:'›';position:absolute;right:8px;top:6px;font-size:1rem;color:var(--muted);opacity:.7;}
+.resumo .item.clicavel:active{transform:scale(.97);background:var(--accent-soft);}
+.lista-nomes{display:flex;flex-direction:column;margin-top:6px;}
+.lista-nome{display:flex;flex-direction:column;gap:2px;padding:9px 2px;border-bottom:1px solid var(--border);cursor:pointer;font-size:.9rem;}
+.lista-nome:last-child{border-bottom:none;}
+.lista-nome small{margin:0;}
+.tag-clt,.tag-status{display:inline-block;font-size:.66rem;font-weight:700;border-radius:8px;padding:1px 6px;margin-left:4px;border:1px solid var(--border);color:var(--muted);vertical-align:middle;}
+.tag-status.presente{color:var(--ok);border-color:var(--ok);}
+.tag-status.falta{color:var(--danger);border-color:var(--danger);}
+.tag-status.atestado{color:var(--atest);border-color:var(--atest);}
+.tag-status.caminho{color:var(--warn);border-color:var(--warn);}
+.tag-status.direto{color:var(--direto);border-color:var(--direto);}
+.tag-status.pegar{color:var(--pegar);border-color:var(--pegar);}
+.pessoa-row.destaque{background:var(--accent-soft);border-radius:8px;transition:background .3s;}
 .pessoa-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
 .pessoa-row:last-child{border-bottom:none;}
 .pessoa-row.coord .pessoa-nome{font-weight:700;}
@@ -2572,6 +2587,60 @@ function contagemPresenca(){
     pendentes: equipe.length - presentes - faltas - caminho - direto - pegar - transferidos};
 }
 function detalhePresentes(c){ return `${c.presCLT} CLT · ${c.presFree} free`; }
+// ---- tocar num quadro da Presença (Faltas, Presentes, A caminho…) mostra os nomes
+const SEM_STATUS = ['presente','caminho','direto','pegar','falta','atestado','transferido'];
+function pessoasDaCaixa(rotulo){
+  const todos = loja.pessoas.map((p,i)=>({p,i})), conf = todos.filter(x=>ehConferente(x.p));
+  const com = st => conf.filter(x=>x.p.presenca === st);
+  switch(rotulo){
+    case 'Coordenadores': return todos.filter(x=>x.p.coordenador);
+    case 'Instrutor': return todos.filter(x=>!x.p.coordenador && x.p.instrutor);
+    case 'Estagiários': return todos.filter(x=>!x.p.coordenador && !x.p.instrutor && x.p.estagiario);
+    case 'Escalados': return conf;
+    case 'Presentes': return com('presente');
+    case 'A caminho': return com('caminho');
+    case 'Vai direto': return com('direto');
+    case 'Pegar no caminho': return com('pegar');
+    case 'Faltas': return conf.filter(x=>x.p.presenca === 'falta' || x.p.presenca === 'atestado');
+    case 'Transferidos': return com('transferido');
+    case 'Pendentes': return conf.filter(x=>!SEM_STATUS.includes(x.p.presenca));
+  }
+  return [];
+}
+function abrirListaCaixa(rotulo){
+  const lista = pessoasDaCaixa(rotulo).sort((a,b)=>a.p.nome.localeCompare(b.p.nome,'pt-BR'));
+  const mostraStatus = ['Escalados','Faltas','Estagiários','Coordenadores','Instrutor'].includes(rotulo);
+  const linha = ({p,i})=>{
+    const tags = [];
+    if(!p.coordenador) tags.push(ehFree(p) ? '<span class="tag-free">FREE</span>' : '<span class="tag-clt">CLT</span>');
+    if(mostraStatus && p.presenca && STATUS[p.presenca]) tags.push(`<span class="tag-status ${p.presenca}">${STATUS[p.presenca].rotulo}</span>`);
+    if(mostraStatus && !p.coordenador && !SEM_STATUS.includes(p.presenca)) tags.push('<span class="tag-status">sem status</span>');
+    const extra = [p.presenca==='presente' && p.chegada ? (p.atraso ? `⏰ chegou ${p.chegada}` : `chegou ${p.chegada}`) : '',
+      p.presenca==='transferido' ? `→ ${p.transferidoPara || 'outra loja'}` : '', p.recebidoDe ? `veio de ${p.recebidoDe}` : ''].filter(Boolean).join(' · ');
+    return `<div class="lista-nome" data-ir="${i}"><span>${esc(p.nome)} ${tags.join(' ')}</span>${extra ? `<small class="hint">${esc(extra)}</small>` : ''}</div>`;
+  };
+  const free = lista.filter(x=>!x.p.coordenador && ehFree(x.p)).length;
+  const box = abrirFolha(`${esc(rotulo)} · ${lista.length}`,
+    `${lista.length && !['Coordenadores'].includes(rotulo) ? `<p class="hint" style="margin-top:2px">${lista.length - free} CLT · ${free} free · toque num nome para ir até ele</p>` : ''}
+     <div class="lista-nomes">${lista.length ? lista.map(linha).join('') : '<p class="hint">Ninguém aqui.</p>'}</div>
+     ${lista.length ? '<div class="acoes"><button class="btn small secondary" type="button" data-copiar>Copiar nomes</button></div>' : ''}`,
+    'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  const bc = box.querySelector('[data-copiar]');
+  if(bc) bc.onclick = async ()=>{
+    const txt = `*${loja.nome || 'Loja'} · ${rotulo} (${lista.length})*\n` + lista.map(({p})=>'- ' + p.nome + (p.presenca==='atestado' && rotulo==='Faltas' ? ' (atestado)' : '')).join('\n');
+    try{ await navigator.clipboard.writeText(txt); }catch(e){ const t = document.createElement('textarea'); t.value = txt; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    bc.textContent = 'Copiado ✓';
+  };
+  box.querySelectorAll('[data-ir]').forEach(el=>el.onclick = ()=>{
+    box.remove();
+    const row = document.getElementById('pres-' + el.dataset.ir);
+    if(row){ row.scrollIntoView({behavior:'smooth', block:'center'}); row.classList.add('destaque'); setTimeout(()=>row.classList.remove('destaque'), 1800); }
+  });
+}
+document.addEventListener('click', e=>{
+  const c = e.target.closest('#listaPresenca [data-caixa]'); if(c) abrirListaCaixa(c.dataset.caixa);
+});
 function detalheFaltas(c){
   return c.atestados ? `${c.faltaSimples} falta · ${c.atestados} atestado` : '';
 }
@@ -2620,7 +2689,8 @@ function renderPresenca(){
   const c = contagemPresenca();
   let html = `<div class="card" id="cardPresenca"><h2>${esc(loja.nome || 'Equipe')}${loja.inicio ? ` <small class="hint">· início ${esc(loja.inicio)}</small>` : ''}</h2>
     ${!loja.inicio ? '<p class="hint">Preencha o "Início programado" acima para o app marcar os atrasos.</p>' : ''}
-    <div class="resumo" style="--n:${caixasResumo(c).length}">${caixasResumo(c).map(([k,v,cl,det],ix)=>`<div class="item ${cl}" style="--span:${spansCaixas(caixasResumo(c).length)[ix]}">${k}<b>${v}</b>${det?`<small>${det}</small>`:''}</div>`).join('')}</div>`;
+    <div class="resumo" style="--n:${caixasResumo(c).length}">${caixasResumo(c).map(([k,v,cl,det],ix)=>`<div class="item ${cl} clicavel" role="button" tabindex="0" data-caixa="${esc(k)}" style="--span:${spansCaixas(caixasResumo(c).length)[ix]}">${k}<b>${v}</b>${det?`<small>${det}</small>`:''}</div>`).join('')}</div>
+    <p class="hint" style="margin:4px 2px 0">Toque num quadro para ver os nomes.</p>`;
   const est = estatisticasHistorico();
   ordemPresenca().forEach(({p,i})=>{
     const e = !p.coordenador && est[normalizarNome(p.nome)];
@@ -2640,7 +2710,7 @@ function renderPresenca(){
           ${p.instrutor ? '' : `<button class="pill coordpill ${p.estagiario?'on':''}" onclick="toggleEstagiario(${i})">Estag.</button>`}` : ''}
         ${statusVisiveis().map(([st,d])=>`<button class="pill ${st} ${p.presenca===st?'on':''}" onclick="marcarPresenca(${i},'${st}')">${d.rotulo}</button>`).join('')}
         ${editandoLista ? `<button class="pill transferir" onclick="abrirTransferir(${i})">Transferir</button>` : ''}`;
-    html += `<div class="pessoa-row ${p.coordenador?'coord':''}"><span class="pessoa-nome">${esc(p.nome)}${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}${histAtraso}${marcaAtraso}</span>
+    html += `<div class="pessoa-row ${p.coordenador?'coord':''}" id="pres-${i}"><span class="pessoa-nome">${esc(p.nome)}${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}${histAtraso}${marcaAtraso}</span>
       <span class="pill-btns">
         ${botoes}
         ${editandoLista ? `<button class="pill remover" onclick="removerPessoa(${i})" aria-label="Remover">×</button>` : ''}
