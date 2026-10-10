@@ -156,7 +156,7 @@ main{max-width:760px;margin:0 auto;padding:0 16px calc(104px + env(safe-area-ins
 /* menu de ícones embaixo */
 nav#barra{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--panel);border-top:1px solid var(--border);padding:4px 6px calc(6px + env(safe-area-inset-bottom,0px));}
 nav#barra .itens{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));max-width:560px;margin:0 auto;}
-nav#barra button{background:none;border:none;color:var(--muted);font-family:inherit;font-size:.68rem;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;cursor:pointer;position:relative;}
+nav#barra button{background:none;border:none;color:var(--muted);font-family:inherit;font-size:min(.68rem, 2.9vw);font-weight:700;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;cursor:pointer;position:relative;}
 nav#barra .ic{display:flex;padding:4px 16px;border-radius:14px;transition:background .25s,color .25s;}
 nav#barra svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 nav#barra button.active{color:var(--accent);}
@@ -264,6 +264,24 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .chip-atraso.ok{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);}
 .resumo .item.atraso{border-left:4px solid var(--danger);}
 .nome-ficha{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;}
+.chips-obs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.chip-obs{border:1px solid var(--border);background:var(--bg);color:var(--muted);border-radius:16px;padding:6px 10px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;}
+.chip-obs.ativo{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
+.texto-resumo{width:100%;margin-top:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:.88rem;font-family:inherit;line-height:1.4;resize:vertical;}
+.caminho{display:flex;flex-direction:column;gap:6px;margin-top:6px;border-left:3px solid var(--accent-soft);padding-left:10px;}
+.caminho .passo{display:flex;flex-direction:column;}
+.caminho .passo small{margin:1px 0 0;}
+.mapa-loja{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow:auto;margin-top:6px;}
+.mapa-loja .trecho{display:flex;flex-direction:column;gap:4px;border-bottom:1px solid var(--border);padding-bottom:6px;}
+.mapa-loja .trecho.miudo{opacity:.75;}
+.seg-chave{display:flex;gap:4px;padding:4px;margin:6px 0 2px;border-radius:12px;background:var(--bg);border:1px solid var(--border);}
+.seg-chave button{flex:1 1 0;min-width:0;border:none;background:none;color:var(--muted);font-family:inherit;font-size:.84rem;font-weight:700;padding:7px 4px;border-radius:9px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;transition:background .2s,color .2s;}
+.seg-chave button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.seg-chave button small{font-weight:600;font-size:.7rem;opacity:.8;}
+.seg-chave button.ativo{background:var(--accent-fill);color:var(--accent-ink);}
+.seg-outros{display:inline-block;margin:6px 0 0;border:1px dashed var(--border);background:none;color:var(--muted);font-family:inherit;font-size:.76rem;font-weight:600;border-radius:8px;padding:4px 9px;cursor:pointer;}
+.seg-outros.ativo{border-style:solid;border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+#produtividade.seg-super{--accent:var(--direto);--accent-fill:#0e6b62;--accent-soft:var(--direto-bg);}
 .selo-meta{display:inline-block;margin-top:4px;border-radius:10px;padding:2px 9px;font-size:.74rem;font-weight:700;border:1px solid var(--border);color:var(--muted);background:var(--bg);}
 .selo-meta.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-bg);}
 .selo-meta.nao{border-color:var(--danger);color:var(--danger);background:var(--danger-bg);}
@@ -384,7 +402,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
   <section id="fichas" class="view">
     <div class="card">
       <h2>Ficha do conferente</h2>
-      <p class="hint">Junta numa tela só: cadastro, produtividade do robô, erros, presença, atrasos, setores e convites de viagem. A nota (0 a 100) mistura itens/hora (60%), presença (25%) e erros (15%).</p>
+      <p class="hint">Junta numa tela só: cadastro, produtividade do robô, erros, presença, atrasos, setores e convites de viagem. A nota (0 a 100) mistura itens/hora (60%), presença (25%) e erros (15%). Itens/hora e erros contam só as drogarias; supermercado aparece à parte e não entra na nota.</p>
       <div class="busca-robo"><span class="lupa" aria-hidden="true">🔍</span>
         <input type="text" inputmode="search" id="buscaFicha" placeholder="Pesquisar nome" autocomplete="off" oninput="renderFichas()"></div>
       <div class="row">
@@ -542,6 +560,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
   <section id="produtividade" class="view">
     <div class="card" id="cardRobo">
       <h2>Produtividade automática</h2>
+      <div id="segRobo"></div>
       <p class="hint" id="statusRobo">O robô do Gmail calcula cada loja assim que o e-mail chega. O app busca aqui quando você abre com internet.</p>
       <div id="avisoRobo"></div>
       <details id="boxMetas" style="margin-top:8px">
@@ -563,7 +582,6 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
     <div id="listaRobo"></div>
     <div id="detalheRobo"></div>
     <div id="conferentesRobo"></div>
-    <div id="rankingMes"></div>
 
     <h2 style="font-size:1rem;margin:22px 0 8px">Calcular manualmente</h2>
     <p class="hint" style="margin-bottom:10px">Para uma loja que não veio por e-mail: escolha os 3 arquivos abaixo.</p>
@@ -609,7 +627,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
       <button data-grupo="inicio"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></span>Início<span class="badge" id="badge-inicio" hidden></span></button>
       <button data-grupo="viagem"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2.5"/><path d="M3 11h18"/><circle cx="7.5" cy="19" r="1.6"/><circle cx="16.5" cy="19" r="1.6"/></svg></span>Viagem<span class="badge" id="badge-viagem" hidden></span></button>
       <button data-grupo="loja"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9l1.6-5h13.8l1.6 5"/><path d="M4.5 9v11h15V9"/><path d="M9.5 20v-5.5h5V20"/><path d="M3.5 9h17"/></svg></span>Loja<span class="badge" id="badge-loja" hidden></span></button>
-      <button data-grupo="prod"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V11"/><path d="M10 20V5"/><path d="M16 20v-7"/><path d="M21 20H3"/></svg></span>Produção<span class="badge" id="badge-prod" hidden></span></button>
+      <button data-grupo="prod"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V11"/><path d="M10 20V5"/><path d="M16 20v-7"/><path d="M21 20H3"/></svg></span>Produtividade<span class="badge" id="badge-prod" hidden></span></button>
       <button data-grupo="fichas"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="11" r="2.4"/><path d="M5.6 16.5c.8-1.5 2-2.2 3.4-2.2s2.6.7 3.4 2.2"/><path d="M14.5 10h4M14.5 13.5h4"/></svg></span>Fichas<span class="badge" id="badge-fichas" hidden></span></button>
 </div></nav>
 
@@ -1566,7 +1584,7 @@ function abrirWhats(p, texto){
 
 // Mais fortes primeiro: IV > III ≈ freelancer > II > I; depois itens/hora do robô; depois preferência
 function forcaRobo(){
-  const m = {}; try{ porConferenteRobo().forEach(c=>{ m[normalizarNome(c.nome)] = c.ih; }); }catch(e){}
+  const m = {}; try{ porConferenteRobo(idsDoSeg('DROGARIA')).forEach(c=>{ m[normalizarNome(c.nome)] = c.ih; }); }catch(e){}
   return m;
 }
 function listaConvites(){
@@ -3345,12 +3363,12 @@ function exportarResumoPNG(){
   gerarImagem(h, dd.length ? `Resumo da viagem ${dd[0]}${dd.length>1?' a '+dd[dd.length-1]:''}.png` : 'Resumo da viagem.png');
 }
 function exportarConferentesRoboPNG(){
-  const conf = porConferenteRobo(); if(!conf.length) return;
-  const lojas = lojasRoboOrdenadas();
-  let h = cabecalhoImagem('Produtividade por conferente', `${lojas.length} loja(s) de ${esc(lojas[lojas.length-1].data)} a ${esc(lojas[0].data)}`);
+  const conf = porConferenteRobo(idsDoSeg(segAtivo)); if(!conf.length) return;
+  const lojas = lojasRoboOrdenadas().filter(l=>segDaLoja(l) === segAtivo);
+  let h = cabecalhoImagem('Produtividade por conferente · ' + ROTULO_SEG[segAtivo], `${lojas.length} loja(s) de ${esc(lojas[lojas.length-1].data)} a ${esc(lojas[0].data)}`);
   h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h','Erros','Precisão'], conf.map((c,i)=>[i+1, esc(c.nome), c.lojas, fmtN(c.pecas), fmtN(c.ih), c.lojasComRel ? c.erros : '—', fmtPct(c.precisao)]), ['', '', 'center', 'right', 'right', 'center', 'right'], 4);
   h += `<div style="color:#62597a;font-size:11px;margin-top:10px">Itens/h = peças somadas ÷ horas somadas · Erros = itens ajustados nas seções da pessoa · Precisão = peças sem ajuste ÷ peças contadas (lojas com relatório de ajustes)</div>`;
-  gerarImagem(h, `Produtividade por conferente - ${dataHojeArquivo()}.png`);
+  gerarImagem(h, `Produtividade por conferente - ${ROTULO_SEG[segAtivo]} - ${dataHojeArquivo()}.png`);
 }
 
 async function exportarProdutividade(){
@@ -3500,7 +3518,7 @@ async function exportarResumo(){
 /* ---- Meta da equipe: itens/hora por conferente, uma por cliente ---- */
 const SEGMENTOS = {DROGARIA:{rotulo:'Drogaria', padrao:850}, SUPERMERCADO:{rotulo:'Supermercado', padrao:1200}, OUTRO:{rotulo:'Outro (sem meta)', padrao:0, semMeta:true}};
 const RE_DROGARIA = /ARAUJO|DROGASIL|RAIA|DROGARIA|DROGA |FARMA|PACHECO|PAGUE MENOS|PANVEL|NISSEI|VENANCIO|SAO JOAO|INDIANA/;
-const RE_SUPER = /SUPERMERCADO|SUPER |HIPER|ATACAD|MERCADO|MART|ASSAI|CARREFOUR|VERDEMAR|EPA |APOIO|BAHAMAS|DMA|BH /;
+const RE_SUPER = /SUPERMERCADO|SUPER |SUPERNOSSO|HIPER|ATACAD|MERCADO|MART|ASSAI|CARREFOUR|VERDEMAR|EPA |APOIO|BAHAMAS|DMA|BH |FARID|FARDID|BRETAS/;
 // nome do cliente (o que aparece na tela)
 function clienteDe(cliente, loja){
   const t = normalizarNome((cliente||'') + ' ' + (loja||'')) + ' ';
@@ -3523,6 +3541,29 @@ function segmentoDe(cliente){
   if(RE_DROGARIA.test(t)) return 'DROGARIA';
   if(RE_SUPER.test(t)) return 'SUPERMERCADO';
   return 'OUTRO';   // cliente desconhecido fica sem meta até ele escolher em "Cada cliente é…"
+}
+// ---- Drogarias x supermercados: a produtividade de um não se mistura com a do outro.
+// Drogaria é o padrão (clientes principais); a chave no topo de Produtividade troca para supermercados.
+// O Início, as Fichas e a nota da escala usam só drogarias.
+let segAtivo = 'DROGARIA';   // não fica salvo: o app sempre abre em Drogarias
+const ROTULO_SEG = {DROGARIA:'Drogarias', SUPERMERCADO:'Supermercados', OUTRO:'Outros clientes'};
+const ICONE_SEG = {DROGARIA:'💊', SUPERMERCADO:'🛒', OUTRO:'🏷️'};
+function segDaLoja(l){ return segmentoDe(clienteDe(l.cliente, l.loja)); }
+function lojasDoSeg(seg){ return robo.lojas.filter(l=>segDaLoja(l) === seg); }
+function idsDoSeg(seg){ return new Set(lojasDoSeg(seg).map(l=>l.id)); }
+function trocarSegmento(seg){
+  if(!SEGMENTOS[seg] || seg === segAtivo) return;
+  segAtivo = seg; roboLojaAberta = null; roboConfAberto = null;
+  renderRobo();
+}
+function chaveSegmento(){
+  const n = {DROGARIA:0, SUPERMERCADO:0, OUTRO:0};
+  robo.lojas.forEach(l=>{ n[segDaLoja(l)]++; });
+  const qtd = k => `${n[k]} loja${n[k] === 1 ? '' : 's'}`;
+  // a chave tem só drogarias x supermercados; "outros clientes" (Calvin Klein…) é um atalho pequeno embaixo, só se existir
+  return `<div class="seg-chave" role="tablist" aria-label="Tipo de cliente">${['DROGARIA', 'SUPERMERCADO'].map(s=>
+      `<button type="button" role="tab" aria-selected="${s===segAtivo}" class="${s===segAtivo?'ativo':''}" data-seg-chave="${s}"><span>${ICONE_SEG[s]} ${ROTULO_SEG[s]}</span><small>${qtd(s)}</small></button>`).join('')}</div>`
+    + (n.OUTRO || segAtivo === 'OUTRO' ? `<button type="button" class="seg-outros ${segAtivo==='OUTRO'?'ativo':''}" data-seg-chave="${segAtivo==='OUTRO' ? 'DROGARIA' : 'OUTRO'}">${ICONE_SEG.OUTRO} Outros clientes (${qtd('OUTRO')})${segAtivo==='OUTRO' ? ' · voltar para drogarias' : ''}</button>` : '');
 }
 function metaDe(cliente){
   const seg = segmentoDe(cliente);
@@ -3630,7 +3671,9 @@ function normLojaRobo(o){
     inicio:horaRobo(o['INÍCIO']), fim:horaRobo(o['FIM']), horas:Number(o['HORAS LÍQUIDAS'])||0, pecas:Number(o['PEÇAS'])||0,
     fora:Number(o['FORA DAS FAIXAS'])||0, conferentes:Number(o['CONFERENTES'])||0, obs:String(o['OBS.']||''),
     // erros (relatório de itens ajustados): vazio = a loja veio sem esse relatório
-    errosItens:numOuNulo(o['ERROS (ITENS)']), pecasAjustadas:numOuNulo(o['PEÇAS AJUSTADAS'])};
+    errosItens:numOuNulo(o['ERROS (ITENS)']), pecasAjustadas:numOuNulo(o['PEÇAS AJUSTADAS']),
+    // resumo dos conferentes: PRONTO / AGUARDANDO CONTROLE / vazio (loja sem a pasta CONTROLE)
+    resumo:String(o['RESUMO']||'')};
 }
 function numOuNulo(v){ return (v === '' || v === null || v === undefined) ? null : (Number(v) || 0); }
 function normErroRobo(o){
@@ -3673,12 +3716,22 @@ async function atualizarDoRobo(manual, soConvites){
     const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     // no "Atualizar agora" o robô olha o Gmail na hora (pode levar até ~1 min se chegaram lojas novas)
     const tempo = setTimeout(()=>{ if(ctrl) ctrl.abort(); }, manual ? 150000 : 40000);
-    const url = manual ? robo.link + (robo.link.includes('?') ? '&' : '?') + 'processar=1' : robo.link;
+    // manda a versão que já tem: se nada mudou no robô, a resposta vem curtinha (economiza dados móveis)
+    const sep = robo.link.includes('?') ? '&' : '?';
+    const url = robo.link + sep + [manual ? 'processar=1' : '', robo.versao && robo.lojas.length ? 'versao=' + encodeURIComponent(robo.versao) : ''].filter(Boolean).join('&');
     const resp = await fetch(url, ctrl ? {signal: ctrl.signal} : {});
     clearTimeout(tempo);
     let j;
     try{ j = await resp.json(); }catch(e){ throw new Error('O robô respondeu algo inesperado. Confira se ele foi publicado como App da Web com acesso "Qualquer pessoa".'); }
     if(j.erro) throw new Error(j.erro === 'chave inválida' ? 'A chave do link não confere com a do robô. Copie de novo a linha do "mostrarLinkDoApp".' : String(j.erro));
+    if(j.semMudanca){
+      robo.atualizadoEm = Date.now(); robo.ultimoErro = ''; salvarRobo();
+      if(manual) toast('Tudo em dia: nenhuma loja nova no Gmail.');
+      else if(soConvites) toast('Nenhuma resposta nova.');
+      if(manual && j.processamento && /erro|consegui/i.test(j.processamento)) toast(j.processamento, 6000);
+      return;
+    }
+    if(j.versao) robo.versao = String(j.versao);
     const antes = new Set(robo.lojas.map(l=>l.id));
     robo.lojas = (j.lojas||[]).map(normLojaRobo).filter(l=>l.id);
     robo.pessoas = (j.pessoas||[]).map(normPessoaRobo).filter(p=>p.id && p.nome);
@@ -3797,38 +3850,49 @@ function renderRobo(){
     : roboBuscando ? (roboPedidoManual ? 'Pedindo ao robô para olhar o Gmail agora… (pode levar até 1 minuto)' : 'Buscando lojas no robô…')
     : `Ligado ao robô · ${robo.lojas.length} loja(s)${quando ? ' · atualizado em ' + quando : ''}`;
   document.getElementById('avisoRobo').innerHTML = robo.ultimoErro ? `<div class="msg warn">${esc(robo.ultimoErro)}</div>` : '';
-  const todasLojas = lojasRoboOrdenadas();
+  if(!SEGMENTOS[segAtivo]) segAtivo = 'DROGARIA';
+  const secao = document.getElementById('produtividade'); if(secao) secao.classList.toggle('seg-super', segAtivo !== 'DROGARIA');
+  const rotSeg = ROTULO_SEG[segAtivo].toLowerCase();
+  const boxSeg = document.getElementById('segRobo');
+  if(boxSeg) boxSeg.innerHTML = robo.lojas.length ? chaveSegmento() + (segAtivo !== 'DROGARIA'
+    ? `<p class="hint" style="margin:4px 2px 0">Vendo só ${rotSeg}: estas lojas não entram no ranking das drogarias, no Início nem nas notas das fichas.</p>` : '') : '';
+  const todasLojas = lojasRoboOrdenadas().filter(l=>segDaLoja(l) === segAtivo);
   const busca = normalizarNome(roboBusca || '');
   const casaPessoa = id => busca && robo.pessoas.some(p=>p.id===id && normalizarNome(p.nome).includes(busca));
-  const lojas = busca ? todasLojas.filter(l=>normalizarNome(`${l.data} ${l.loja} ${l.num}`).includes(busca) || casaPessoa(l.id)) : todasLojas;
+  const casaBusca = l => normalizarNome(`${l.data} ${l.loja} ${l.num}`).includes(busca) || casaPessoa(l.id);
+  const lojas = busca ? todasLojas.filter(casaBusca) : todasLojas;
+  // pesquisa que só acha resultado no outro tipo de cliente: oferece trocar
+  const outroSeg = busca && !lojas.length ? Object.keys(SEGMENTOS).find(s=>s !== segAtivo && lojasDoSeg(s).some(casaBusca)) : null;
+  const avisoOutro = outroSeg ? `<p class="hint" style="margin-top:8px">Nada em ${rotSeg}, mas tem resultado em ${ROTULO_SEG[outroSeg].toLowerCase()}. <button class="btn small secondary" style="margin:0 0 0 4px" data-seg-chave="${outroSeg}">Ver ${ROTULO_SEG[outroSeg].toLowerCase()}</button></p>` : '';
   const abrirLojas = roboUi.lojas || !!busca;
   const contLojas = busca ? `${lojas.length} de ${todasLojas.length}` : `${todasLojas.length}`;
   const comMeta = todasLojas.map(equipeLojaRobo).filter(eq=>eq.meta);
   const placarMeta = comMeta.length ? ` · ✅ ${comMeta.filter(eq=>eq.bateu).length} de ${comMeta.length} na meta` : '';
   renderMetas();
-  document.getElementById('listaRobo').innerHTML = todasLojas.length ? `<div class="card"><button class="secao-toggle ${abrirLojas?'aberta':''}" onclick="alternarSecaoRobo('lojas')"><span class="seta">▶</span> Lojas recebidas <small>(${contLojas}${placarMeta})</small></button>${
-    !abrirLojas ? '' : !lojas.length ? '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>' : lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
+  document.getElementById('listaRobo').innerHTML = !todasLojas.length
+    ? (robo.lojas.length ? `<div class="card"><p class="hint" style="margin:0">Nenhuma loja de ${segAtivo === 'OUTRO' ? 'outros clientes' : rotSeg.replace(/s$/, '')} recebida ainda.${segAtivo === 'SUPERMERCADO' ? ' Assim que chegar o e-mail de um supermercado (Farid, por exemplo), ela aparece aqui.' : ''}</p>${avisoOutro}</div>` : '')
+    : `<div class="card"><button class="secao-toggle ${abrirLojas?'aberta':''}" onclick="alternarSecaoRobo('lojas')"><span class="seta">▶</span> Lojas recebidas <small>(${contLojas}${placarMeta})</small></button>${avisoOutro}${
+    !abrirLojas ? '' : !lojas.length ? (avisoOutro ? '' : '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>') : lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
       <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças${l.errosItens !== null && l.errosItens !== undefined ? ` · ${l.errosItens} erro(s)` : ''} · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small>${seloMeta(equipeLojaRobo(l))}</span>
-      <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('')}</div>` : '';
+      <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('')}</div>`;
   renderDetalheRobo();
-  const confTodos = porConferenteRobo().map((c,i)=>Object.assign({pos:i+1}, c));
+  const confTodos = porConferenteRobo(idsDoSeg(segAtivo)).map((c,i)=>Object.assign({pos:i+1}, c));
   const conf = busca ? confTodos.filter(c=>normalizarNome(c.nome).includes(busca)) : confTodos;
   const abrirConf = roboUi.conf || !!busca;
   const contConf = busca ? `${conf.length} de ${confTodos.length}` : `${confTodos.length}`;
   document.getElementById('conferentesRobo').innerHTML = confTodos.length ? `<div class="card"><button class="secao-toggle ${abrirConf?'aberta':''}" onclick="alternarSecaoRobo('conf')"><span class="seta">▶</span> Por conferente <small>(${contConf})</small></button>
-    ${!abrirConf ? '' : `<p class="hint" style="margin-top:6px">Relatório completo de todas as lojas do robô: peças, itens/hora (peças somadas ÷ horas somadas), erros e precisão (peças sem ajuste ÷ peças contadas, só nas lojas com relatório de itens ajustados). Toque num nome para ver as lojas e os erros dele(a).</p>
+    ${!abrirConf ? '' : `<p class="hint" style="margin-top:6px">Relatório de todas as lojas de ${rotSeg} do robô: peças, itens/hora (peças somadas ÷ horas somadas), erros e precisão (peças sem ajuste ÷ peças contadas, só nas lojas com relatório de itens ajustados). Toque num nome para ver as lojas e os erros dele(a).</p>
     ${!conf.length ? '<p class="hint">Nenhum conferente encontrado.</p>' : `<div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Erros</th><th>Precisão</th></tr></thead><tbody>${
       conf.map(c=>`<tr class="linha-clicavel" data-conf="${esc(normalizarNome(c.nome))}"><td>${c.pos}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtN(c.ih)}</td><td>${c.lojasComRel ? (c.erros ? `<b style="color:var(--danger)">${c.erros}</b>` : '0') : '—'}</td><td>${fmtPct(c.precisao)}</td></tr>`).join('')
     }</tbody></table></div>`}
     ${detalheConferenteRobo()}`}
     ${abrirConf ? `<div class="acoes"><button class="btn secondary" onclick="exportarConferentesRoboPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarConferentesRobo()">Excel</button></div>` : ''}</div>` : '';
-  if(typeof renderRankingMes === 'function') renderRankingMes();
   if(typeof atualizarBadges === 'function') atualizarBadges();
 }
 function detalheConferenteRobo(){
   if(!roboConfAberto) return '';
   const regs = robo.pessoas.filter(p=>normalizarNome(p.nome)===roboConfAberto)
-    .map(p=>({p, l:robo.lojas.find(x=>x.id===p.id)})).filter(x=>x.l)
+    .map(p=>({p, l:robo.lojas.find(x=>x.id===p.id)})).filter(x=>x.l && segDaLoja(x.l) === segAtivo)
     .sort((a,b)=>dataParaChave(b.l.data)-dataParaChave(a.l.data));
   if(!regs.length) return '';
   return `<div class="card" id="cardConfRobo" style="margin-top:10px;background:var(--accent-soft)"><h2 style="font-size:1rem">${esc(regs[0].p.nome)} · ${regs.length} loja(s)</h2>
@@ -3837,6 +3901,11 @@ function detalheConferenteRobo(){
     }</tbody></table></div>
     <div class="acoes"><button class="btn secondary small" onclick="abrirFicha(${esc(JSON.stringify(regs[0].p.nome))})">Abrir ficha</button><button class="btn secondary small" style="margin-left:6px" onclick="roboConfAberto=null;renderRobo()">Fechar</button></div></div>`;
 }
+// chave Drogarias / Supermercados (e o botão "Ver supermercados" da pesquisa)
+document.getElementById('produtividade').addEventListener('click', e=>{
+  const b = e.target.closest('[data-seg-chave]'); if(!b) return;
+  trocarSegmento(b.dataset.segChave);
+});
 document.getElementById('conferentesRobo').addEventListener('click', e=>{
   const te = e.target.closest('[data-erros-loja]');
   if(te){ const l = robo.lojas.find(x=>x.id===te.dataset.errosLoja); if(l && l.errosItens !== null && l.errosItens !== undefined) abrirErros(te.dataset.errosLoja, te.dataset.errosNome); return; }
@@ -3852,7 +3921,9 @@ function renderDetalheRobo(){
   div.innerHTML = `<div class="card" id="cardRankingRobo"><h2>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''} · ${esc(l.data)}</h2>
     <p class="hint">${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h líquidas · ${fmtN(l.fora)} peça(s) fora das faixas</p>
     ${caixaEquipe(equipeLojaRobo(l))}
-    <p class="hint">${esc(textoErrosLoja(l))}${l.errosItens !== null && l.errosItens !== undefined ? ' Toque num nome para ver os itens ajustados.' : ''}</p>
+    <p class="hint">${esc(textoErrosLoja(l))} Toque num nome para ver o resumo dele(a)${l.errosItens !== null && l.errosItens !== undefined ? ' e os itens ajustados' : ''}.</p>
+    ${l.resumo === 'PRONTO' ? `<div class="acoes" style="margin-top:0"><button class="btn small" onclick="abrirResumoEquipe(roboLojaAberta)">📝 Resumo da equipe</button><button class="btn small secondary" onclick="abrirMapaLoja(roboLojaAberta)">🗺️ Mapa da loja</button></div>`
+      : l.resumo === 'AGUARDANDO CONTROLE' ? '<p class="hint">📝 O resumo de cada conferente aparece quando chegar o e-mail do CONTROLE desta loja.</p>' : ''}
     <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th>${l.errosItens !== null && l.errosItens !== undefined ? '<th>Erros</th>' : ''}</tr></thead><tbody>${
       ps.map((p,i)=>`<tr class="linha-clicavel" data-erros-nome="${esc(p.nome)}"><td>${i+1}</td><td>${esc(p.nome)}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${l.errosItens !== null && l.errosItens !== undefined ? celulaErros(p) : ''}</tr>`).join('')
     }</tbody></table></div>
@@ -3867,21 +3938,326 @@ function renderDetalheRobo(){
 }
 document.getElementById('detalheRobo').addEventListener('click', e=>{
   const tr = e.target.closest('[data-erros-nome]'); if(!tr || !roboLojaAberta) return;
-  const l = robo.lojas.find(x=>x.id===roboLojaAberta);
-  if(l && l.errosItens !== null && l.errosItens !== undefined) abrirErros(roboLojaAberta, tr.dataset.errosNome);
-  else abrirFicha(tr.dataset.errosNome);
+  abrirConferenteLoja(roboLojaAberta, tr.dataset.errosNome);
 });
 document.getElementById('listaRobo').addEventListener('click', e=>{
   const b = e.target.closest('[data-robo]'); if(!b) return;
   roboLojaAberta = b.dataset.robo; renderDetalheRobo();
   const el = document.getElementById('cardRankingRobo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'});
 });
+/* =====================================================================
+   RESUMO DO CONFERENTE (o que cada um contou, por onde passou, erros)
+   O robô monta os dados a partir da pasta CONTROLE do zip; o app só baixa
+   o resumo da loja quando você abre (poucos KB) e escreve o texto aqui mesmo.
+   ===================================================================== */
+const RESUMOS_KEY = 'central_resumos_v1';
+let resumosCache = lsGet(RESUMOS_KEY, {});   // {idLoja: {resumo, em}}
+const resumoBaixando = {};
+async function obterResumo(id, forcar){
+  if(!forcar && resumosCache[id]) return resumosCache[id].resumo;
+  if(!robo.link) throw new Error('Cole o link do robô primeiro.');
+  if(resumoBaixando[id]) return resumoBaixando[id];
+  resumoBaixando[id] = (async ()=>{
+    const resp = await fetch(robo.link + (robo.link.includes('?') ? '&' : '?') + 'acao=resumo&id=' + encodeURIComponent(id));
+    const j = await resp.json();
+    if(j.erro || !j.resumo) throw new Error(j.erro || 'O robô não mandou o resumo.');
+    resumosCache[id] = {resumo: j.resumo, em: Date.now()};
+    // guarda só os 12 mais recentes no aparelho
+    const ids = Object.keys(resumosCache).sort((a,b)=>resumosCache[b].em - resumosCache[a].em);
+    ids.slice(12).forEach(k=>delete resumosCache[k]);
+    lsSet(RESUMOS_KEY, resumosCache);
+    return j.resumo;
+  })();
+  try{ return await resumoBaixando[id]; } finally { delete resumoBaixando[id]; }
+}
+const SETORES_LISTA = {
+  DROGARIA: ['Geladeira','Frente de caixa','Bomboniere','Medicamentos','Controlado','OTC','Balcão','Estoque','Perfumaria','Sabonete','Desodorante','Esmalte','Maquiagem',
+    'Dermo','Slatwall','Shampoo infantil','Infantil e brinquedos','Absorventes','Ortopédico','Primeiros socorros','Suplementos','Pet','Quebras'],
+  SUPERMERCADO: ['Mercearia','Bebidas','Frios e laticínios','Açougue','Hortifruti','Padaria','Limpeza','Higiene e perfumaria','Bazar','Pet','Estoque']
+};
+const SETOR_FRASE = {'Geladeira':['a geladeira','na geladeira'], 'Frente de caixa':['a frente de caixa','na frente de caixa'], 'Bomboniere':['a bomboniere','na bomboniere'],
+  'Medicamentos':['medicamentos','em medicamentos'], 'Controlado':['controlados','em controlados'], 'OTC':['o OTC','no OTC'], 'Balcão':['o balcão','no balcão'],
+  'Estoque':['o estoque','no estoque'], 'Perfumaria':['perfumaria','na perfumaria'], 'Sabonete':['sabonetes','em sabonetes'], 'Desodorante':['desodorantes','em desodorantes'],
+  'Esmalte':['esmaltes','em esmaltes'], 'Maquiagem':['maquiagem','na maquiagem'], 'Dermo':['o dermo','no dermo'], 'Slatwall':['o slatwall','no slatwall'],
+  'Shampoo infantil':['shampoo infantil','no shampoo infantil'], 'Infantil e brinquedos':['o infantil','no infantil'], 'Absorventes':['absorventes','em absorventes'],
+  'Ortopédico':['o ortopédico','no ortopédico'], 'Primeiros socorros':['primeiros socorros','em primeiros socorros'], 'Suplementos':['suplementos','em suplementos'],
+  'Pet':['o pet','no pet'], 'Quebras':['quebras','em quebras'], 'Mercearia':['mercearia','na mercearia'], 'Bebidas':['bebidas','em bebidas'],
+  'Frios e laticínios':['frios e laticínios','em frios e laticínios'], 'Açougue':['o açougue','no açougue'], 'Hortifruti':['o hortifruti','no hortifruti'],
+  'Padaria':['a padaria','na padaria'], 'Limpeza':['limpeza','em limpeza'], 'Higiene e perfumaria':['higiene e perfumaria','em higiene e perfumaria'], 'Bazar':['o bazar','no bazar']};
+const fraseSetor = (s, i) => {
+  const f = SETOR_FRASE[s] || [String(s||'outros').toLowerCase(), 'em ' + String(s||'outros').toLowerCase()];
+  return i === 2 ? f[0].replace(/^(o|a) /, '') : f[i];   // 2 = só o nome ("um pouco de infantil")
+};
+// "THIAGO HENRIQUE DOS SANTOS" → "Thiago Henrique dos Santos"
+const nomeProprio = n => String(n||'').toLowerCase().replace(/(^|\s)(\p{L})/gu, (m,a,b)=>a + b.toUpperCase()).replace(/\s(D[aeo]s?|E)(?=\s)/g, m=>m.toLowerCase());
+const OBS_RESUMO = [
+  {k:'org', rot:'👍 Organizado', txt:'Manteve a organização.'},
+  {k:'atento', rot:'👍 Atento', txt:'Contou com atenção.'},
+  {k:'ritmo', rot:'👍 Bom ritmo', txt:'Manteve um bom ritmo.'},
+  {k:'apoio', rot:'🤝 Teve apoio', txt:'Teve apoio na contagem.'},
+  {k:'primeira', rot:'⭐ Primeira vez no setor', txt:''},
+  {k:'experiente', rot:'💡 Colocar com experiente', txt:'Vale colocar com alguém experiente em setores com produtos parecidos.'},
+  {k:'desorg', rot:'⚠️ Desorganizado', txt:'Precisa caprichar mais na arrumação.'},
+  {k:'distraido', rot:'⚠️ Pouca atenção', txt:'Precisa de mais atenção na contagem.'}
+];
+// junta ou frase: "a, b e c"
+const listaE = a => a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' e ' + a[a.length - 1];
+const fmtMinutos = m => m >= 60 ? Math.floor(m/60) + 'h' + String(Math.round(m % 60)).padStart(2,'0') : Math.round(m) + ' min';
+const ABREV_PROD = {SORV:'sorvete', CHOC:'chocolate', SH:'shampoo', COND:'condicionador', CR:'creme', PROT:'protetor', ABS:'absorvente', DES:'desodorante', SAB:'sabonete',
+  FRAL:'fralda', ESM:'esmalte', REFRI:'refrigerante', ENERG:'energético', BISC:'biscoito', TINT:'tintura', HID:'hidratante', LOC:'loção', PICOLE:'picolé', BAL:'bala',
+  MASC:'máscara', ESC:'escova', AP:'aparelho', LENCO:'lenço', TOALHA:'toalha', SUPL:'suplemento', VIT:'vitamina', RAC:'ração', COLAG:'colágeno'};
+// "SORV MAGNUM BOMBOM CLASSICO 161G" → "Sorvete Magnum Bombom Classico"
+function nomeProduto(desc){
+  const p = String(desc||'').toUpperCase().replace(/\s+/g,' ').trim().split(' ').filter(t=>!/\d/.test(t) && !/^(C\/|S\/|P\/|UN|ML|KG|LT|G)$/.test(t));
+  if(!p.length) return String(desc||'').trim();
+  const corte = p.slice(0, 4);
+  while(corte.length > 1 && /^(DE|DA|DO|DOS|DAS|E|C|P|COM|SEM|P\/)$/.test(corte[corte.length - 1])) corte.pop();
+  const pal = corte.map((t,i)=>{ const x = (i===0 && ABREV_PROD[t]) ? ABREV_PROD[t] : t.toLowerCase(); return x.replace(/(^|[&\-\/])(\p{L})/gu, (m,a,b)=>a + b.toUpperCase()); });
+  return pal.join(' ');
+}
+// erros da pessoa: trocas de sabor/tamanho (uma a mais, outra a menos, mesmo começo de nome) e o resto
+function analisarErros(erros){
+  const lista = erros.map(e=>({...e, d: e.qa - e.q1, chave: String(e.descricao||'').toUpperCase().split(/\s+/).slice(0,2).join(' ')}));
+  const trocas = [], usados = new Set();
+  lista.forEach((a,i)=>{
+    if(usados.has(i) || a.d >= 0) return;   // a = contou a mais
+    const j = lista.findIndex((b,k)=>!usados.has(k) && k!==i && b.d > 0 && b.chave === a.chave);
+    if(j < 0) return;
+    const b = lista[j];
+    usados.add(i); usados.add(j);
+    trocas.push({qtd: Math.min(-a.d, b.d), lancouComo: a, era: b, bateu: -a.d === b.d});
+  });
+  return {trocas, outros: lista.filter((e,i)=>!usados.has(i))};
+}
+function correcoesDaLoja(r){
+  const c = Object.assign({}, ((robo.setoresCorr||{})[r.id]) || {});
+  // correções de inventários anteriores da mesma loja (mesmas seções) valem de novo
+  const num = String(r.id||'').split('_')[1] || '';
+  const antes = ((robo.setoresLoja||{})[num]) || [];
+  if(antes.length) r.mapa.forEach((b, k)=>{
+    if(c[k] !== undefined) return;
+    const igual = antes.find(x=>{ const ini = Math.max(x.i, b.i), fim = Math.min(x.f, b.f); return fim >= ini && (fim - ini + 1) >= 0.8 * (b.f - b.i + 1); });
+    if(igual) c[k] = igual.s;
+  });
+  return c;
+}
+// caminho da pessoa já com as correções de setor e os pedaços seguidos do mesmo setor juntos
+function caminhoDaPessoa(r, p){
+  const corr = correcoesDaLoja(r);
+  const out = [];
+  p.blocos.forEach(b=>{
+    const s = corr[b.b] !== undefined ? corr[b.b] : b.s;
+    const ult = out[out.length - 1];
+    if(ult && ult.s === s){ ult.n += b.n; ult.p += b.p; ult.m = (ult.m||0) + (b.m||0); ult.f = Math.max(ult.f, b.f); ult.i = Math.min(ult.i, b.i); b.it.forEach(w=>{ if(!ult.it.includes(w)) ult.it.push(w); }); ult.pv = ult.pv || b.pv; ult.pt = 0; }
+    else out.push({s, i:b.i, f:b.f, n:b.n, p:b.p, m:b.m, it:b.it.slice(), pv:b.pv||0, pt:b.pt||0, corrigido: corr[b.b] !== undefined});
+  });
+  return out;
+}
+// por setor (soma tudo o que a pessoa fez em cada setor), na ordem em que apareceu
+function setoresDaPessoa(caminho){
+  const m = {};
+  caminho.forEach((b, k)=>{
+    const x = m[b.s] || (m[b.s] = {s:b.s, p:0, m:0, it:[], pv:0, pt:true, primeiro:k, firme:null});
+    x.p += b.p; x.m += (b.m||0); x.pv = x.pv || b.pv; x.pt = x.pt && !!b.pt;
+    if(x.firme === null && (b.n >= 4 || (b.m||0) >= 10)) x.firme = k;   // quando começou de verdade (não uma passada rápida)
+    b.it.forEach(w=>{ if(!x.it.includes(w)) x.it.push(w); });
+  });
+  return Object.values(m).sort((a,b)=>((a.firme ?? 1e9 + a.primeiro) - (b.firme ?? 1e9 + b.primeiro)));
+}
+function notaResumo(idLoja, nome){
+  robo.notasResumo = robo.notasResumo || {};
+  const k = normalizarNome(nome);
+  const porLoja = robo.notasResumo[idLoja] || (robo.notasResumo[idLoja] = {});
+  return porLoja[k] || (porLoja[k] = {obs:[], nota:'', texto:''});
+}
+function salvarNotasResumo(){ salvarRobo(); marcarAlterado('robo'); }
+function pessoaDoResumo(r, nome){ return (r.pessoas||[]).find(x=>mesmoNomeFlex(x.nome, nome)) || null; }
+
+// o texto do resumo (curto, sem formalidade); o que ele marcar entra junto
+function textoResumoConferente(l, r, pr, pRobo){
+  const n = notaResumo(l.id, pRobo ? pRobo.nome : pr.nome);
+  const nome = pRobo ? pRobo.nome : pr.nome;
+  const linhas = [];
+  linhas.push(`*${nomeProprio(nome)}*${pr && pr.treinamento ? ' · em treinamento' : ''}`);
+  // 1) o que contou
+  if(pr && pr.blocos.length){
+    const st = setoresDaPessoa(caminhoDaPessoa(r, pr)).filter(x=>x.s);
+    const tot = st.reduce((t,x)=>t + x.p, 0) || 1;
+    const principal = st.slice().sort((a,b)=>b.p - a.p)[0];
+    const relevantes = st.filter(x=>x === principal || x.p / tot >= 0.12 || x.m >= 25).slice(0, 4);
+    const resto = st.filter(x=>!relevantes.includes(x) && x.p / tot >= 0.03).map(x=>fraseSetor(x.s, 2)).slice(0, 2);
+    const pv = x => (x.pv || (x === principal && n.obs.includes('primeira'))) ? ' pela primeira vez' : '';
+    const itens = x => x.it.length ? ` (${listaE(x.it.slice(0, 3))})` : '';
+    const tempo = x => r.comLog && x.m ? fmtMinutos(x.m) : '';
+    let f = '';
+    if(relevantes.length === 1){
+      const x = relevantes[0];
+      f = `Contou ${fraseSetor(x.s, 0)}${pv(x)}${itens(x)}${tempo(x) ? ', ' + tempo(x) : ''}`;
+    } else if(r.comLog){
+      const partes = relevantes.map((x, i)=>{
+        const t = tempo(x);
+        if(x === principal) return `${i === 0 ? 'começou e ficou a maior parte' : 'passou a maior parte'} ${fraseSetor(x.s, 1)}${pv(x)}${t ? ` (${t}${x.it.length ? ' — ' + listaE(x.it.slice(0,3)) : ''})` : itens(x)}`;
+        return `${i === 0 ? 'começou' : i === relevantes.length - 1 ? 'terminou' : 'passou'} ${fraseSetor(x.s, 1)}${pv(x)}${t ? ` (${t})` : ''}`;
+      });
+      f = listaE(partes);
+      f = f.charAt(0).toUpperCase() + f.slice(1);
+    } else {
+      f = `Contou principalmente ${fraseSetor(principal.s, 0)}${pv(principal)}${itens(principal)}`;
+      const outros = relevantes.filter(x=>x !== principal).map(x=>fraseSetor(x.s, 0));
+      if(outros.length) f += ` e também ${listaE(outros)}`;
+    }
+    if(resto.length) f += `; e um pouco de ${listaE(resto)}`;
+    linhas.push(f + '.');
+  }
+  // 2) números
+  if(pRobo){
+    const eq = equipeLojaRobo(l), ps = pessoasDaLojaRobo(l.id), pos = ps.indexOf(pRobo) + 1;
+    let t = `${fmtN(pRobo.pecas)} peças | ${fmtN(pRobo.ih)} ip/h`;
+    if(eq.meta && pRobo.ih) t += pRobo.ih >= eq.meta ? ' (acima da meta)' : ` (abaixo da meta de ${fmtN(eq.meta)})`;
+    if(pos > 0 && ps.length > 1) t += ` · ${pos}º de ${ps.length} na loja`;
+    linhas.push(t);
+  }
+  // 3) erros
+  if(l.errosItens !== null && l.errosItens !== undefined && pRobo){
+    const lista = errosDaPessoa(l.id, pRobo.nome);
+    if(!lista.length) linhas.push('Nenhum erro de contagem.');
+    else {
+      const a = analisarErros(lista), partes = [];
+      a.trocas.forEach(t=>{
+        // "lançou 4 Sorvete Magnum Bombom Classico como Choc": só a diferença do segundo nome
+        const x = nomeProduto(t.era.descricao), y = nomeProduto(t.lancouComo.descricao).split(' '), xs = x.split(' ');
+        let k = 0; while(k < y.length - 1 && k < xs.length && xs[k] === y[k]) k++;
+        partes.push(`lançou ${t.qtd} ${x} como ${y.slice(k).join(' ')}${t.bateu ? ' (o total bateu)' : ''}`);
+      });
+      a.outros.slice(0, 3).forEach(e=>partes.push(e.d > 0 ? `faltou ${e.d} ${nomeProduto(e.descricao)}` : `contou ${-e.d} a mais de ${nomeProduto(e.descricao)}`));
+      if(a.outros.length > 3) partes.push(`mais ${a.outros.length - 3} item(ns)`);
+      linhas.push(`${lista.length === 1 ? 'Teve 1 ajuste' : `Teve ${lista.length} ajustes`}: ${listaE(partes)}.`);
+    }
+  }
+  // 4) o que ele marcou
+  const obs = OBS_RESUMO.filter(o=>n.obs.includes(o.k) && o.txt).map(o=>o.txt);
+  if(obs.length) linhas.push(obs.join(' '));
+  if(n.nota && n.nota.trim()) linhas.push(n.nota.trim());
+  return linhas.join('\n');
+}
+
+// tela do conferente dentro da loja: resumo + erros + observações + texto pronto
+async function abrirConferenteLoja(id, nome){
+  const l = robo.lojas.find(x=>x.id===id); if(!l) return;
+  const pRobo = robo.pessoas.find(x=>x.id===id && mesmoNomeFlex(x.nome, nome)) || null;
+  const temRel = l.errosItens !== null && l.errosItens !== undefined;
+  const box = abrirFolha(esc(nome), `<p class="hint" style="margin-top:2px">${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''} · ${esc(l.data)}${pRobo ? ` · ${fmtN(pRobo.pecas)} peças · ${fmtN(pRobo.ih)} itens/h` : ''}</p>
+    <div data-resumo><p class="hint">${l.resumo === 'PRONTO' ? 'Carregando o resumo…' : l.resumo === 'AGUARDANDO CONTROLE' ? 'O resumo aparece quando o e-mail do CONTROLE desta loja chegar.' : 'Sem o resumo dos setores: a loja veio sem a pasta CONTROLE (ou foi processada pelo robô antigo). Abaixo, números e erros.'}</p></div>
+    <div data-erros></div>
+    <div class="section-title">Suas observações</div>
+    <div class="chips-obs">${OBS_RESUMO.map(o=>`<button type="button" class="chip-obs" data-obs="${o.k}">${o.rot}</button>`).join('')}</div>
+    <input type="text" data-nota placeholder="Observação sua (opcional)" style="margin-top:8px">
+    <div class="section-title">Texto pronto</div>
+    <textarea data-texto rows="7" class="texto-resumo"></textarea>
+    <div class="acoes"><button class="btn small" type="button" data-copiar>Copiar</button><button class="btn small secondary" type="button" data-whats>WhatsApp</button>
+      <button class="btn small secondary" type="button" data-refazer>Refazer texto</button><button class="btn small secondary" type="button" data-ficha>Ficha</button></div>`,
+    'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  const nt = notaResumo(id, nome);
+  let r = null;
+  const ta = box.querySelector('[data-texto]'), inNota = box.querySelector('[data-nota]');
+  inNota.value = nt.nota || '';
+  const pintarObs = ()=>box.querySelectorAll('[data-obs]').forEach(b=>b.classList.toggle('ativo', nt.obs.includes(b.dataset.obs)));
+  const pr = () => r ? pessoaDoResumo(r, nome) : null;
+  const atualizarTexto = (forcar)=>{ if(nt.texto && !forcar) { ta.value = nt.texto; return; } ta.value = textoResumoConferente(l, r || {pessoas:[], mapa:[]}, pr() || {nome, blocos:[]}, pRobo); };
+  pintarObs(); atualizarTexto();
+  // erros (lista que já existia)
+  const lista = pRobo ? errosDaPessoa(id, pRobo.nome) : [];
+  box.querySelector('[data-erros]').innerHTML = !temRel ? '' : `<div class="section-title">Erros (${lista.length})</div>${!lista.length ? '<p class="hint">Nenhum item ajustado.</p>' :
+    `<div class="wrap-table" style="max-height:30vh;overflow:auto"><table><thead><tr><th>Seção</th><th>Produto</th><th>1ª</th><th>Ajust.</th></tr></thead><tbody>${
+      lista.map(e=>`<tr><td>${esc(e.secao)}</td><td>${esc(e.descricao)}</td><td>${e.q1}</td><td>${e.qa}</td></tr>`).join('')}</tbody></table></div>`}`;
+  box.querySelectorAll('[data-obs]').forEach(b=>b.onclick = ()=>{
+    const k = b.dataset.obs, i = nt.obs.indexOf(k);
+    if(i >= 0) nt.obs.splice(i, 1); else nt.obs.push(k);
+    if(k === 'org' || k === 'desorg'){ const outro = k === 'org' ? 'desorg' : 'org'; const j = nt.obs.indexOf(outro); if(i < 0 && j >= 0) nt.obs.splice(j, 1); }
+    if(k === 'atento' || k === 'distraido'){ const outro = k === 'atento' ? 'distraido' : 'atento'; const j = nt.obs.indexOf(outro); if(i < 0 && j >= 0) nt.obs.splice(j, 1); }
+    nt.texto = ''; salvarNotasResumo(); pintarObs(); atualizarTexto();
+  });
+  inNota.oninput = ()=>{ nt.nota = inNota.value; nt.texto = ''; salvarNotasResumo(); atualizarTexto(); };
+  ta.oninput = ()=>{ nt.texto = ta.value; salvarNotasResumo(); };
+  box.querySelector('[data-refazer]').onclick = ()=>{ nt.texto = ''; salvarNotasResumo(); atualizarTexto(true); };
+  box.querySelector('[data-copiar]').onclick = async (ev)=>{ try{ await navigator.clipboard.writeText(ta.value); }catch(e){ ta.select(); document.execCommand('copy'); } ev.target.textContent = 'Copiado ✓'; };
+  box.querySelector('[data-whats]').onclick = ()=>window.open('https://wa.me/?text=' + encodeURIComponent(ta.value), '_blank');
+  box.querySelector('[data-ficha]').onclick = ()=>{ box.remove(); abrirFicha(pRobo ? pRobo.nome : nome); };
+  if(l.resumo !== 'PRONTO') return;
+  try{
+    r = await obterResumo(id);
+    if(!document.body.contains(box)) return;
+    const p = pr();
+    box.querySelector('[data-resumo]').innerHTML = p ? htmlResumoPessoa(r, p) : '<p class="hint">Não achei esta pessoa nos arquivos do CONTROLE.</p>';
+    atualizarTexto();
+  }catch(e){
+    const div = box.querySelector('[data-resumo]'); if(div) div.innerHTML = `<p class="hint">${esc(e.message || 'Não consegui baixar o resumo agora.')}</p>`;
+  }
+}
+function htmlResumoPessoa(r, p){
+  const cam = caminhoDaPessoa(r, p);
+  const pausas = (p.pausas||[]).filter(x=>x >= 25);
+  return `${p.treinamento ? '<span class="selo-meta">🎓 Em treinamento</span> ' : ''}${p.minutos ? `<span class="hint">${fmtMinutos(p.minutos)} contando${pausas.length ? ` · pausa de ${pausas.map(x=>x + ' min').join(' e ')}` : ''}</span>` : ''}
+    <div class="section-title">${r.comLog ? 'Por onde passou (na ordem)' : 'O que contou'}</div>
+    <div class="caminho">${cam.map(b=>`<div class="passo"><b>${esc(b.s || 'Outros')}</b>${b.pv ? ' <span title="primeira vez">⭐ 1ª vez</span>' : ''}${b.pt ? ' <small class="hint">(ponta)</small>' : ''}${b.corrigido ? ' <small class="hint">(corrigido)</small>' : ''}
+      <small class="hint">seções ${b.i}–${b.f} · ${fmtN(b.p)} pç${b.m ? ' · ' + fmtMinutos(b.m) : ''}${b.it.length ? ' · ' + esc(b.it.slice(0,3).join(', ')) : ''}</small></div>`).join('')}</div>`;
+}
+
+// resumo de todos (para mandar para a empresa) e mapa da loja (corrigir setor)
+async function abrirResumoEquipe(id){
+  const l = robo.lojas.find(x=>x.id===id); if(!l) return;
+  const box = abrirFolha(`Resumo da equipe · ${esc(l.loja)}`, `<p class="hint">${esc(l.data)} · os textos já levam o que você marcou em cada pessoa.</p>
+    <textarea data-texto rows="14" class="texto-resumo">Carregando…</textarea>
+    <div class="acoes"><button class="btn small" type="button" data-copiar>Copiar</button><button class="btn small secondary" type="button" data-whats>WhatsApp</button></div>`, 'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  const ta = box.querySelector('[data-texto]');
+  box.querySelector('[data-copiar]').onclick = async (ev)=>{ try{ await navigator.clipboard.writeText(ta.value); }catch(e){ ta.select(); document.execCommand('copy'); } ev.target.textContent = 'Copiado ✓'; };
+  box.querySelector('[data-whats]').onclick = ()=>window.open('https://wa.me/?text=' + encodeURIComponent(ta.value), '_blank');
+  let r = null;
+  try{ r = await obterResumo(id); }catch(e){ ta.value = e.message || 'Não consegui baixar o resumo agora.'; return; }
+  const ps = pessoasDaLojaRobo(id);
+  ta.value = `*Resumo da equipe · ${l.loja}${l.num ? ' | ' + l.num : ''} · ${l.data}*\n\n` + ps.map(p=>{
+    const nt = notaResumo(id, p.nome);
+    return nt.texto || textoResumoConferente(l, r, pessoaDoResumo(r, p.nome) || {nome:p.nome, blocos:[]}, p);
+  }).join('\n\n');
+}
+async function abrirMapaLoja(id){
+  const l = robo.lojas.find(x=>x.id===id); if(!l) return;
+  const box = abrirFolha(`Mapa da loja · ${esc(l.loja)}`, `<p class="hint">Setores que o robô achou pela sequência de seções e pelos produtos. Se algum estiver errado, troque aqui: o resumo de quem contou muda na hora, e numa próxima contagem desta loja as mesmas seções já vêm com a sua correção.</p>
+    <div data-mapa><p class="hint">Carregando…</p></div>`, 'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  let r = null;
+  try{ r = await obterResumo(id); }catch(e){ box.querySelector('[data-mapa]').innerHTML = `<p class="hint">${esc(e.message || 'Não consegui baixar o resumo agora.')}</p>`; return; }
+  const corr = correcoesDaLoja(r);
+  const quem = {};
+  r.pessoas.forEach(p=>p.blocos.forEach(b=>(b.bs || [b.b]).forEach(k=>{ (quem[k] = quem[k] || new Set()).add(nomeCurto(p.nome)); })));
+  const lista = SETORES_LISTA[r.segmento === 'SUPERMERCADO' ? 'SUPERMERCADO' : 'DROGARIA'];
+  const div = box.querySelector('[data-mapa]');
+  div.innerHTML = `<div class="mapa-loja">${r.mapa.map((b, k)=>{
+    const s = corr[k] !== undefined ? corr[k] : b.s;
+    const opcoes = [...new Set([s, b.s, ...lista].filter(Boolean))];
+    return `<div class="trecho${b.n <= 2 ? ' miudo' : ''}"><span><b>${b.i}–${b.f}</b> <small class="hint">${b.n} seç. · ${esc([...(quem[k]||[])].join(', ') || '—')}${b.k && b.k.length ? ' · ' + esc(b.k.join(', ')) : ''}</small></span>
+      <select data-trecho="${k}">${opcoes.map(o=>`<option ${o===s?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`; }).join('')}</div>`;
+  div.querySelectorAll('select[data-trecho]').forEach(sel=>sel.onchange = ()=>{
+    const k = +sel.dataset.trecho, b = r.mapa[k];
+    robo.setoresCorr = robo.setoresCorr || {}; (robo.setoresCorr[id] = robo.setoresCorr[id] || {})[k] = sel.value;
+    // lembra para a próxima contagem desta loja
+    const num = String(id).split('_')[1] || '';
+    if(num){ robo.setoresLoja = robo.setoresLoja || {}; const arr = robo.setoresLoja[num] || (robo.setoresLoja[num] = []);
+      const i = arr.findIndex(x=>x.i === b.i && x.f === b.f); if(i >= 0) arr[i].s = sel.value; else arr.push({i:b.i, f:b.f, s:sel.value}); }
+    // o texto pronto de quem contou esse trecho volta a ser gerado
+    r.pessoas.forEach(p=>{ if(p.blocos.some(x=>(x.bs || [x.b]).includes(k))) notaResumo(id, p.nome).texto = ''; });
+    salvarNotasResumo(); toast(`Trecho ${b.i}–${b.f}: ${sel.value}.`);
+  });
+}
+
 // Resumo da viagem direto das lojas que o robô recebeu (sem precisar subir Excel)
 function abrirResumoRobo(){
-  const lojas = lojasRoboOrdenadas();
-  if(!lojas.length){ toast('Ainda não chegou nenhuma loja pelo robô.'); return; }
+  const lojas = lojasRoboOrdenadas().filter(l=>segDaLoja(l) === segAtivo);
+  if(!lojas.length){ toast(robo.lojas.length ? `Nenhuma loja de ${ROTULO_SEG[segAtivo].toLowerCase()} recebida pelo robô.` : 'Ainda não chegou nenhuma loja pelo robô.'); return; }
   const recente = diaDe(lojas[0].data);
-  const box = abrirFolha('Resumo da viagem — escolha as lojas',
+  const box = abrirFolha(`Resumo da viagem (${ROTULO_SEG[segAtivo].toLowerCase()}) — escolha as lojas`,
     `<div class="acoes" style="margin-bottom:6px"><button class="btn small secondary" type="button" data-marcar="7">Últimos 7 dias</button>
        <button class="btn small secondary" type="button" data-marcar="0" style="margin-left:6px">Desmarcar todas</button></div>
      <div class="checklist-estag" style="max-height:50vh;overflow:auto">${lojas.map((l,ix)=>
@@ -3945,31 +4321,33 @@ function exportarRankingRoboPNG(){
   gerarImagem(h, nomeArquivoRobo(l, 'png'));
 }
 async function exportarConferentesRobo(){
-  const conf = porConferenteRobo(); if(!conf.length || !excelDisponivel()) return;
-  const lojas = lojasRoboOrdenadas();
+  const ids = idsDoSeg(segAtivo);
+  const conf = porConferenteRobo(ids); if(!conf.length || !excelDisponivel()) return;
+  const lojas = lojasRoboOrdenadas().filter(l=>ids.has(l.id));
+  const erros = (robo.erros||[]).filter(e=>ids.has(e.id));
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Por conferente');
-  const r = cabecalhoPlanilha(ws, 'Produtividade por conferente', [`${lojas.length} loja(s) de ${lojas[lojas.length-1].data} a ${lojas[0].data}`]);
+  const r = cabecalhoPlanilha(ws, 'Produtividade por conferente · ' + ROTULO_SEG[segAtivo], [`${lojas.length} loja(s) de ${lojas[lojas.length-1].data} a ${lojas[0].data}`]);
   const linhas = conf.map((c,i)=>[i+1, c.nome, c.lojas, c.pecas, Math.round(c.horas*100)/100, c.ih, c.media, c.melhor,
     c.lojasComRel ? c.erros : '—', c.lojasComRel ? c.pecasErro : '—', c.precisao === null ? '—' : Math.round(c.precisao*10)/1000]);
   tabelaExcel(ws, r, ['#','NOME','LOJAS','PEÇAS','HORAS','ITENS/HORA (AGRUPADO)','MÉDIA ITENS/HORA','MELHOR LOJA','ERROS','PEÇAS AJUSTADAS','PRECISÃO'], linhas, {
     larguras:[5, larguraPara(linhas.map(x=>x[1]), 30, 50), 8, 11, 9, 20, 17, 13, 9, 16, 11],
     alinhar:['center', null, 'center', 'right', 'right', 'right', 'right', 'right', 'center', 'right', 'right'], formatos:[null, null, null, '#,##0', '0.00', '#,##0', '#,##0', '#,##0', null, '#,##0', '0.0%'], congelar:true });
-  if((robo.erros||[]).length){
+  if(erros.length){
     const ws3 = wb.addWorksheet('Erros');
-    const r3 = cabecalhoPlanilha(ws3, 'Erros da equipe (todas as lojas)', []);
+    const r3 = cabecalhoPlanilha(ws3, 'Erros da equipe · ' + ROTULO_SEG[segAtivo], []);
     const lojaDe = id => { const l = robo.lojas.find(x=>x.id===id); return l ? [l.data, l.num, l.loja] : ['', '', id]; };
-    const l3 = robo.erros.map(e=>[...lojaDe(e.id), e.nome, e.secao, e.descricao, e.q1, e.qa, e.dif, e.motivo]);
+    const l3 = erros.map(e=>[...lojaDe(e.id), e.nome, e.secao, e.descricao, e.q1, e.qa, e.dif, e.motivo]);
     tabelaExcel(ws3, r3, ['DATA','Nº','LOJA','QUEM','SEÇÃO','DESCRIÇÃO','1ª CONTAGEM','AJUSTADA','DIFERENÇA','MOTIVO'], l3, {
       larguras:[12, 7, larguraPara(l3.map(x=>x[2]), 20, 40), larguraPara(l3.map(x=>x[3]), 22, 45), 8, larguraPara(l3.map(x=>x[5]), 24, 45), 12, 10, 10, 20], congelar:true });
   }
   const ws2 = wb.addWorksheet('Lojas');
-  const r2 = cabecalhoPlanilha(ws2, 'Lojas recebidas do robô', []);
+  const r2 = cabecalhoPlanilha(ws2, 'Lojas recebidas do robô · ' + ROTULO_SEG[segAtivo], []);
   const l2 = lojas.map(l=>[l.data, l.num, l.loja, l.inicio, l.fim, l.horas, l.conferentes, l.pecas, l.fora]);
   tabelaExcel(ws2, r2, ['DATA','Nº','LOJA','INÍCIO','FIM','HORAS','CONFERENTES','PEÇAS','FORA DAS FAIXAS'], l2, {
     larguras:[12, 7, larguraPara(l2.map(x=>x[2]), 26, 45), 8, 8, 8, 13, 10, 16], alinhar:['center','center',null,'center','center','right','center','right','right'],
     formatos:[null, null, null, null, null, '0.00', null, '#,##0', '#,##0'], congelar:true });
-  await salvarExcel(wb, `Produtividade por conferente - ${dataHojeArquivo()}.xlsx`);
+  await salvarExcel(wb, `Produtividade por conferente - ${ROTULO_SEG[segAtivo]} - ${dataHojeArquivo()}.xlsx`);
 }
 
 /* =====================================================================
@@ -3980,10 +4358,12 @@ let cacheInd = null, cacheIndChave = '';
 function mapaIndicadores(){
   const chave = [robo.atualizadoEm, robo.pessoas.length, historico.length, historico.reduce((m,r)=>Math.max(m, r.atualizadoEm||0), 0),
     db.clt.length + db.fl.length, (robo.convites||[]).length, (robo.convites||[]).filter(c=>c.resposta).length,
-    loja.pessoas.length, loja.pessoas.filter(p=>p.atraso).length, loja.codigo||''].join('|');
+    loja.pessoas.length, loja.pessoas.filter(p=>p.atraso).length, loja.codigo||'', robo.lojas.length, JSON.stringify(robo.segmentos||{})].join('|');
   if(cacheInd && chave === cacheIndChave) return cacheInd;
   ajustarAtrasosRobo();
-  const conf = porConferenteRobo();
+  // nota e itens/hora das fichas: só drogarias (supermercado tem outra meta e não se mistura)
+  const conf = porConferenteRobo(idsDoSeg('DROGARIA'));
+  const confSuper = porConferenteRobo(idsDoSeg('SUPERMERCADO'));
   const est = estatisticasHistorico();
   const convites = {};
   (robo.convites||[]).forEach(c=>{ if(!c.resposta) return; const k = normalizarNome(c.nome); const x = convites[k] || (convites[k] = {sim:0, nao:0}); if(c.resposta==='SIM') x.sim++; else x.nao++; });
@@ -3994,6 +4374,7 @@ function mapaIndicadores(){
   const pegar = nome => { const k = normalizarNome(nome); return mapa[k] || (mapa[k] = {nome, chave:k}); };
   conf.forEach(c=>Object.assign(pegar(c.nome), {ih:c.ih, media:c.media, lojasRobo:c.lojas, pecas:c.pecas, horas:c.horas, melhor:c.melhor, ihPct:pct(c.ih),
     erros:c.erros, pecasErro:c.pecasErro, lojasComRel:c.lojasComRel, precisao:c.precisao}));
+  confSuper.forEach(c=>{ pegar(c.nome).sup = {ih:c.ih, lojas:c.lojas, pecas:c.pecas, media:c.media}; });
   Object.values(est).forEach(e=>{
     const x = pegar(e.nome);
     const base = e.lojas - e.transferido;
@@ -4059,7 +4440,7 @@ function pessoasDasFichas(){
   const visto = new Set();
   const add = (nome, tipo, cad)=>{ const k = normalizarNome(nome); if(!k || visto.has(k)) return; visto.add(k); lista.push({nome, tipo, cad}); };
   db.clt.forEach(p=>add(p.nome, 'clt', p)); db.fl.forEach(p=>add(p.nome, 'fl', p)); db.rj.forEach(p=>add(p.nome, 'rj', p));
-  Object.values(mapaIndicadores()).forEach(x=>{ if(x.ih || x.lojasHist) add(x.nome, 'fora', null); });
+  Object.values(mapaIndicadores()).forEach(x=>{ if(x.ih || x.lojasHist || x.sup) add(x.nome, 'fora', null); });
   return lista.map(x=>Object.assign(x, {ind: indicadoresDe(x.nome)}));
 }
 function rotuloTipo(x){
@@ -4104,7 +4485,7 @@ function renderFichaAberta(todas, rankNota){
     <p class="hint">Nota ${ind.nota} (base: ${ind.baseNota})${pos >= 0 ? ` · ${pos+1}º de ${rankNota.length} no cadastro` : ''}${ind.setores && ind.setores.length ? ' · setores: ' + ind.setores.map(s=>`${esc(s.nome)} (${s.n}×)`).join(', ') : ''}</p>
     ${whats}
     ${lojasRobo.length ? `<div class="section-title">Produtividade por loja (robô)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
-      lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')}</tbody></table></div>` : ''}
+      lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${segDaLoja(l) !== 'DROGARIA' ? ` <small class="hint">${ICONE_SEG[segDaLoja(l)]} ${segDaLoja(l) === 'SUPERMERCADO' ? 'supermercado' : 'outro cliente'}</small>` : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')}</tbody></table></div>` : ''}
     ${ind.registros && ind.registros.length ? `<div class="section-title">Presença (histórico das lojas)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Status</th><th>Setor</th></tr></thead><tbody>${
       ind.registros.slice().reverse().map(r=>`<tr><td>${esc(r.data)}</td><td>${esc(r.loja)}</td><td>${rotuloHist(r)}</td><td>${(r.setores||[]).map(esc).join(', ') || '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
     ${!lojasRobo.length && !(ind.registros||[]).length ? '<p class="hint">Ainda não há lojas do robô nem do histórico com esse nome.</p>' : ''}
@@ -4114,14 +4495,15 @@ function renderFichaAberta(todas, rankNota){
 function blocosFicha(ind){
   return [
     ['Nota', ind.nota, ind.baseNota === 'robô' ? 'itens/h + presença + erros' : 'sem robô: pela preferência'],
-    ['Itens/hora', ind.ih ? fmtN(ind.ih) : '—', ind.lojasRobo ? `${ind.lojasRobo} loja(s) · média ${fmtN(ind.media)}` : ''],
+    ['Itens/hora', ind.ih ? fmtN(ind.ih) : '—', ind.lojasRobo ? `${ind.lojasRobo} drogaria(s) · média ${fmtN(ind.media)}` : 'drogarias'],
     ['Presença', ind.presPct!=null && ind.lojasHist ? ind.presPct + '%' : '—', ind.lojasHist ? `${ind.presente||0} de ${ind.lojasHist} loja(s)` : ''],
     ['Faltas', (ind.faltas||0) + (ind.atestados||0), ind.atestados ? `${ind.faltas||0} falta · ${ind.atestados} atestado` : ''],
     ['Atrasos', ind.atrasos||0, ind.atrasos ? `média ${Math.round(ind.minAtraso/ind.atrasos)} min` : ''],
     ['Peças', ind.pecas ? fmtN(ind.pecas) : '—', ind.melhor ? `melhor loja ${fmtN(ind.melhor)}/h` : ''],
     ['Erros', ind.lojasComRel ? (ind.erros||0) : '—', ind.lojasComRel ? `precisão ${fmtPct(ind.precisao)} · ${fmtN(ind.pecasErro||0)} pç ajust.` : 'sem relatório de ajustes'],
     ['Viagens', (ind.convSim||ind.convNao) ? `✅ ${ind.convSim||0} · ❌ ${ind.convNao||0}` : '—', 'convites (90 dias)'],
-    ['Setor mais comum', ind.setores && ind.setores[0] ? esc(ind.setores[0].nome) : '—', ind.setores && ind.setores[0] ? ind.setores[0].n + '×' : '']];
+    ['Setor mais comum', ind.setores && ind.setores[0] ? esc(ind.setores[0].nome) : '—', ind.setores && ind.setores[0] ? ind.setores[0].n + '×' : '']]
+    .concat(ind.sup ? [['🛒 Supermercado', ind.sup.ih ? fmtN(ind.sup.ih) + '/h' : '—', `${ind.sup.lojas} loja(s) · ${fmtN(ind.sup.pecas)} pç · fora da nota`]] : []);
 }
 document.getElementById('fichaAberta').addEventListener('click', e=>{
   const te = e.target.closest('[data-erros-loja]'); if(!te) return;
@@ -4143,31 +4525,19 @@ function exportarFichaPNG(){
   h += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">${blocosFicha(ind).map(([k,v,det])=>
     `<div style="border:1px solid #ddd6ea;border-radius:8px;padding:6px 8px;font-size:12px;color:#62597a">${k}<div style="font-size:18px;font-weight:700;color:#1c1530">${v}</div>${det?`<div style="font-size:10px">${det}</div>`:''}</div>`).join('')}</div>`;
   if(lojasRobo.length) h += `<div style="font-weight:700;margin:4px 0 6px">Produtividade por loja</div>` + tabelaImagem(['Data','Loja','Peças','Itens/h'],
-    lojasRobo.map(({p,l})=>[esc(l.data), esc(l.loja) + (p.atraso ? ` <span style="color:#9C0006;font-size:11px">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtN(p.ih)]), ['', '', 'right', 'right'], 3);
+    lojasRobo.map(({p,l})=>[esc(l.data), esc(l.loja) + (segDaLoja(l) === 'SUPERMERCADO' ? ' <span style="color:#0e6b62;font-size:11px">🛒 supermercado</span>' : '') + (p.atraso ? ` <span style="color:#9C0006;font-size:11px">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtN(p.ih)]), ['', '', 'right', 'right'], 3);
   gerarImagem(h, `Ficha - ${limpaNomeArquivo(x.nome)}.png`);
 }
 
 /* =====================================================================
-   INÍCIO: PAINEL DO DIA, RANKING DO MÊS, RELATÓRIO FINAL DA LOJA, LISTA DA VIAGEM
+   INÍCIO: PAINEL DO DIA, RELATÓRIO FINAL DA LOJA, LISTA DA VIAGEM
    ===================================================================== */
 function abrirLojaRobo(id){
-  abrirView('produtividade'); roboLojaAberta = id; renderDetalheRobo();
+  const l = robo.lojas.find(x=>x.id===id); if(l) segAtivo = segDaLoja(l);
+  abrirView('produtividade'); roboLojaAberta = id; renderRobo();
   setTimeout(()=>{ const el = document.getElementById('cardRankingRobo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 60);
 }
 function nomeCurto(n){ const p = String(n||'').trim().split(/\s+/); return p.length > 1 ? primeiroNome(n) + ' ' + p[p.length-1].charAt(0) + '.' : primeiroNome(n); }
-function mesDe(d){ const k = String(dataParaChave(d) || ''); return k.length === 8 ? k.slice(4,6) + '/' + k.slice(0,4) : ''; }
-function mesesRobo(){ return [...new Set(lojasRoboOrdenadas().map(l=>mesDe(l.data)).filter(Boolean))]; }
-function lojasDoMes(mes){ return robo.lojas.filter(l=>mesDe(l.data) === mes); }
-// conferente do mês: maior itens/hora entre quem fez pelo menos 2 lojas no mês (se ninguém fez 2, vale 1)
-function rankingDoMes(mes){
-  ajustarAtrasosRobo();
-  const lojas = lojasDoMes(mes);
-  const conf = porConferenteRobo(new Set(lojas.map(l=>l.id)));
-  const minimo = conf.some(c=>c.lojas >= 2) ? 2 : 1;
-  const elegiveis = conf.filter(c=>c.lojas >= minimo && c.ih > 0).sort((a,b)=>(b.ih-a.ih) || ((b.precisao||0)-(a.precisao||0)));
-  const metas = lojas.map(equipeLojaRobo).filter(e=>e.meta);
-  return {mes, lojas, conf, minimo, elegiveis, campeao: elegiveis[0] || null, naMeta: metas.filter(e=>e.bateu).length, comMeta: metas.length};
-}
 // pendências do dia (também viram o número vermelho no ícone Início)
 function pendencias(){
   const lista = [];
@@ -4186,7 +4556,7 @@ function pendencias(){
   const lojas = lojasRoboOrdenadas(); const recente = lojas.length ? diaDe(lojas[0].data) : null;
   lojas.filter(l=>recente !== null && diaDe(l.data) !== null && recente - diaDe(l.data) <= 6).forEach(l=>{
     const eq = equipeLojaRobo(l);
-    if(eq.meta && !eq.bateu) lista.push({tipo:'danger', txt:`${l.loja} ficou abaixo da meta: ${fmtN(eq.ih)}/h (${eq.pct}%)`, ir:()=>abrirLojaRobo(l.id)});
+    if(eq.meta && !eq.bateu) lista.push({tipo:'danger', txt:`${l.loja}${segDaLoja(l) === 'SUPERMERCADO' ? ' (supermercado)' : ''} ficou abaixo da meta: ${fmtN(eq.ih)}/h (${eq.pct}%)`, ir:()=>abrirLojaRobo(l.id)});
   });
   if(!robo.link) lista.push({tipo:'warn', txt:'Robô da produtividade não ligado (cole o link)', ir:()=>abrirView('produtividade')});
   else if(robo.ultimoErro) lista.push({tipo:'danger', txt:robo.ultimoErro, ir:()=>abrirView('produtividade')});
@@ -4204,18 +4574,21 @@ function renderPainel(){
   const div = document.getElementById('painel'); if(!div) return;
   ajustarAtrasosRobo();
   const hoje = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'2-digit'});
-  const lojas = lojasRoboOrdenadas(), ult = lojas[0];
+  // o Início mostra as drogarias (clientes principais); supermercado aparece só num bloco à parte
+  const todas = lojasRoboOrdenadas();
+  const lojas = todas.filter(l=>segDaLoja(l) === 'DROGARIA'), ult = lojas[0];
+  const ultSuper = todas.find(l=>segDaLoja(l) === 'SUPERMERCADO');
   let h = `<p class="hint" style="margin:14px 2px 0;text-transform:capitalize">${esc(hoje)}</p>`;
-  // destaque: última loja que chegou pelo robô x meta
+  // destaque: última drogaria que chegou pelo robô x meta
   if(ult){
     const eq = equipeLojaRobo(ult);
     h += `<div class="hero ${eq.meta && !eq.bateu ? 'ruim' : ''}" onclick="abrirLojaRobo('${esc(ult.id)}')">
-      <div class="rot">Última loja · ${esc(ult.data)} · ${esc(ult.loja)}${ult.num ? ' | ' + esc(ult.num) : ''}</div>
+      <div class="rot">Última drogaria · ${esc(ult.data)} · ${esc(ult.loja)}${ult.num ? ' | ' + esc(ult.num) : ''}</div>
       <div class="big">${fmtN(eq.ih)} <span>itens/h por conferente</span></div>
       <div class="rot">${eq.meta ? `Meta ${esc(eq.segmento)} ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '· meta batida ✅' : '· abaixo da meta'}` : 'Sem meta para este cliente'}</div>
       <div class="barra-meta"><i data-w="${eq.meta ? Math.min(100, eq.pct) : 0}"></i></div></div>`;
   } else {
-    h += `<div class="hero" onclick="abrirView('produtividade')"><div class="rot">Produtividade</div><div class="big" style="font-size:1.3rem">Nenhuma loja do robô ainda</div><div class="rot">${robo.link ? 'Assim que um e-mail de arquivos chegar, ela aparece aqui.' : 'Ligue o robô em Produção.'}</div></div>`;
+    h += `<div class="hero" onclick="abrirView('produtividade')"><div class="rot">Produtividade</div><div class="big" style="font-size:1.3rem">${todas.length ? 'Nenhuma drogaria do robô ainda' : 'Nenhuma loja do robô ainda'}</div><div class="rot">${robo.link ? 'Assim que um e-mail de arquivos chegar, ela aparece aqui.' : 'Ligue o robô em Produtividade.'}</div></div>`;
   }
   // blocos
   const t = [];
@@ -4229,9 +4602,12 @@ function renderPainel(){
     t.push({rot:'Erros na última loja', n: ult.errosItens === null || ult.errosItens === undefined ? '—' : String(ult.errosItens),
       s: ult.errosItens === null || ult.errosItens === undefined ? 'sem relatório de ajustes' : `${ps.filter(p=>p.erros).length} conferente(s) · ${fmtN(ult.pecasAjustadas||0)} pç`, ir:`abrirLojaRobo('${esc(ult.id)}')`});
     if(melhor) t.push({rot:'Melhor da última loja', n:esc(nomeCurto(melhor.nome)), s:`${fmtN(melhor.ih)} itens/h`, ir:`abrirFicha(${esc(JSON.stringify(melhor.nome))})`});
-    const mes = mesDe(ult.data), rm = rankingDoMes(mes);
-    t.push({rot:'Metas em ' + mes, n: rm.comMeta ? `${rm.naMeta} de ${rm.comMeta}` : '—', s:`${rm.lojas.length} loja(s) no mês`, ir:"abrirView('produtividade');setTimeout(()=>{const e=document.getElementById('rankingMes');if(e)e.scrollIntoView({behavior:'smooth'});},80)"});
-    if(rm.campeao) t.push({rot:'Conferente do mês', n:'🏆 ' + esc(nomeCurto(rm.campeao.nome)), s:`${fmtN(rm.campeao.ih)} itens/h · ${rm.campeao.lojas} loja(s)`, ir:`abrirFicha(${esc(JSON.stringify(rm.campeao.nome))})`});
+  }
+  // supermercado fica num bloco separado (não mistura com as drogarias)
+  if(ultSuper){
+    const eq = equipeLojaRobo(ultSuper);
+    t.push({rot:'🛒 Último supermercado', n: eq.ih ? fmtN(eq.ih) + '/h' : '—',
+      s:`${ultSuper.data} · ${ultSuper.loja}${eq.meta ? ` · ${eq.pct}% da meta ${fmtN(eq.meta)}` : (eq.ih ? ' · sem meta' : ' · sem horário da contagem')}`, ir:`abrirLojaRobo('${esc(ultSuper.id)}')`});
   }
   if(t.length) h += `<div class="tiles">${t.map(x=>`<div class="tile" onclick="${x.ir}"><div class="rot">${x.rot}</div><div class="n">${x.n}</div><small>${esc(x.s)}</small></div>`).join('')}</div>`;
   // pendências
@@ -4253,42 +4629,6 @@ document.getElementById('painel').addEventListener('click', e=>{
   const p = e.target.closest('[data-pend]'); if(!p) return;
   const x = painelPend[+p.dataset.pend]; if(x && x.ir) x.ir();
 });
-
-// ---- Ranking do mês / conferente do mês (Produção)
-function renderRankingMes(){
-  const div = document.getElementById('rankingMes'); if(!div) return;
-  const meses = mesesRobo();
-  if(!meses.length){ div.innerHTML = ''; return; }
-  if(!roboUi.mes || !meses.includes(roboUi.mes)) roboUi.mes = meses[0];
-  const aberto = !!roboUi.mesAberto;
-  const rm = rankingDoMes(roboUi.mes);
-  div.innerHTML = `<div class="card"><button class="secao-toggle ${aberto?'aberta':''}" onclick="roboUi.mesAberto=!roboUi.mesAberto;lsSet(ROBO_UI_KEY, roboUi);renderRankingMes()"><span class="seta">▶</span> Ranking do mês <small>(${esc(rm.mes)}${rm.campeao ? ' · 🏆 ' + esc(nomeCurto(rm.campeao.nome)) : ''})</small></button>
-    ${!aberto ? '' : `<div class="row" style="margin-top:8px"><div><select class="full" onchange="roboUi.mes=this.value;lsSet(ROBO_UI_KEY, roboUi);renderRankingMes()">${meses.map(m=>`<option ${m===rm.mes?'selected':''}>${m}</option>`).join('')}</select></div></div>
-    ${rm.campeao ? `<div class="caixa-equipe ok"><span class="hint" style="margin:0">Conferente do mês</span><b class="n">🏆 ${esc(rm.campeao.nome)}</b>
-      <span class="hint" style="margin:0">${fmtN(rm.campeao.ih)} itens/h · ${rm.campeao.lojas} loja(s) · ${fmtN(rm.campeao.pecas)} peças${rm.campeao.lojasComRel ? ' · ' + rm.campeao.erros + ' erro(s) · precisão ' + fmtPct(rm.campeao.precisao) : ''}</span></div>` : ''}
-    <p class="hint">${rm.lojas.length} loja(s) no mês${rm.comMeta ? ` · ${rm.naMeta} de ${rm.comMeta} bateram a meta da equipe` : ''}. Conferente do mês: maior itens/hora entre quem fez ${rm.minimo === 2 ? 'pelo menos 2 lojas' : '1 loja ou mais'}.</p>
-    <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Erros</th><th>Precisão</th></tr></thead><tbody>${
-      rm.elegiveis.concat(rm.conf.filter(c=>!rm.elegiveis.includes(c) && c.ih > 0).sort((a,b)=>b.ih-a.ih)).map((c,i)=>`<tr class="linha-clicavel" onclick="abrirFicha(${esc(JSON.stringify(c.nome))})"><td>${rm.elegiveis.includes(c) ? (i===0 ? '🏆' : i+1) : '—'}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtN(c.ih)}</td><td>${c.lojasComRel ? c.erros : '—'}</td><td>${fmtPct(c.precisao)}</td></tr>`).join('')
-    }</tbody></table></div>
-    <div class="acoes"><button class="btn secondary" onclick="exportarRankingMesPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarRankingMesExcel()">Excel</button></div>`}</div>`;
-}
-function exportarRankingMesPNG(){
-  const rm = rankingDoMes(roboUi.mes); if(!rm.conf.length) return;
-  let h = cabecalhoImagem(`Ranking do mês · ${esc(rm.mes)}`, `${rm.lojas.length} loja(s)${rm.comMeta ? ` · ${rm.naMeta} de ${rm.comMeta} na meta da equipe` : ''}`);
-  if(rm.campeao) h += `<div style="background:#C6EFCE;color:#006100;border-radius:8px;padding:8px 10px;margin:0 0 12px"><div style="font-size:12px">Conferente do mês</div><div style="font-size:20px;font-weight:700">🏆 ${esc(rm.campeao.nome)}</div><div style="font-size:12px">${fmtN(rm.campeao.ih)} itens/h · ${rm.campeao.lojas} loja(s)${rm.campeao.lojasComRel ? ' · precisão ' + fmtPct(rm.campeao.precisao) : ''}</div></div>`;
-  h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h','Erros','Precisão'], rm.elegiveis.map((c,i)=>[i===0?'🏆':i+1, esc(c.nome), c.lojas, fmtN(c.pecas), fmtN(c.ih), c.lojasComRel ? c.erros : '—', fmtPct(c.precisao)]), ['', '', 'center', 'right', 'right', 'center', 'right'], 4);
-  h += `<div style="color:#62597a;font-size:11px;margin-top:10px">Ranking por itens/hora (peças somadas ÷ horas somadas) entre quem fez ${rm.minimo === 2 ? 'pelo menos 2 lojas' : '1 loja ou mais'} no mês.</div>`;
-  gerarImagem(h, `Ranking do mes ${rm.mes.replace('/', '-')}.png`);
-}
-async function exportarRankingMesExcel(){
-  const rm = rankingDoMes(roboUi.mes); if(!rm.conf.length || !excelDisponivel()) return;
-  const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('Ranking do mês');
-  const r = cabecalhoPlanilha(ws, 'Ranking do mês · ' + rm.mes, [`${rm.lojas.length} loja(s)`, rm.campeao ? 'Conferente do mês: ' + rm.campeao.nome : '']);
-  const linhas = rm.conf.slice().sort((a,b)=>b.ih-a.ih).map((c,i)=>[i+1, c.nome, c.lojas, c.pecas, c.ih, c.lojasComRel ? c.erros : '—', c.precisao === null ? '—' : Math.round(c.precisao*10)/1000]);
-  tabelaExcel(ws, r, ['#','NOME','LOJAS','PEÇAS','ITENS/HORA','ERROS','PRECISÃO'], linhas, {larguras:[5, larguraPara(linhas.map(x=>x[1]), 30, 50), 8, 11, 12, 9, 11],
-    alinhar:['center', null, 'center', 'right', 'right', 'center', 'right'], formatos:[null, null, null, '#,##0', '#,##0', null, '0.0%'], congelar:true });
-  await salvarExcel(wb, `Ranking do mes ${rm.mes.replace('/', '-')}.xlsx`);
-}
 
 // ---- Relatório final da loja (uma imagem com presença, produtividade, meta, erros e setores)
 function lojaRoboDaPresenca(){
@@ -4442,8 +4782,10 @@ registrarSinc('loja', ()=>loja,
 registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
   ()=>{ const q = lsGet(QUARTOS_KEY, {}); return !(q.coord || q.lider || q.motorista); });
-registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}, metas: robo.metas || {}, segmentos: robo.segmentos || {}}),
+registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}, metas: robo.metas || {}, segmentos: robo.segmentos || {},
+    setoresCorr: robo.setoresCorr || {}, setoresLoja: robo.setoresLoja || {}, notasResumo: robo.notasResumo || {}}),
   v=>{ if(!v || typeof v !== 'object') return;
+       ['setoresCorr', 'setoresLoja', 'notasResumo'].forEach(k=>{ if(v[k] && typeof v[k] === 'object') robo[k] = v[k]; });
        if(v.metas && typeof v.metas === 'object'){ robo.metas = v.metas; robo.segmentos = (v.segmentos && typeof v.segmentos === 'object') ? v.segmentos : (robo.segmentos || {}); salvarRobo(); renderRobo(); }
        if(v.nomes && typeof v.nomes === 'object'){ robo.nomes = v.nomes; aplicarNomesRobo(); salvarRobo(); renderRobo(); }
        if(typeof v.link === 'string' && v.link !== robo.link){ robo.link = v.link; salvarRobo(); renderRobo(); atualizarDoRobo(false); } },
