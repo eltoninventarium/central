@@ -279,12 +279,15 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .chip-atraso.ok{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);}
 .resumo .item.atraso{border-left:4px solid var(--danger);}
 .nome-ficha{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;}
+.pill.treino{min-width:40px;padding:6px 8px;}
+.pill.treino.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
 .chips-obs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
 .chip-obs{border:1px solid var(--border);background:var(--bg);color:var(--muted);border-radius:16px;padding:6px 10px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;}
 .chip-obs.ativo{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
 .texto-resumo{width:100%;margin-top:6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:.88rem;font-family:inherit;line-height:1.4;resize:vertical;}
 .caminho{display:flex;flex-direction:column;gap:6px;margin-top:6px;border-left:3px solid var(--accent-soft);padding-left:10px;}
 .caminho .passo{display:flex;flex-direction:column;}
+.caminho-todo{margin-top:8px;} .caminho-todo summary{cursor:pointer;}
 .caminho .passo small{margin:1px 0 0;}
 .mapa-loja{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow:auto;margin-top:6px;}
 .mapa-loja .trecho{display:flex;flex-direction:column;gap:4px;border-bottom:1px solid var(--border);padding-bottom:6px;}
@@ -344,6 +347,14 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .sheet{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:60;max-height:calc(100vh - 140px);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 6px 24px rgba(0,0,0,.3);max-width:560px;margin:0 auto;max-height:75vh;overflow:auto;}
 .sheet .titulo{font-weight:700;font-size:.95rem;}
 .pessoa-nome small.hist{display:block;font-size:.72rem;font-weight:400;color:var(--muted);margin-top:2px;}
+.setor-titulo{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.setor-titulo .pill{font-size:.72rem;flex-shrink:0;}
+.rank-setor{padding:8px 2px;border-bottom:1px solid var(--border);cursor:pointer;}
+.rank-setor:last-child{border-bottom:0;}
+.rank-topo{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.rank-topo .pill{flex-shrink:0;}
+.rank-detalhe{margin-top:6px;padding:6px 8px;border-radius:7px;background:var(--bg);font-size:.78rem;line-height:1.5;color:var(--muted);}
+.lista-rank{max-height:60vh;overflow:auto;}
 .sugestoes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:.75rem;color:var(--muted);}
 .chip-sug{border:1px dashed var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:16px;padding:5px 10px;font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;}
 .linha-clicavel{cursor:pointer;}
@@ -514,9 +525,10 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
   <!-- ================= LOJA: SETORES ================= -->
   <section id="setores" class="view">
     <div class="card">
-      <label style="margin-top:0">Modelo de setores desta loja</label>
-      <select id="selModeloLoja" class="full" onchange="trocarModeloLoja(this.value)"></select>
-      <p class="hint">"Drogaria" é o padrão. Para um cliente com setores diferentes, crie um modelo em <a href="#" onclick="abrirView('modelos');return false" style="color:var(--accent)">Modelos</a>.</p>
+      <label style="margin-top:0">Lista de setores desta loja</label>
+      <div class="row" style="gap:8px;align-items:center"><div style="flex:1;min-width:0"><select id="selModeloLoja" class="full" onchange="trocarModeloLoja(this.value)"></select></div>
+        <button class="btn small secondary" id="btnEditarSetores" type="button" onclick="alternarEdicaoSetores()">✏️ Editar setores</button></div>
+      <p class="hint">Vem sozinha pelo tipo do cliente (drogaria, supermercado ou loja de roupa). Em ✏️ Editar setores dá para criar, renomear, mudar a ordem ou apagar — vale para as próximas lojas do mesmo tipo. Listas de um cliente específico ficam em <a href="#" onclick="abrirView('modelos');return false" style="color:var(--accent)">Modelos</a>.</p>
     </div>
     <div id="msgSetores"></div>
     <div id="listaSetores"></div>
@@ -1843,13 +1855,16 @@ async function exportarQuartos(){
 /* =====================================================================
    LOJA: PRESENÇA
    ===================================================================== */
-const SETORES_DROGARIA = ["Estoque","Geladeira","Bomboniere","Frente de Caixa","Controlado","Genérico",
+const SETORES_DROGARIA = ["Estoque","Geladeira","Bomboniere","Frente de caixa","Controlado","Genérico",
   "Medicamento A-Z","Cartelado","Balcão","OTC","Esmalte","Desodorante","Ortopédico","Ração","Shampoo"];
+// supermercado (lista dele, 12/10/2026): sem açougue; com adega, frente de caixa, macarrão, biscoito, bomboniere e geladeira
+const SETORES_SUPERMERCADO = ['Mercearia','Macarrão','Biscoito','Bomboniere','Bebidas','Adega','Frios e laticínios','Geladeira','Hortifruti',
+  'Padaria','Limpeza','Higiene e perfumaria','Bazar','Pet','Frente de caixa','Estoque'];
 const LOJA_KEY = 'central_loja_v1';
 let loja = Object.assign({ nome:'', data:'', pessoas:[], setores:{}, modelo:'drogaria' }, lsGet(LOJA_KEY, {}));
 if(!loja.modelo) loja.modelo = 'drogaria';
 // correções de nome de setor: dados antigos são ajustados sozinhos ao abrir
-const RENOMEAR_SETORES = {'Bomboneire':'Bomboniere'};
+const RENOMEAR_SETORES = {'Bomboneire':'Bomboniere', 'Frente de Caixa':'Frente de caixa'};
 function nomeSetorAtual(s){ return RENOMEAR_SETORES[s] || s; }
 function corrigirChavesSetores(obj){
   if(!obj || typeof obj!=='object') return obj;
@@ -1857,8 +1872,9 @@ function corrigirChavesSetores(obj){
   return obj;
 }
 function corrigirModelos(lista){
-  (lista||[]).forEach(m=>{ if(m && Array.isArray(m.setores)) m.setores = m.setores.map(nomeSetorAtual).filter((x,i,a)=>a.indexOf(x)===i); });
-  return lista;
+  lista = lista || [];
+  lista.forEach(m=>{ if(m && Array.isArray(m.setores)) m.setores = m.setores.map(nomeSetorAtual).filter((x,i,a)=>a.indexOf(x)===i); });
+  return garantirModelosBase(lista);
 }
 function migrarLoja(l){
   (l.pessoas||[]).forEach(p=>{ if(p.presenca==='ausente' || p.presenca==='suspensao') p.presenca = 'falta'; });
@@ -1873,7 +1889,25 @@ function listaSetor(s){ if(!loja.setores[s]) loja.setores[s] = []; return loja.s
 /* =====================================================================
    LOJA: MODELOS DE SETORES (sincronizados entre PC e celular quando possível)
    ===================================================================== */
-const MODELO_PADRAO = {id:'drogaria', nome:'Drogaria (padrão)', setores:SETORES_DROGARIA, fixo:true};
+// Uma lista de setores por tipo de cliente (drogaria, supermercado, loja de roupa). Todas editáveis, ficam junto dos
+// modelos (sincronizam PC/celular) e são usadas na aba Setores e no Mapa da loja. A loja escolhe sozinha pelo cliente.
+const MODELOS_BASE = [
+  {id:'drogaria', nome:'Drogaria', tipo:'DROGARIA', setores:SETORES_DROGARIA},
+  {id:'supermercado', nome:'Supermercado', tipo:'SUPERMERCADO', setores:SETORES_SUPERMERCADO},
+  {id:'roupa', nome:'Loja de roupa', tipo:'ROUPA', setores:[]}
+];
+const ID_DO_TIPO = {DROGARIA:'drogaria', SUPERMERCADO:'supermercado', ROUPA:'roupa'};
+const ROTULO_TIPO = {DROGARIA:'drogarias', SUPERMERCADO:'supermercados', ROUPA:'lojas de roupa'};
+function garantirModelosBase(lista){
+  MODELOS_BASE.forEach(b=>{
+    const m = lista.find(x=>x && x.id===b.id);
+    if(!m) lista.push({id:b.id, nome:b.nome, tipo:b.tipo, base:true, setores:b.setores.slice()});
+    else { m.base = true; m.tipo = b.tipo; m.nome = b.nome; delete m.fixo; if(!Array.isArray(m.setores)) m.setores = b.setores.slice(); }
+  });
+  const ordem = m => { const i = MODELOS_BASE.findIndex(b=>b.id===m.id); return i < 0 ? 99 : i; };
+  lista.sort((a,b)=>ordem(a) - ordem(b));
+  return lista;
+}
 const MODELOS_KEY = 'central_modelos_v1';
 const MODELOS_SYNC_KEY = 'central_modelos_jaSincronizou';
 let modelosProprios = corrigirModelos(lsGet(MODELOS_KEY, []));
@@ -1883,8 +1917,8 @@ let filaGravacao = Promise.resolve();
 let timerGravar = null;
 let modelosSujos = false;
 
-function todosModelos(){ return [MODELO_PADRAO, ...modelosProprios]; }
-function modeloPorId(id){ return todosModelos().find(m=>m.id===id) || MODELO_PADRAO; }
+function todosModelos(){ if(!modelosProprios.some(m=>m.id==='drogaria')) garantirModelosBase(modelosProprios); return modelosProprios; }
+function modeloPorId(id){ return todosModelos().find(m=>m.id===id) || todosModelos().find(m=>m.id==='drogaria'); }
 function modeloProprio(id){ return modelosProprios.find(m=>m.id===id) || null; }
 function novoIdModelo(){ return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function limparNomeSetor(t){ return (t||'').replace(/\s+/g,' ').trim(); }
@@ -1949,7 +1983,32 @@ async function conectarModelos(db){
 function renderSelModelo(){
   const sel = document.getElementById('selModeloLoja');
   if(!sel) return;
-  sel.innerHTML = todosModelos().map(m=>`<option value="${esc(m.id)}" ${m.id===loja.modelo?'selected':''}>${esc(m.nome)} (${m.setores.length} setores)</option>`).join('');
+  const auto = !loja.modeloManual;
+  sel.innerHTML = (auto ? '' : '<option value="__auto__">↺ Voltar ao automático (pelo cliente)</option>') +
+    todosModelos().map(m=>`<option value="${esc(m.id)}" ${m.id===loja.modelo?'selected':''}>${esc(m.nome)}${m.id===loja.modelo && auto ? ' · automático' : ''} (${m.setores.length})</option>`).join('');
+}
+// tipo do cliente da loja atual: o que veio do robô (depois da contagem) ou o nome da loja/escala
+const RE_ROUPA = /CALVIN|KLEIN|TOMMY|HERING|RENNER|RIACHUELO|MARISA|ZARA|LACOSTE|AREZZO|RESERVA|ARAMIS|COLCCI|LUPO|MODA|ROUPA|CONFEC|VESTU|CALCAD|OUTLET|SHOPPING/;
+function clienteDaEscalaAtual(){ return (ultimaEscala && ultimaEscala.viagem && ultimaEscala.viagem.cliente) || ''; }
+function tipoDaLojaAtual(){
+  let lr = null; try{ lr = lojaRoboDaPresenca(); }catch(e){ lr = null; }
+  const cli = lr ? clienteDe(lr.cliente, lr.loja) : clienteDe(clienteDaEscalaAtual(), loja.nome);
+  const seg = segmentoDe(cli);
+  if(seg !== 'OUTRO') return seg;
+  const t = ' ' + normalizarNome([cli, loja.nome, lr ? lr.loja : ''].join(' ')) + ' ';
+  return RE_ROUPA.test(t) ? 'ROUPA' : 'DROGARIA';
+}
+// lista que a loja usa sozinha: um modelo próprio com palavra do cliente (ex.: "FARID") vale primeiro; senão, a do tipo
+function modeloAutomatico(){
+  const t = ' ' + normalizarNome([loja.nome, clienteDaEscalaAtual()].join(' ')) + ' ';
+  const prop = todosModelos().find(m=>!m.base && m.chave && String(m.chave).split(/[,;]/).map(normalizarNome).filter(x=>x.length>=3).some(c=>t.includes(c)));
+  if(prop) return prop.id;
+  return ID_DO_TIPO[tipoDaLojaAtual()] || 'drogaria';
+}
+function ajustarModeloAutomatico(){
+  if(loja.modeloManual) return;
+  const a = modeloAutomatico();
+  if(a !== loja.modelo && !pessoasEmSetoresFora(modeloPorId(a).setores)){ loja.modelo = a; salvarLoja(); }
 }
 
 function pessoasEmSetoresFora(novosSetores){
@@ -1959,11 +2018,19 @@ function pessoasEmSetoresFora(novosSetores){
 }
 
 function trocarModeloLoja(id){
-  if(id===loja.modelo) return;
+  if(id==='__auto__'){
+    const a = modeloAutomatico(), m = modeloPorId(a);
+    const perdidos = a !== loja.modelo ? pessoasEmSetoresFora(m.setores) : 0;
+    if(perdidos && !confirm(`${perdidos} pessoa(s) estão em setores que não existem na lista "${m.nome}" e vão sair da distribuição. Continuar?`)){ renderSelModelo(); return; }
+    loja.modeloManual = false; loja.modelo = m.id;
+    Object.keys(loja.setores).forEach(s=>{ if(!m.setores.includes(s)) delete loja.setores[s]; });
+    salvarLoja(); renderSelModelo(); renderSetores(); return;
+  }
+  if(id===loja.modelo){ loja.modeloManual = true; salvarLoja(); renderSelModelo(); return; }
   const m = modeloPorId(id);
   const perdidos = pessoasEmSetoresFora(m.setores);
   if(perdidos && !confirm(`${perdidos} pessoa(s) estão em setores que não existem no modelo "${m.nome}" e vão sair da distribuição. Continuar?`)){ renderSelModelo(); return; }
-  loja.modelo = m.id;
+  loja.modelo = m.id; loja.modeloManual = true;
   Object.keys(loja.setores).forEach(s=>{ if(!m.setores.includes(s)) delete loja.setores[s]; });
   salvarLoja(); renderSelModelo(); renderSetores();
 }
@@ -1972,10 +2039,10 @@ function renderModelos(){
   const div = document.getElementById('listaModelos');
   div.innerHTML = todosModelos().map(m=>{
     const emUso = m.id===loja.modelo;
-    const botoes = m.fixo
-      ? `<button class="pill" onclick="editarModelo('${m.id}')">Ver</button><button class="pill" onclick="duplicarModelo('${m.id}')">Duplicar</button>`
-      : `<button class="pill" onclick="editarModelo('${m.id}')">Editar</button><button class="pill" onclick="duplicarModelo('${m.id}')">Duplicar</button><button class="pill remover" onclick="excluirModelo('${m.id}')">Excluir</button>`;
-    return `<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(m.nome)}</b><br><span class="hint">${m.setores.length} setor(es)${emUso?' · em uso na loja atual':''}</span></span><span class="pill-btns">${botoes}</span></div>`;
+    const botoes = `<button class="pill" onclick="editarModelo('${m.id}')">Editar</button><button class="pill" onclick="duplicarModelo('${m.id}')">Duplicar</button>` +
+      (m.base ? '' : `<button class="pill remover" onclick="excluirModelo('${m.id}')">Excluir</button>`);
+    const quando = m.base ? ` · usada sozinha em ${ROTULO_TIPO[m.tipo]}` : (m.chave ? ` · usada sozinha nas lojas com "${esc(m.chave)}"` : '');
+    return `<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(m.nome)}</b><br><span class="hint">${m.setores.length} setor(es)${quando}${emUso?' · em uso na loja atual':''}</span></span><span class="pill-btns">${botoes}</span></div>`;
   }).join('');
   renderEditorModelo();
 }
@@ -1984,17 +2051,13 @@ function renderEditorModelo(){
   const div = document.getElementById('editorModelo');
   if(!modeloEditando){ div.innerHTML=''; return; }
   const m = modeloPorId(modeloEditando);
-  if(m.fixo){
-    div.innerHTML = `<div class="card" id="cardEditorModelo"><h2>${esc(m.nome)}</h2>
-      <p class="hint">O modelo padrão não é editado, para não perder a base das drogarias. Toque em Duplicar para criar uma versão sua a partir dele.</p>
-      <ol style="margin:6px 0 0;padding-left:20px;font-size:.88rem">${m.setores.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
-      <div class="acoes"><button class="btn" onclick="duplicarModelo('${m.id}')">Duplicar</button><button class="btn secondary" onclick="fecharEditorModelo()">Fechar</button></div></div>`;
-    return;
-  }
-  let h = `<div class="card" id="cardEditorModelo"><h2>Editando modelo</h2>
-    <label>Nome do modelo</label>
+  let h = `<div class="card" id="cardEditorModelo"><h2>${m.base ? 'Lista de setores · ' + esc(m.nome) : 'Editando modelo'}</h2>` +
+    (m.base ? `<p class="hint">Usada sozinha em ${ROTULO_TIPO[m.tipo]}. Mudou aqui, muda para todas as próximas lojas desse tipo (PC e celular).</p>`
+      : `<label>Nome do modelo</label>
     <input type="text" value="${esc(m.nome)}" onchange="renomearModelo(this.value)">
-    <div class="section-title">Setores (${m.setores.length}) — na ordem em que aparecem</div>`;
+    <label>Usar sozinho nas lojas com estas palavras no nome (opcional)</label>
+    <input type="text" value="${esc(m.chave||'')}" placeholder="Ex.: FARID" onchange="definirChaveModelo(this.value)">`) +
+    `<div class="section-title">Setores (${m.setores.length}) — na ordem em que aparecem</div>`;
   if(!m.setores.length) h += `<p class="hint">Nenhum setor ainda. Adicione abaixo.</p>`;
   m.setores.forEach((s,i)=>{
     h += `<div class="setor-row"><span class="hint" style="width:20px;margin:0;text-align:right">${i+1}</span>
@@ -2011,6 +2074,7 @@ function renderEditorModelo(){
     </details>
     <div class="acoes">
       <button class="btn" onclick="usarModeloNaLoja()">Usar na loja atual</button>
+      ${m.base ? `<button class="btn secondary" onclick="restaurarModeloBase('${m.id}')">Voltar à lista original</button>` : ''}
       <button class="btn secondary" onclick="fecharEditorModelo()">Fechar</button>
     </div></div>`;
   div.innerHTML = h;
@@ -2053,11 +2117,13 @@ function duplicarModelo(id){
 }
 
 function excluirModelo(id){
-  const m = modeloProprio(id); if(!m) return;
+  const m = modeloProprio(id); if(!m || m.base) return;
   if(!confirm(`Excluir o modelo "${m.nome}"? Isso vale para o PC e o celular.`)) return;
   if(loja.modelo===id){
-    loja.modelo = 'drogaria';
-    Object.keys(loja.setores).forEach(s=>{ if(!SETORES_DROGARIA.includes(s)) delete loja.setores[s]; });
+    loja.modeloManual = false;
+    loja.modelo = ID_DO_TIPO[tipoDaLojaAtual()] || 'drogaria';
+    const nova = modeloPorId(loja.modelo).setores;
+    Object.keys(loja.setores).forEach(s=>{ if(!nova.includes(s)) delete loja.setores[s]; });
     salvarLoja();
   }
   modelosProprios = modelosProprios.filter(x=>x.id!==id);
@@ -2066,8 +2132,22 @@ function excluirModelo(id){
   renderModelos(); renderSelModelo();
 }
 
+function definirChaveModelo(valor){
+  const m = modeloProprio(modeloEditando); if(!m || m.base) return;
+  m.chave = limparNomeSetor(valor).toUpperCase();
+  salvarModelos(); atualizarTelasModelos();
+  if(m.chave) toast(`Lojas com "${m.chave}" no nome vão usar "${m.nome}" sozinhas.`);
+}
+// lista base (drogaria/supermercado/loja de roupa) volta a ser a original do app
+function restaurarModeloBase(id){
+  const m = modeloProprio(id), b = MODELOS_BASE.find(x=>x.id===id); if(!m || !b) return;
+  if(!confirm(`Voltar a lista "${m.nome}" para a original? Setores que você criou ou renomeou nela voltam ao que era.`)) return;
+  m.setores = b.setores.slice();
+  if(loja.modelo===id){ Object.keys(loja.setores).forEach(s=>{ if(!m.setores.includes(s)) delete loja.setores[s]; }); salvarLoja(); }
+  salvarModelos(true); atualizarTelasModelos();
+}
 function renomearModelo(valor){
-  const m = modeloProprio(modeloEditando); if(!m) return;
+  const m = modeloProprio(modeloEditando); if(!m || m.base) return;
   const nome = limparNomeSetor(valor);
   if(!nome || todosModelos().some(x=>x!==m && mesmoNome(x.nome,nome))){ toast(nome?'Já existe um modelo com esse nome.':'O nome não pode ficar vazio.'); renderEditorModelo(); return; }
   m.nome = nome; salvarModelos();
@@ -2078,20 +2158,20 @@ function renomearSetor(i, valor){
   const m = modeloProprio(modeloEditando); if(!m) return;
   const antigo = m.setores[i];
   const novo = limparNomeSetor(valor);
-  if(!novo){ toast('O nome do setor não pode ficar vazio.'); renderEditorModelo(); return; }
+  if(!novo){ toast('O nome do setor não pode ficar vazio.'); atualizarTelasModelos(); return; }
   if(novo===antigo) return;
-  if(m.setores.some((s,k)=>k!==i && mesmoNome(s,novo))){ toast('Esse setor já existe no modelo.'); renderEditorModelo(); return; }
+  if(m.setores.some((s,k)=>k!==i && mesmoNome(s,novo))){ toast('Esse setor já existe nesta lista.'); atualizarTelasModelos(); return; }
   m.setores[i] = novo;
   if(loja.modelo===m.id && loja.setores[antigo]){ loja.setores[novo] = loja.setores[antigo]; delete loja.setores[antigo]; salvarLoja(); }
   salvarModelos();
-  renderModelos(); renderSelModelo();
+  atualizarTelasModelos();
 }
 
 function moverSetor(i, d){
   const m = modeloProprio(modeloEditando); if(!m) return;
   const j = i + d; if(j<0 || j>=m.setores.length) return;
   [m.setores[i], m.setores[j]] = [m.setores[j], m.setores[i]];
-  salvarModelos(); renderEditorModelo();
+  salvarModelos(); atualizarTelasModelos();
 }
 
 function removerSetorModelo(i){
@@ -2101,14 +2181,14 @@ function removerSetorModelo(i){
   if(emUso && !confirm(`O setor "${s}" tem ${emUso} pessoa(s) na loja atual. Remover mesmo assim?`)) return;
   m.setores.splice(i,1);
   if(loja.modelo===m.id){ delete loja.setores[s]; salvarLoja(); }
-  salvarModelos(); renderModelos(); renderSelModelo();
+  salvarModelos(); atualizarTelasModelos();
 }
 
 function adicionarSetoresNoModelo(nomes){
   const m = modeloProprio(modeloEditando); if(!m) return 0;
   let n = 0;
   nomes.forEach(s=>{ if(!m.setores.some(x=>mesmoNome(x,s))){ m.setores.push(s); n++; } });
-  if(n){ salvarModelos(); renderModelos(); renderSelModelo(); }
+  if(n){ salvarModelos(); atualizarTelasModelos(); }
   return n;
 }
 function adicionarSetorModelo(){
@@ -2338,6 +2418,8 @@ function carregarPessoasNaLoja(pessoas, nomeLoja, data, extra){
   loja.inicio = (extra && extra.inicio) || '';
   document.getElementById('inicioLoja').value = loja.inicio;
   loja.pessoas = pessoas;
+  loja.modeloManual = false;
+  loja.modelo = modeloAutomatico();
   loja.bateVolta = false;
   loja.outrasLojas = [];
   loja.assinaturaSalva = null;
@@ -2796,13 +2878,56 @@ function exportarPresencaPNG(){
 function nomesDisponiveis(){ return loja.pessoas.filter(p=>!STATUS_FORA.includes(p.presenca)).map(p=>p.nome); }
 function rotuloIndisponivel(nome){ const p = loja.pessoas.find(x=>x.nome===nome); return ' (' + ((p && STATUS[p.presenca]) ? STATUS[p.presenca].rotulo.toLowerCase() : 'fora da lista') + ')'; }
 
+let editandoSetoresLoja = false;
+function alternarEdicaoSetores(){ editandoSetoresLoja = !editandoSetoresLoja; renderSetores(); }
+// edição rápida da lista em uso, na própria aba Setores (as mesmas funções da tela Modelos)
+function htmlEditorSetoresLoja(){
+  const m = modeloPorId(loja.modelo);
+  modeloEditando = m.id;
+  let h = `<div class="card" id="cardEditorSetoresLoja"><h2>Editar setores · ${esc(m.nome)}</h2>
+    <p class="hint">${m.base ? `Vale para todas as ${ROTULO_TIPO[m.tipo]} daqui para frente (PC e celular).` : 'Vale para todas as lojas que usam esta lista.'} Quem já está num setor renomeado continua nele.</p>`;
+  if(!m.setores.length) h += `<p class="hint">Nenhum setor ainda. Adicione abaixo.</p>`;
+  m.setores.forEach((st,i)=>{
+    h += `<div class="setor-row"><span class="hint" style="width:20px;margin:0;text-align:right">${i+1}</span>
+      <input type="text" value="${esc(st)}" onchange="renomearSetor(${i},this.value)" aria-label="Nome do setor ${i+1}">
+      <button class="pill" onclick="moverSetor(${i},-1)" ${i===0?'disabled':''} aria-label="Subir">↑</button>
+      <button class="pill" onclick="moverSetor(${i},1)" ${i===m.setores.length-1?'disabled':''} aria-label="Descer">↓</button>
+      <button class="pill remover" onclick="removerSetorModelo(${i})" aria-label="Apagar">×</button></div>`;
+  });
+  h += `<div class="setor-row" style="margin-top:12px"><input type="text" id="novoSetorLoja" placeholder="Nome do novo setor" onkeydown="if(event.key==='Enter')adicionarSetorLoja()">
+      <button class="btn small" onclick="adicionarSetorLoja()">Adicionar</button></div>
+    <details style="margin-top:10px"><summary class="hint" style="cursor:pointer">Colar vários setores de uma vez</summary>
+      <textarea id="colarSetoresLoja" rows="4" style="width:100%;margin-top:6px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 9px;color:var(--text);font-size:.9rem;font-family:inherit;" placeholder="Um setor por linha"></textarea>
+      <button class="btn small" style="margin-top:6px" onclick="colarSetoresLoja()">Adicionar da lista</button>
+    </details>
+    <div class="acoes"><button class="btn" onclick="alternarEdicaoSetores()">Concluir</button>
+      ${m.base ? `<button class="btn secondary" onclick="restaurarModeloBase('${m.id}')">Voltar à lista original</button>` : ''}</div></div>`;
+  return h;
+}
+function adicionarSetorLoja(){
+  const el = document.getElementById('novoSetorLoja');
+  const nome = limparNomeSetor(el && el.value);
+  if(!nome) return;
+  modeloEditando = loja.modelo;
+  if(!adicionarSetoresNoModelo([nome])) toast('Esse setor já existe nesta lista.');
+  const novo = document.getElementById('novoSetorLoja'); if(novo) novo.focus();
+}
+function colarSetoresLoja(){
+  const el = document.getElementById('colarSetoresLoja');
+  modeloEditando = loja.modelo;
+  const n = adicionarSetoresNoModelo(separarSetores(el && el.value));
+  toast(n ? `${n} setor(es) adicionado(s).` : 'Nenhum setor novo na lista.');
+}
 function renderSetores(){
+  ajustarModeloAutomatico();
   renderSelModelo();
   const div = document.getElementById('listaSetores');
   const msg = document.getElementById('msgSetores');
   const acoes = document.getElementById('acoesSetores');
+  const bt = document.getElementById('btnEditarSetores'); if(bt) bt.textContent = editandoSetoresLoja ? '✓ Concluir' : '✏️ Editar setores';
+  if(editandoSetoresLoja){ msg.innerHTML = ''; acoes.style.display = 'none'; div.innerHTML = htmlEditorSetoresLoja(); return; }
   if(!setoresAtuais().length){
-    msg.innerHTML = '<div class="msg warn">Este modelo ainda não tem setores. Adicione em Modelos de setores.</div>';
+    msg.innerHTML = '<div class="msg warn">Esta lista ainda não tem setores. Toque em ✏️ Editar setores para montar.</div>';
     div.innerHTML=''; acoes.style.display='none'; return;
   }
   if(!loja.pessoas.length){
@@ -2819,13 +2944,15 @@ function renderSetores(){
   const semSetor = disponiveis.filter(n=>!jaAlocados.has(n) && !foraDaConta.has(n));
   const est = estatisticasHistorico();
   const temHist = historicoAtivo().length > 0;
+  atualizarPerfis();
+  const comPerfis = !!indicePerfis(segParaPerfis());
   let html = `<div class="card"><div class="hint">${loja.nome?'<b>'+esc(loja.nome)+'</b> · ':''}${disponiveis.length} disponível(is) · ${semSetor.length} ainda sem setor${semSetor.length?': '+semSetor.map(esc).join(', '):''}</div>
-    <div class="hint" style="margin-top:6px">${temHist
-      ? 'Sugestões pelo histórico: aparecem em cada setor as pessoas sem setor que já contaram ali. Só entram se você tocar.'
-      : 'Dica: ao fim de cada contagem, toque em "Salvar no histórico". Com o tempo, cada setor passa a mostrar sugestões de quem já contou ali.'}</div></div>`;
+    <div class="hint" style="margin-top:6px">${comPerfis || temHist
+      ? 'Sugestões: em cada setor, quem está sem setor e já contou ali, primeiro quem rende mais e erra menos naquele setor (⚡ ritmo acima da média da equipe ali · ✔ menos erros que a média). Toque em 📊 para ver todo mundo. Só entram se você tocar.'
+      : 'Dica: as sugestões aparecem quando o robô tiver lojas com resumo (ou depois de "Salvar no histórico").'}</div></div>`;
   setoresAtuais().forEach((setor, si)=>{
     const linhas = loja.setores[setor] || [];
-    html += `<div class="card setor-card"><h2>${esc(setor)} <small>${linhas.filter(l=>l.nome).length || ''}</small></h2>`;
+    html += `<div class="card setor-card"><h2 class="setor-titulo"><span>${esc(setor)} <small>${linhas.filter(l=>l.nome).length || ''}</small></span><button class="pill" type="button" data-rank="${si}" title="Quem é bom neste setor">📊 Quem é bom</button></h2>`;
     linhas.forEach((item,i)=>{
       html += `<div class="setor-row">`;
       if(item.tipo==='manual'){
@@ -2835,20 +2962,25 @@ function renderSetores(){
         const opts = lista.map(n=>`<option value="${esc(n)}" ${n===item.nome?'selected':''}>${esc(n)}${!disponiveis.includes(n)?rotuloIndisponivel(n):''}${n!==item.nome && jaAlocados.has(n)?' •':''}</option>`).join('');
         html += `<select onchange="editarSelecao(${si},${i},this.value)"><option value="">Selecione...</option>${opts}<option value="__outro__">Outro (digitar)</option></select>`;
       }
-      html += `<button class="btn small danger" onclick="removerLinha(${si},${i})" aria-label="Remover">×</button></div>`;
+      html += `${item.nome ? `<button class="pill treino ${item.treino ? 'on' : ''}" onclick="alternarTreino(${si},${i})" title="Em treinamento: primeira vez neste setor" aria-label="Treinamento">🎓</button>` : ''}<button class="btn small danger" onclick="removerLinha(${si},${i})" aria-label="Remover">×</button></div>`;
     });
     const sug = sugestoesSetor(setor, semSetor, est);
-    if(sug.length) html += `<div class="sugestoes">Sugestão: ${sug.map(x=>`<button class="chip-sug" data-si="${si}" data-nome="${esc(x.nome)}">+ ${esc(x.nome)} · ${x.vezes}×</button>`).join('')}</div>`;
+    if(sug.length) html += `<div class="sugestoes">Sugestão: ${sug.map(x=>`<button class="chip-sug" data-si="${si}" data-nome="${esc(x.nome)}">+ ${esc(x.nome)} · ${Math.max(x.lojas, x.vezesHist)}×${x.rapido ? ' ⚡' : ''}${x.poucoErro ? ' ✔' : ''}</button>`).join('')}</div>`;
     html += `<button class="btn small secondary" style="margin-top:8px" onclick="adicionarLinha(${si})">+ Adicionar pessoa</button></div>`;
   });
-  html += `<p class="hint">• = já está em outro setor.</p>`;
+  html += `<p class="hint">• = já está em outro setor. 🎓 = em treinamento (primeira vez contando neste setor): aparece no resumo do conferente.</p>`;
   div.innerHTML = html;
+}
+function alternarTreino(si, i){
+  const it = listaSetor(setoresAtuais()[si])[i]; if(!it) return;
+  it.treino = !it.treino; salvarLoja(); renderSetores();
+  toast(it.treino ? `${it.nome}: em treinamento em ${setoresAtuais()[si]}.` : `${it.nome}: sem treinamento.`);
 }
 
 function adicionarLinha(si){ listaSetor(setoresAtuais()[si]).push({tipo:'lista', nome:''}); salvarLoja(); renderSetores(); }
 function removerLinha(si,i){ listaSetor(setoresAtuais()[si]).splice(i,1); salvarLoja(); renderSetores(); }
 function editarSelecao(si,i,valor){
-  listaSetor(setoresAtuais()[si])[i] = valor==='__outro__' ? {tipo:'manual', nome:''} : {tipo:'lista', nome:valor};
+  listaSetor(setoresAtuais()[si])[i] = valor==='__outro__' ? {tipo:'manual', nome:''} : {tipo:'lista', nome:valor};   // pessoa nova na linha: sem treinamento
   salvarLoja(); renderSetores();
 }
 function editarManual(si,i,valor){ listaSetor(setoresAtuais()[si])[i].nome = valor; salvarLoja(); }
@@ -2944,14 +3076,16 @@ function salvarNoHistorico(){
   const id = idRegistro(nomeLoja, chave);
   const existente = historico.find(r=>r.id===id && !r.excluido);
   if(existente && !confirm(`Já existe "${nomeLoja}" de ${chaveParaBR(chave)} no histórico. Substituir pelo registro atual?`)) return false;
-  const setores = {};
-  setoresAtuais().forEach(s=>{ const n = nomesDoSetor(s); if(n.length) setores[s] = n; });
+  const setores = {}, treinos = {};
+  setoresAtuais().forEach(s=>{ const n = nomesDoSetor(s); if(n.length) setores[s] = n;
+    const t = (loja.setores[s]||[]).filter(it=>it.treino && (it.nome||'').trim()).map(it=>it.nome.trim()); if(t.length) treinos[s] = t; });
   const r = {id, atualizadoEm: Date.now(), data: chaveParaBR(chave), loja: nomeLoja, modelo: modeloPorId(loja.modelo).nome, bateVolta: !!loja.bateVolta,
     codigo: loja.codigo || '', inicio: loja.inicio || '',
     pessoas: loja.pessoas.map(p=>Object.assign({nome:p.nome, coordenador:!!p.coordenador, presenca:p.presenca || null}, ehFree(p) ? {free:true} : {},
       p.instrutor ? {instrutor:true} : {}, p.estagiario ? {estagiario:true} : {},
       p.transferidoPara ? {transferidoPara:p.transferidoPara} : {}, p.recebidoDe ? {recebidoDe:p.recebidoDe} : {},
-      p.presenca==='presente' && p.chegada ? {chegada:p.chegada} : {}, p.presenca==='presente' && p.atraso ? {atraso:p.atraso} : {})), setores};
+      p.presenca==='presente' && p.chegada ? {chegada:p.chegada} : {}, p.presenca==='presente' && p.atraso ? {atraso:p.atraso} : {})), setores,
+    ...(Object.keys(treinos).length ? {treinos} : {})};
   const i = historico.findIndex(x=>x.id===id);
   if(i >= 0) historico[i] = r; else historico.push(r);
   salvarHistoricoLocal();
@@ -3046,13 +3180,10 @@ function setoresMaisFrequentes(e, max){
 
 // ---- sugestões de setor: só pessoas disponíveis e ainda sem setor, por quantas vezes já contaram ali
 function sugestoesSetor(setor, livres, est){
-  const ks = normalizarNome(setor);
-  return livres.map(nome=>{
-      const e = est[normalizarNome(nome)];
-      const x = e && e.setores[ks];
-      return x ? {nome, vezes:x.n, ultima:x.ultima} : null;
-    }).filter(Boolean)
-    .sort((a,b)=>b.vezes-a.vezes || b.ultima-a.ultima)
+  const idx = indicePerfis(segParaPerfis());
+  return livres.map(nome=>avaliarNoSetor(setor, nome, idx, est))
+    .filter(a=>a.lojas || a.vezesHist)
+    .sort((a,b)=>b.nota - a.nota || (Math.max(b.lojas, b.vezesHist) - Math.max(a.lojas, a.vezesHist)) || b.ultima - a.ultima)
     .slice(0, 3);
 }
 function aceitarSugestao(si, nome){
@@ -3062,6 +3193,7 @@ function aceitarSugestao(si, nome){
   salvarLoja(); renderSetores();
 }
 document.getElementById('listaSetores').addEventListener('click', e=>{
+  const r = e.target.closest('[data-rank]'); if(r){ abrirRankingSetor(+r.dataset.rank); return; }
   const b = e.target.closest('.chip-sug'); if(!b) return;
   aceitarSugestao(+b.dataset.si, b.dataset.nome);
 });
@@ -4041,11 +4173,19 @@ async function obterResumo(id, forcar){
   try{ return await resumoBaixando[id]; } finally { delete resumoBaixando[id]; }
 }
 const SETORES_LISTA = {
-  DROGARIA: ['Geladeira','Frente de caixa','Bomboniere','Medicamentos','Controlado','OTC','Balcão','Estoque','Perfumaria','Sabonete','Desodorante','Esmalte','Maquiagem',
+  DROGARIA: ['Geladeira','Frente de caixa','Bomboniere','Cartelado','Medicamentos','Controlado','OTC','Balcão','Estoque','Perfumaria','Sabonete','Desodorante','Esmalte','Maquiagem',
     'Dermo','Slatwall','Shampoo infantil','Infantil e brinquedos','Absorventes','Ortopédico','Primeiros socorros','Suplementos','Pet','Quebras'],
-  SUPERMERCADO: ['Mercearia','Bebidas','Frios e laticínios','Açougue','Hortifruti','Padaria','Limpeza','Higiene e perfumaria','Bazar','Pet','Estoque']
+  SUPERMERCADO: ['Mercearia','Macarrão','Biscoito','Bomboniere','Bebidas','Adega','Frios e laticínios','Geladeira','Hortifruti','Padaria','Limpeza',
+    'Higiene e perfumaria','Bazar','Pet','Frente de caixa','Estoque']
 };
-const SETOR_FRASE = {'Geladeira':['a geladeira','na geladeira'], 'Frente de caixa':['a frente de caixa','na frente de caixa'], 'Bomboniere':['a bomboniere','na bomboniere'],
+// opções do Mapa da loja: a lista de setores do tipo do cliente (a mesma da aba Setores) e, depois, os nomes que o robô usa
+function setoresParaMapa(seg){
+  const tipo = seg === 'SUPERMERCADO' ? 'SUPERMERCADO' : seg === 'OUTRO' ? 'ROUPA' : 'DROGARIA';
+  const out = [];
+  [...modeloPorId(ID_DO_TIPO[tipo]).setores, ...(tipo === 'ROUPA' ? [] : SETORES_LISTA[tipo])].forEach(x=>{ if(!out.some(y=>normalizarNome(y)===normalizarNome(x))) out.push(x); });
+  return out;
+}
+const SETOR_FRASE = {'Cartelado':['o cartelado','no cartelado'], 'Geladeira':['a geladeira','na geladeira'], 'Frente de caixa':['a frente de caixa','na frente de caixa'], 'Bomboniere':['a bomboniere','na bomboniere'],
   'Medicamentos':['medicamentos','em medicamentos'], 'Controlado':['controlados','em controlados'], 'OTC':['o OTC','no OTC'], 'Balcão':['o balcão','no balcão'],
   'Estoque':['o estoque','no estoque'], 'Perfumaria':['perfumaria','na perfumaria'], 'Sabonete':['sabonetes','em sabonetes'], 'Desodorante':['desodorantes','em desodorantes'],
   'Esmalte':['esmaltes','em esmaltes'], 'Maquiagem':['maquiagem','na maquiagem'], 'Dermo':['o dermo','no dermo'], 'Slatwall':['o slatwall','no slatwall'],
@@ -4053,7 +4193,9 @@ const SETOR_FRASE = {'Geladeira':['a geladeira','na geladeira'], 'Frente de caix
   'Ortopédico':['o ortopédico','no ortopédico'], 'Primeiros socorros':['primeiros socorros','em primeiros socorros'], 'Suplementos':['suplementos','em suplementos'],
   'Pet':['o pet','no pet'], 'Quebras':['quebras','em quebras'], 'Mercearia':['mercearia','na mercearia'], 'Bebidas':['bebidas','em bebidas'],
   'Frios e laticínios':['frios e laticínios','em frios e laticínios'], 'Açougue':['o açougue','no açougue'], 'Hortifruti':['o hortifruti','no hortifruti'],
-  'Padaria':['a padaria','na padaria'], 'Limpeza':['limpeza','em limpeza'], 'Higiene e perfumaria':['higiene e perfumaria','em higiene e perfumaria'], 'Bazar':['o bazar','no bazar']};
+  'Padaria':['a padaria','na padaria'], 'Limpeza':['limpeza','em limpeza'], 'Higiene e perfumaria':['higiene e perfumaria','em higiene e perfumaria'], 'Bazar':['o bazar','no bazar'],
+  'Adega':['a adega','na adega'], 'Macarrão':['macarrão','em macarrão'], 'Biscoito':['biscoitos','em biscoitos'], 'Genérico':['genéricos','em genéricos'],
+  'Medicamento A-Z':['medicamentos A-Z','em medicamentos A-Z'], 'Ração':['rações','em rações'], 'Shampoo':['shampoos','em shampoos']};
 const fraseSetor = (s, i) => {
   const f = SETOR_FRASE[s] || [String(s||'outros').toLowerCase(), 'em ' + String(s||'outros').toLowerCase()];
   return i === 2 ? f[0].replace(/^(o|a) /, '') : f[i];   // 2 = só o nome ("um pouco de infantil")
@@ -4065,7 +4207,6 @@ const OBS_RESUMO = [
   {k:'atento', rot:'👍 Atento', txt:'Contou com atenção.'},
   {k:'ritmo', rot:'👍 Bom ritmo', txt:'Manteve um bom ritmo.'},
   {k:'apoio', rot:'🤝 Teve apoio', txt:'Teve apoio na contagem.'},
-  {k:'primeira', rot:'⭐ Primeira vez no setor', txt:''},
   {k:'experiente', rot:'💡 Colocar com experiente', txt:'Vale colocar com alguém experiente em setores com produtos parecidos.'},
   {k:'desorg', rot:'⚠️ Desorganizado', txt:'Precisa caprichar mais na arrumação.'},
   {k:'distraido', rot:'⚠️ Pouca atenção', txt:'Precisa de mais atenção na contagem.'}
@@ -4141,6 +4282,206 @@ function notaResumo(idLoja, nome){
   return porLoja[k] || (porLoja[k] = {obs:[], nota:'', texto:''});
 }
 function salvarNotasResumo(){ salvarRobo(); marcarAlterado('robo'); }
+// ---- Treinamento: quem decide é o coordenador (primeira vez contando num setor).
+// Marca em Loja › Setores (🎓 na linha da pessoa) ou no resumo do conferente.
+function registroPresencaDaLojaRobo(l){
+  if(loja.pessoas.length){ const atual = lojaRoboDaPresenca(); if(atual && atual.id === l.id) return {atual:true}; }
+  const dl = diaDe(l.data);
+  return historicoAtivo().find(r=>{
+    const dr = diaDe(r.data); if(dr === null || dl === null || Math.abs(dr - dl) > 1) return false;
+    if(r.codigo && l.num) return +r.codigo === +l.num;
+    const a = normalizarNome(r.loja), b = normalizarNome(l.loja);
+    return a && b && (a.includes(b) || b.includes(a));
+  }) || null;
+}
+function treinosDaLojaRobo(l){
+  const reg = registroPresencaDaLojaRobo(l), out = {};
+  const add = (nome, setor)=>{ const k = normalizarNome(nome); (out[k] = out[k] || []).push(setor); };
+  if(!reg) return out;
+  if(reg.atual) setoresAtuais().forEach(st=>(loja.setores[st]||[]).forEach(it=>{ if(it.treino && it.nome) add(it.nome, st); }));
+  else Object.entries(reg.treinos || {}).forEach(([st, nomes])=>(nomes||[]).forEach(n=>add(n, st)));
+  return out;
+}
+function treinoDaPessoa(l, nome){
+  const nt = notaResumo(l.id, nome), t = treinosDaLojaRobo(l);
+  const k = Object.keys(t).find(x=>mesmoNomeFlex(x, nome));
+  const setores = k ? t[k] : [];
+  const ativo = (nt.treino === true || nt.treino === false) ? nt.treino : setores.length > 0;
+  return {ativo, setores: ativo ? setores : [], daEscala: setores.length > 0};
+}
+// ---- Ritmo peça a peça x multiplicando (setores onde se conta multiplicando a quantidade)
+const SETORES_MULTIPLICANDO = ['Estoque','Cartelado','Geladeira','Bomboniere','Frente de caixa'];
+function ritmoDaPessoa(r, p, pRobo){
+  if(!r || !r.comLog || !p || r.segmento === 'SUPERMERCADO') return null;
+  const g = {mult:{p:0, m:0}, peca:{p:0, m:0}};
+  caminhoDaPessoa(r, p).forEach(b=>{ const k = SETORES_MULTIPLICANDO.some(s=>mesmoSetor(s, b.s)) ? 'mult' : 'peca'; g[k].p += b.p; g[k].m += (b.m || 0); });
+  const ativo = g.mult.m + g.peca.m;
+  if(!ativo) return null;
+  // o tempo sem registro no coletor (andar até o setor, arrumar) é repartido para bater com as horas da loja
+  const oficial = pRobo && pRobo.horas ? pRobo.horas * 60 : 0;
+  const fator = oficial && ativo >= 0.6 * oficial ? oficial / ativo : 1;
+  const calc = x => !x.p ? null : {pecas: x.p, min: Math.round(x.m * fator), ih: x.m >= 10 ? Math.round(x.p / (x.m * fator / 60)) : null};
+  return {mult: calc(g.mult), peca: calc(g.peca)};
+}
+function htmlRitmo(rt){
+  if(!rt || (!rt.mult && !rt.peca)) return '';
+  const caixa = (rot, x) => x ? `<div class="item">${rot}<b>${x.ih ? fmtN(x.ih) + ' ip/h' : '—'}</b><small>${x.ih ? `${fmtN(x.pecas)} pç · ${fmtMinutos(x.min)}` : 'pouco tempo para medir'}</small></div>`
+    : `<div class="item">${rot}<b>—</b><small>não contou</small></div>`;
+  return `<div class="section-title">Quanto rende</div><div class="resumo" style="--n:2">${caixa('Peça a peça', rt.peca)}${caixa('Multiplicando', rt.mult)}</div>
+    <p class="hint" style="margin-top:4px">Multiplicando = estoque, cartelado, geladeira, bomboniere e frente de caixa. Tempo medido pelos registros do coletor.</p>`;
+}
+// "GELADEIRA" (modelo de setores) ↔ "Geladeira" (setor que o robô achou)
+function mesmoSetor(a, b){
+  const x = normalizarNome(a).replace(/S\b/g, ''), y = normalizarNome(b).replace(/S\b/g, '');
+  return !!x && !!y && (x === y || x.includes(y) || y.includes(x));
+}
+/* ---- Perfil por setor (o robô manda): quem rende mais e erra menos em cada setor → sugestão em Loja › Setores.
+   Baixa só quando a aba Setores abre (no máximo a cada 10 min) e só se mudou (versão própria). Erros sempre em
+   MÉDIA POR LOJA no setor (nunca o total, que assusta em quem conta muito ali) e, tocando, loja por loja. */
+const PERFIS_KEY = 'central_perfis_v1';
+let perfisRobo = lsGet(PERFIS_KEY, null);   // {v, nomes, setores, lojas:[{id,d,l,seg,x:[[nome,setor,peças,min,erros,seções]]}], em}
+let perfisBaixando = null, perfisIdx = null;
+function atualizarPerfis(forcar){
+  if(!robo.link || perfisBaixando) return perfisBaixando;
+  if(!forcar && perfisRobo && Date.now() - (perfisRobo.em || 0) < 10 * 60 * 1000) return null;
+  perfisBaixando = (async ()=>{
+    try{
+      const url = robo.link + (robo.link.includes('?') ? '&' : '?') + 'acao=perfis' + (perfisRobo && perfisRobo.v ? '&v=' + encodeURIComponent(perfisRobo.v) : '');
+      const j = await (await fetch(url)).json();
+      if(!j || j.erro) return;
+      if(j.semMudanca && perfisRobo){ perfisRobo.em = Date.now(); lsSet(PERFIS_KEY, perfisRobo); return; }
+      if(!Array.isArray(j.lojas)) return;
+      perfisRobo = Object.assign(j, {em: Date.now()}); perfisIdx = null;
+      lsSet(PERFIS_KEY, perfisRobo);
+      if(document.getElementById('setores').classList.contains('active') && !editandoSetoresLoja) renderSetores();
+    }catch(e){ /* sem internet: fica com o que já tem */ }
+    finally{ perfisBaixando = null; }
+  })();
+  return perfisBaixando;
+}
+function segParaPerfis(){ const t = tipoDaLojaAtual(); return t === 'ROUPA' ? 'OUTRO' : t; }
+// "Medicamento A-Z" e "Genérico" (distribuição) ↔ "Medicamentos" (robô); "Ração" ↔ "Pet"; plural/acentos não importam
+const ALIAS_SETOR = {'GENERICO':'MEDICAMENTO', 'MEDICAMENTO A Z':'MEDICAMENTO', 'MEDICAMENTO AZ':'MEDICAMENTO', 'RACAO':'PET', 'RACOE':'PET'};
+function chaveSetorMedida(st){
+  const k = normalizarNome(st).replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').map(w=>w.length > 3 ? w.replace(/S$/, '') : w).join(' ');
+  return ALIAS_SETOR[k] || k;
+}
+const ehMultiplicando = st => SETORES_MULTIPLICANDO.some(x=>mesmoSetor(x, st));
+function indicePerfis(seg){
+  if(!perfisRobo || !Array.isArray(perfisRobo.lojas) || !perfisRobo.lojas.length) return null;
+  perfisIdx = perfisIdx || {};
+  if(perfisIdx[seg]) return perfisIdx[seg];
+  const pessoas = {}, setor = {}, tipo = {mult:{p:0, m:0}, peca:{p:0, m:0}};
+  perfisRobo.lojas.filter(l=>(l.seg || 'DROGARIA') === seg).forEach(l=>(l.x || []).forEach(([ni, si, p, m, e, n])=>{
+    const nome = perfisRobo.nomes[ni], st = perfisRobo.setores[si];
+    if(!nome || !st) return;
+    const k = chaveSetorMedida(st), kn = normalizarNome(nome);
+    const pe = pessoas[kn] || (pessoas[kn] = {nome, setores:{}, mult:{p:0, m:0}, peca:{p:0, m:0}});
+    const ps = pe.setores[k] || (pe.setores[k] = {s:st, lojas:[], pMed:0, mMed:0, e:0, nLojas:0});
+    const conta = m >= 15 || n >= 10;   // contou ali de verdade (não uma passada rápida de poucas seções)
+    ps.lojas.push({id:l.id, d:l.d, l:l.l, p, m, e, n, conta});
+    if(conta){ ps.nLojas++; ps.e += e; }
+    const t = ehMultiplicando(st) ? 'mult' : 'peca';
+    const ss = setor[k] || (setor[k] = {pMed:0, mMed:0, e:0, nLojas:0});
+    if(m >= 10){ ps.pMed += p; ps.mMed += m; pe[t].p += p; pe[t].m += m; tipo[t].p += p; tipo[t].m += m; ss.pMed += p; ss.mMed += m; }
+    if(conta){ ss.e += e; ss.nLojas++; }
+  }));
+  return perfisIdx[seg] = {pessoas, setor, tipo};
+}
+function perfilPessoa(idx, nome){
+  if(!idx) return null;
+  const k = normalizarNome(nome);
+  if(idx.pessoas[k]) return idx.pessoas[k];
+  const alt = Object.keys(idx.pessoas).find(x=>mesmoNomeFlex(x, nome));
+  return alt ? idx.pessoas[alt] : null;
+}
+function chaveNoIndice(obj, setorAloc){
+  const k = chaveSetorMedida(setorAloc);
+  if(!obj || obj[k]) return k;
+  return Object.keys(obj).find(x=>mesmoSetor(x, k)) || k;
+}
+// nota de 0 a 1 para a pessoa no setor: experiência (40%), ritmo no setor (35%) e erros por loja no setor (25%)
+function avaliarNoSetor(setorAloc, nome, idx, est){
+  const pe = perfilPessoa(idx, nome);
+  const k = chaveNoIndice(pe ? pe.setores : (idx ? idx.setor : null), setorAloc);
+  const ps = pe ? pe.setores[k] || null : null, bs = idx ? idx.setor[k] || null : null;
+  const tipo = ehMultiplicando(setorAloc) ? 'mult' : 'peca';
+  const h = est ? est[normalizarNome(nome)] : null, hs = h && h.setores ? h.setores[normalizarNome(setorAloc)] : null;
+  const vezesHist = hs ? hs.n : 0, ultima = hs ? hs.ultima || 0 : 0;
+  const lojas = ps ? ps.nLojas : 0;
+  const ih = ps && ps.mMed >= 20 ? Math.round(ps.pMed / (ps.mMed / 60)) : null;
+  const ihBase = bs && bs.mMed >= 30 ? Math.round(bs.pMed / (bs.mMed / 60)) : null;
+  const ihTipo = pe && pe[tipo].m >= 30 ? Math.round(pe[tipo].p / (pe[tipo].m / 60)) : null;
+  const ihTipoBase = idx && idx.tipo[tipo].m >= 60 ? idx.tipo[tipo].p / (idx.tipo[tipo].m / 60) : null;
+  const erroMedia = lojas ? ps.e / lojas : null;
+  const erroBase = bs && bs.nLojas ? bs.e / bs.nLojas : null;
+  const cl = x => Math.max(0, Math.min(1, x));
+  const exp = Math.min(Math.max(lojas, vezesHist), 5) / 5;
+  let rit = 0.5;
+  if(ih && ihBase) rit = cl(ih / ihBase - 0.5);
+  else if(ihTipo && ihTipoBase) rit = 0.5 + (cl(ihTipo / ihTipoBase - 0.5) - 0.5) * 0.6;   // sem dado no setor: o ritmo dela nesse tipo de setor, com peso menor
+  let err = 0.5;
+  if(lojas && erroBase !== null) err = erroBase > 0 ? cl(1 - (erroMedia / erroBase) / 2) : (erroMedia === 0 ? 0.6 : 0.3);
+  return {nome, lojas, vezesHist, ultima, ih, ihBase, ihTipo, tipo, erroMedia, erroBase,
+    nota: 0.4 * exp + 0.35 * rit + 0.25 * err,
+    rapido: !!(ih && ihBase && ih >= 1.1 * ihBase),
+    poucoErro: !!(lojas >= 2 && erroBase && erroMedia <= 0.6 * erroBase),
+    novato: !lojas && !vezesHist, detalhe: ps ? ps.lojas : []};
+}
+const fmt1 = x => (Math.round(x * 10) / 10).toLocaleString('pt-BR', {minimumFractionDigits: x > 0 && x < 10 ? 1 : 0, maximumFractionDigits: 1});
+const fmtErroLoja = x => !x ? 'nenhum erro' : `${fmt1(x)} erro${x >= 2 ? 's' : ''} por loja`;
+const diaNumBR = d => { const m = String(d||'').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? +(m[3] + m[2] + m[1]) : 0; };
+// 📊 "Quem é bom" num setor: todos os disponíveis, do mais indicado para o menos (tocar abre loja por loja)
+function abrirRankingSetor(si){
+  const setor = setoresAtuais()[si]; if(!setor) return;
+  const seg = segParaPerfis(), idx = indicePerfis(seg), est = estatisticasHistorico();
+  const onde = {};
+  setoresAtuais().forEach(st=>listaSetor(st).forEach(it=>{ if(it.nome) onde[normalizarNome(it.nome)] = st; }));
+  const foraDaConta = new Set(loja.pessoas.filter(p=>p.coordenador || p.instrutor).map(p=>normalizarNome(p.nome)));
+  const lista = nomesDisponiveis().filter(n=>!foraDaConta.has(normalizarNome(n))).map(n=>avaliarNoSetor(setor, n, idx, est))
+    .sort((a,b)=>(a.novato - b.novato) || b.nota - a.nota);   // primeiro quem já contou aqui; depois quem nunca contou (bons para treinar)
+  const tipoTxt = ehMultiplicando(setor) ? 'multiplicando' : 'peça a peça';
+  const base = lista.find(a=>a.ihBase || a.erroBase !== null) || {};
+  const rotSeg = {DROGARIA:'nas drogarias', SUPERMERCADO:'nos supermercados', OUTRO:'nos outros clientes'}[seg];
+  const cab = idx ? `<p class="hint" style="margin-top:2px">Setor contado ${tipoTxt}. Média da equipe ${rotSeg}: ${base.ihBase ? fmtN(base.ihBase) + ' ip/h' : 'ritmo ainda sem dado'}${base.erroBase !== null && base.erroBase !== undefined ? ' · ' + fmtErroLoja(base.erroBase) : ''}.<br>
+      ⚡ rende mais que a média aqui · ✔ erra menos que a média · 🎓 nunca contou aqui. Erro = média por loja neste setor (não é o total).</p>`
+    : `<p class="hint" style="margin-top:2px">O ritmo e os erros por setor chegam do robô junto com os resumos das lojas. Por enquanto, só o histórico salvo aqui.</p>`;
+  const linha = (a, i) => {
+    const em = onde[normalizarNome(a.nome)];
+    const partes = [];
+    if(a.lojas) partes.push(`${a.lojas} loja${a.lojas > 1 ? 's' : ''} aqui`);
+    else if(a.vezesHist) partes.push(`${a.vezesHist}× no histórico`);
+    if(a.ih) partes.push(`${fmtN(a.ih)} ip/h aqui`);
+    else if(a.ihTipo) partes.push(`${tipoTxt}: ${fmtN(a.ihTipo)} ip/h em outros setores`);
+    if(a.erroMedia !== null) partes.push(fmtErroLoja(a.erroMedia));
+    const marcas = [a.rapido ? '⚡' : '', a.poucoErro ? '✔' : '', a.novato ? '🎓' : ''].join('');
+    const det = a.detalhe.slice().sort((x,y)=>diaNumBR(y.d) - diaNumBR(x.d)).map(x=>
+      `<div>${esc(x.d)} · ${esc(x.l)}: ${x.n} seç. · ${fmtN(x.p)} pç${x.m ? ' · ' + fmtMinutos(x.m) : ''} · <b>${x.e} erro${x.e === 1 ? '' : 's'}</b></div>`).join('');
+    return `<div class="rank-setor" data-abrir="${i}"><div class="rank-topo"><span><b>${esc(nomeProprio(a.nome))}</b> ${marcas}${em ? ` <small class="hint">· em ${esc(em)}</small>` : ''}</span>
+        ${em === setor ? '<small class="hint">já está aqui</small>' : `<button class="pill" type="button" data-por="${i}">+ Pôr aqui</button>`}</div>
+      <small class="hint">${partes.join(' · ') || 'nunca contou aqui (pelos dados do robô)'}</small>
+      ${det ? `<div class="rank-detalhe" hidden>${det}</div>` : ''}</div>`;
+  };
+  const iNovato = lista.findIndex(a=>a.novato);
+  const corpo = lista.map((a, i)=>(i === iNovato ? `<div class="section-title" style="margin-top:10px">Nunca contaram aqui${idx ? ' — no topo, quem rende mais nesse tipo de setor (bons para treinar)' : ''}</div>` : '') + linha(a, i)).join('');
+  const box = abrirFolha(`📊 ${esc(setor)} · quem é bom aqui`, cab + `<div class="lista-rank">${lista.length ? corpo : '<p class="hint">Ninguém disponível.</p>'}</div>`, 'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  box.querySelectorAll('[data-abrir]').forEach(el=>el.onclick = ev=>{
+    if(ev.target.closest('[data-por]')) return;
+    const d = el.querySelector('.rank-detalhe'); if(d) d.hidden = !d.hidden;
+  });
+  box.querySelectorAll('[data-por]').forEach(bt=>bt.onclick = ()=>{
+    const a = lista[+bt.dataset.por]; if(!a) return;
+    const antes = onde[normalizarNome(a.nome)];
+    if(antes && antes !== setor){
+      const l = listaSetor(antes), j = l.findIndex(it=>it.nome && normalizarNome(it.nome) === normalizarNome(a.nome));
+      if(j >= 0) l.splice(j, 1);
+    }
+    aceitarSugestao(si, a.nome);
+    box.remove();
+    toast(antes && antes !== setor ? `${nomeCurto(a.nome)} saiu de ${antes} e foi para ${setor}.` : `${nomeCurto(a.nome)} em ${setor}.`);
+  });
+}
 function pessoaDoResumo(r, nome){ return (r.pessoas||[]).find(x=>mesmoNomeFlex(x.nome, nome)) || null; }
 
 // o texto do resumo (curto, sem formalidade); o que ele marcar entra junto
@@ -4148,7 +4489,9 @@ function textoResumoConferente(l, r, pr, pRobo){
   const n = notaResumo(l.id, pRobo ? pRobo.nome : pr.nome);
   const nome = pRobo ? pRobo.nome : pr.nome;
   const linhas = [];
-  linhas.push(`*${nomeProprio(nome)}*${pr && pr.treinamento ? ' · em treinamento' : ''}`);
+  const tr = treinoDaPessoa(l, nome);
+  linhas.push(`*${nomeProprio(nome)}*${tr.ativo ? ' · em treinamento' : ''}`);
+  let treinoSemSetor = tr.ativo && tr.setores.length > 0;
   // 1) o que contou
   if(pr && pr.blocos.length){
     const st = setoresDaPessoa(caminhoDaPessoa(r, pr)).filter(x=>x.s);
@@ -4156,7 +4499,14 @@ function textoResumoConferente(l, r, pr, pRobo){
     const principal = st.slice().sort((a,b)=>b.p - a.p)[0];
     const relevantes = st.filter(x=>x === principal || x.p / tot >= 0.12 || x.m >= 25).slice(0, 4);
     const resto = st.filter(x=>!relevantes.includes(x) && x.p / tot >= 0.03).map(x=>fraseSetor(x.s, 2)).slice(0, 2);
-    const pv = x => (x.pv || (x === principal && n.obs.includes('primeira'))) ? ' pela primeira vez' : '';
+    // treinamento = primeira vez no setor que o coordenador marcou (sem setor marcado: o setor principal)
+    st.forEach(x=>{ x.pv = 0; });
+    if(tr.ativo){
+      const achados = st.filter(x=>tr.setores.some(s2=>mesmoSetor(x.s, s2)));
+      if(achados.length){ achados.forEach(x=>{ x.pv = 1; }); treinoSemSetor = false; }
+      else if(!tr.setores.length) principal.pv = 1;
+    }
+    const pv = x => x.pv ? ' pela primeira vez' : '';
     const itens = x => x.it.length ? ` (${listaE(x.it.slice(0, 3))})` : '';
     const tempo = x => r.comLog && x.m ? fmtMinutos(x.m) : '';
     let f = '';
@@ -4179,6 +4529,7 @@ function textoResumoConferente(l, r, pr, pRobo){
     if(resto.length) f += `; e um pouco de ${listaE(resto)}`;
     linhas.push(f + '.');
   }
+  if(treinoSemSetor) linhas.push(`Em treinamento: primeira vez contando ${listaE(tr.setores.map(x=>x.toLowerCase()))}.`);
   // 2) números
   if(pRobo){
     const eq = equipeLojaRobo(l), ps = pessoasDaLojaRobo(l.id), pos = ps.indexOf(pRobo) + 1;
@@ -4186,6 +4537,9 @@ function textoResumoConferente(l, r, pr, pRobo){
     if(eq.meta && pRobo.ih) t += pRobo.ih >= eq.meta ? ' (acima da meta)' : ` (abaixo da meta de ${fmtN(eq.meta)})`;
     if(pos > 0 && ps.length > 1) t += ` · ${pos}º de ${ps.length} na loja`;
     linhas.push(t);
+    const rt = ritmoDaPessoa(r, pr, pRobo);
+    const partes = [rt && rt.peca && rt.peca.ih ? `peça a peça ${fmtN(rt.peca.ih)} ip/h` : '', rt && rt.mult && rt.mult.ih ? `multiplicando ${fmtN(rt.mult.ih)} ip/h` : ''].filter(Boolean);
+    if(partes.length) linhas.push(partes.join(' · ').replace(/^./, c=>c.toUpperCase()));
   }
   // 3) erros
   if(l.errosItens !== null && l.errosItens !== undefined && pRobo){
@@ -4220,7 +4574,8 @@ async function abrirConferenteLoja(id, nome){
     <div data-resumo><p class="hint">${l.resumo === 'PRONTO' ? 'Carregando o resumo…' : l.resumo === 'AGUARDANDO CONTROLE' ? 'O resumo aparece quando o e-mail do CONTROLE desta loja chegar.' : 'Sem o resumo dos setores: a loja veio sem a pasta CONTROLE (ou foi processada pelo robô antigo). Abaixo, números e erros.'}</p></div>
     <div data-erros></div>
     <div class="section-title">Suas observações</div>
-    <div class="chips-obs">${OBS_RESUMO.map(o=>`<button type="button" class="chip-obs" data-obs="${o.k}">${o.rot}</button>`).join('')}</div>
+    <div class="chips-obs"><button type="button" class="chip-obs" data-treino>🎓 Treinamento</button>${OBS_RESUMO.map(o=>`<button type="button" class="chip-obs" data-obs="${o.k}">${o.rot}</button>`).join('')}</div>
+    <p class="hint" data-treino-dica style="margin:4px 2px 0"></p>
     <input type="text" data-nota placeholder="Observação sua (opcional)" style="margin-top:8px">
     <div class="section-title">Texto pronto</div>
     <textarea data-texto rows="7" class="texto-resumo"></textarea>
@@ -4232,7 +4587,13 @@ async function abrirConferenteLoja(id, nome){
   let r = null;
   const ta = box.querySelector('[data-texto]'), inNota = box.querySelector('[data-nota]');
   inNota.value = nt.nota || '';
-  const pintarObs = ()=>box.querySelectorAll('[data-obs]').forEach(b=>b.classList.toggle('ativo', nt.obs.includes(b.dataset.obs)));
+  const pintarObs = ()=>{
+    box.querySelectorAll('[data-obs]').forEach(b=>b.classList.toggle('ativo', nt.obs.includes(b.dataset.obs)));
+    const tr = treinoDaPessoa(l, nome), bt = box.querySelector('[data-treino]');
+    bt.classList.toggle('ativo', tr.ativo);
+    bt.textContent = '🎓 Treinamento' + (tr.ativo && tr.setores.length ? ' · ' + tr.setores.join(', ') : '');
+    box.querySelector('[data-treino-dica]').textContent = tr.daEscala && nt.treino === undefined ? 'Marcado em Loja › Setores.' : tr.ativo ? 'Primeira vez no setor (marcado por você).' : '';
+  };
   const pr = () => r ? pessoaDoResumo(r, nome) : null;
   const atualizarTexto = (forcar)=>{ if(nt.texto && !forcar) { ta.value = nt.texto; return; } ta.value = textoResumoConferente(l, r || {pessoas:[], mapa:[]}, pr() || {nome, blocos:[]}, pRobo); };
   pintarObs(); atualizarTexto();
@@ -4248,6 +4609,7 @@ async function abrirConferenteLoja(id, nome){
     if(k === 'atento' || k === 'distraido'){ const outro = k === 'atento' ? 'distraido' : 'atento'; const j = nt.obs.indexOf(outro); if(i < 0 && j >= 0) nt.obs.splice(j, 1); }
     nt.texto = ''; salvarNotasResumo(); pintarObs(); atualizarTexto();
   });
+  box.querySelector('[data-treino]').onclick = ()=>{ nt.treino = !treinoDaPessoa(l, nome).ativo; nt.texto = ''; salvarNotasResumo(); pintarObs(); atualizarTexto(); };
   inNota.oninput = ()=>{ nt.nota = inNota.value; nt.texto = ''; salvarNotasResumo(); atualizarTexto(); };
   ta.oninput = ()=>{ nt.texto = ta.value; salvarNotasResumo(); };
   box.querySelector('[data-refazer]').onclick = ()=>{ nt.texto = ''; salvarNotasResumo(); atualizarTexto(true); };
@@ -4259,19 +4621,25 @@ async function abrirConferenteLoja(id, nome){
     r = await obterResumo(id);
     if(!document.body.contains(box)) return;
     const p = pr();
-    box.querySelector('[data-resumo]').innerHTML = p ? htmlResumoPessoa(r, p) : '<p class="hint">Não achei esta pessoa nos arquivos do CONTROLE.</p>';
+    box.querySelector('[data-resumo]').innerHTML = p ? htmlRitmo(ritmoDaPessoa(r, p, pRobo)) + htmlResumoPessoa(r, p, treinoDaPessoa(l, nome)) : '<p class="hint">Não achei esta pessoa nos arquivos do CONTROLE.</p>';
     atualizarTexto();
   }catch(e){
     const div = box.querySelector('[data-resumo]'); if(div) div.innerHTML = `<p class="hint">${esc(e.message || 'Não consegui baixar o resumo agora.')}</p>`;
   }
 }
-function htmlResumoPessoa(r, p){
+function htmlResumoPessoa(r, p, tr){
   const cam = caminhoDaPessoa(r, p);
   const pausas = (p.pausas||[]).filter(x=>x >= 25);
-  return `${p.treinamento ? '<span class="selo-meta">🎓 Em treinamento</span> ' : ''}${p.minutos ? `<span class="hint">${fmtMinutos(p.minutos)} contando${pausas.length ? ` · pausa de ${pausas.map(x=>x + ' min').join(' e ')}` : ''}</span>` : ''}
+  if(tr && tr.ativo) cam.forEach(b=>{ b.pv = tr.setores.some(s2=>mesmoSetor(b.s, s2)) ? 1 : 0; });
+  const total = cam.reduce((t,b)=>t + b.p, 0) || 1;
+  const passo = b=>`<div class="passo"><span><b>${esc(b.s || 'Outros')}</b>${b.pv ? ' <span title="primeira vez">🎓 1ª vez</span>' : ''}${b.pt ? ' <small class="hint" style="display:inline">(ponta)</small>' : ''}${b.corrigido ? ' <small class="hint" style="display:inline">(corrigido)</small>' : ''}</span>
+      <small class="hint">seções ${b.i}–${b.f} · ${fmtN(b.p)} pç${b.m ? ' · ' + fmtMinutos(b.m) : ''}${b.it.length ? ' · ' + esc(b.it.slice(0,3).join(', ')) : ''}</small></div>`;
+  // os trechos grandes primeiro; as passadas rápidas ficam no "caminho completo"
+  const grandes = cam.filter(b=>b.p >= 0.05 * total || (b.m||0) >= 15);
+  return `${tr && tr.ativo ? `<span class="selo-meta">🎓 Em treinamento${tr.setores.length ? ' · ' + esc(tr.setores.join(', ')) : ''}</span> ` : ''}${p.minutos ? `<span class="hint">${fmtMinutos(p.minutos)} contando${pausas.length ? ` · pausa de ${pausas.map(x=>x + ' min').join(' e ')}` : ''}</span>` : ''}
     <div class="section-title">${r.comLog ? 'Por onde passou (na ordem)' : 'O que contou'}</div>
-    <div class="caminho">${cam.map(b=>`<div class="passo"><b>${esc(b.s || 'Outros')}</b>${b.pv ? ' <span title="primeira vez">⭐ 1ª vez</span>' : ''}${b.pt ? ' <small class="hint">(ponta)</small>' : ''}${b.corrigido ? ' <small class="hint">(corrigido)</small>' : ''}
-      <small class="hint">seções ${b.i}–${b.f} · ${fmtN(b.p)} pç${b.m ? ' · ' + fmtMinutos(b.m) : ''}${b.it.length ? ' · ' + esc(b.it.slice(0,3).join(', ')) : ''}</small></div>`).join('')}</div>`;
+    <div class="caminho">${(grandes.length < cam.length ? grandes : cam).map(passo).join('')}</div>
+    ${grandes.length < cam.length ? `<details class="caminho-todo"><summary class="hint">Caminho completo (${cam.length} trechos)</summary><div class="caminho">${cam.map(passo).join('')}</div></details>` : ''}`;
 }
 
 // resumo de todos (para mandar para a empresa) e mapa da loja (corrigir setor)
@@ -4302,12 +4670,12 @@ async function abrirMapaLoja(id){
   const corr = correcoesDaLoja(r);
   const quem = {};
   r.pessoas.forEach(p=>p.blocos.forEach(b=>(b.bs || [b.b]).forEach(k=>{ (quem[k] = quem[k] || new Set()).add(nomeCurto(p.nome)); })));
-  const lista = SETORES_LISTA[r.segmento === 'SUPERMERCADO' ? 'SUPERMERCADO' : 'DROGARIA'];
+  const lista = setoresParaMapa(r.segmento);
   const div = box.querySelector('[data-mapa]');
   div.innerHTML = `<div class="mapa-loja">${r.mapa.map((b, k)=>{
     const s = corr[k] !== undefined ? corr[k] : b.s;
     const opcoes = [...new Set([s, b.s, ...lista].filter(Boolean))];
-    return `<div class="trecho${b.n <= 2 ? ' miudo' : ''}"><span><b>${b.i}–${b.f}</b> <small class="hint">${b.n} seç. · ${esc([...(quem[k]||[])].join(', ') || '—')}${b.k && b.k.length ? ' · ' + esc(b.k.join(', ')) : ''}</small></span>
+    return `<div class="trecho${b.n <= 2 ? ' miudo' : ''}"><span><b>${b.i}–${b.f}</b> <small class="hint">${b.n} seç. · ${esc([...(quem[k]||[])].join(', ') || '—')}${b.ct ? ` · ${b.ct} códigos de cartelado` : ''}${b.k && b.k.length ? ' · ' + esc(b.k.join(', ')) : ''}</small></span>
       <select data-trecho="${k}">${opcoes.map(o=>`<option ${o===s?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`; }).join('')}</div>`;
   div.querySelectorAll('select[data-trecho]').forEach(sel=>sel.onchange = ()=>{
     const k = +sel.dataset.trecho, b = r.mapa[k];
@@ -4811,7 +5179,7 @@ async function restaurarBackup(){
     marcarAlterado(nome, true);
   });
   if(Array.isArray(d.modelos)){
-    modelosProprios = JSON.parse(JSON.stringify(d.modelos));
+    modelosProprios = corrigirModelos(JSON.parse(JSON.stringify(d.modelos)));
     salvarModelos(true);
     atualizarTelasModelos();
   }
