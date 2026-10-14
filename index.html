@@ -369,6 +369,16 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .erro-resumo{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.8rem;color:var(--muted, inherit);margin:4px 0 8px;}
 .erro-grupo{border-bottom:1px solid var(--border);padding:6px 0;}
 .erro-grupo summary{cursor:pointer;padding:4px 0;font-size:.9rem;}
+.regras-setor{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin:-2px 0 8px;font-size:.78rem;}
+.regra-tag{border-radius:10px;padding:2px 8px;font-weight:700;font-size:.74rem;background:var(--accent-soft);}
+.regra-prio{background:var(--danger-bg);color:var(--danger);} .regra-semnovato{background:var(--warn-bg);color:var(--warn);}
+.regra-novato{background:var(--ok-bg);color:var(--ok);} .regra-ultimo{opacity:.85;}
+.setor-prio{border-left:4px solid var(--danger);}
+.aviso-lista{font-weight:700;font-size:.92rem;margin-bottom:10px;}
+.regras-editor{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 10px 26px;}
+.regras-editor .pill{font-size:.72rem;padding:3px 7px;}
+.regras-editor .pill.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.regras-editor input{flex:1 1 100%;margin-top:4px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:.82rem;font-family:inherit;}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--text);color:var(--bg);border-radius:9px;padding:10px 12px;font-size:.82rem;max-width:520px;margin:0 auto;}
 </style>
 </head>
@@ -1880,10 +1890,92 @@ function corrigirChavesSetores(obj){
   Object.keys(obj).forEach(k=>{ const n = nomeSetorAtual(k); if(n!==k){ obj[n] = (obj[n]||[]).concat(obj[k]); delete obj[k]; } });
   return obj;
 }
+/* ---- Regras por setor (dentro de cada lista de setores): prioridade, novato, experiente…
+   Guardadas no próprio modelo (m.regras[setor] = {tags:[...], nota:''}) e sincronizadas com ele (PC e celular).
+   Na aba Setores: aparecem embaixo do nome do setor, avisam quando um novato cai num setor que não é para novato
+   e mudam as sugestões (novatos vão para os setores de novato; não são sugeridos nos de experiente). */
+const REGRAS_SETOR = {
+  prio:      {ic:'🔥', rot:'Prioridade', dica:'crítico: contar primeiro'},
+  semnovato: {ic:'🚫', rot:'Sem novato', dica:'multiplicação: novato não'},
+  experiente:{ic:'⭐', rot:'Experiente', dica:'só gente experiente'},
+  novato:    {ic:'🎓', rot:'Novato', dica:'bom para novato'},
+  ultimo:    {ic:'🕐', rot:'Por último', dica:'mais tranquilo, deixar pro fim'}
+};
+function regraDoSetor(m, setor){ const r = (m && m.regras && m.regras[setor]) || {}; return {tags: Array.isArray(r.tags) ? r.tags : [], nota: r.nota || ''}; }
+function ehNovatoNaLoja(nome, item){
+  if(item && item.treino) return true;
+  const p = loja.pessoas.find(x=>mesmoNome(x.nome, nome));
+  return !!(p && p.estagiario && !p.coordenador && !p.instrutor);
+}
+function etiquetasRegraHtml(r){
+  if(!r.tags.length && !r.nota) return '';
+  return `<div class="regras-setor">${r.tags.filter(t=>REGRAS_SETOR[t]).map(t=>`<span class="regra-tag regra-${t}">${REGRAS_SETOR[t].ic} ${REGRAS_SETOR[t].rot}</span>`).join('')}${r.nota ? `<span class="hint">${esc(r.nota)}</span>` : ''}</div>`;
+}
+function avisosRegraHtml(r, linhas){
+  if(!r.tags.some(t=>t === 'semnovato' || t === 'experiente')) return '';
+  const nov = linhas.filter(it=>it.nome && ehNovatoNaLoja(it.nome, it)).map(it=>it.nome);
+  return nov.length ? `<div class="msg warn" style="margin:6px 0">⚠ ${nov.map(esc).join(', ')} ${nov.length > 1 ? 'são novatos' : 'é novato(a)'} — este setor é ${r.tags.includes('semnovato') ? 'sem novato' : 'só para experiente'}.</div>` : '';
+}
+// no editor de setores: etiquetas e observação de cada setor
+function htmlRegrasEditor(m, i){
+  const r = regraDoSetor(m, m.setores[i]);
+  return `<div class="regras-editor">${Object.entries(REGRAS_SETOR).map(([k,v])=>`<button type="button" class="pill ${r.tags.includes(k) ? 'on' : ''}" onclick="alternarRegraSetor(${i},'${k}')" title="${esc(v.dica)}">${v.ic} ${v.rot}</button>`).join('')}
+    <input type="text" value="${esc(r.nota)}" placeholder="Observação (ex.: peça a peça, produtos caros)" onchange="notaRegraSetor(${i},this.value)"></div>`;
+}
+function avisosDoModelo(v){
+  const m = modeloProprio(modeloEditando); if(!m) return;
+  m.avisos = String(v || '').split('\n').map(x=>x.trim()).filter(Boolean).join('\n'); salvarModelos();
+}
+function alternarRegraSetor(i, tag){
+  const m = modeloProprio(modeloEditando); if(!m) return;
+  const s = m.setores[i]; m.regras = Object.assign({}, m.regras || {});
+  const r = regraDoSetor(m, s), tags = r.tags.slice(), k = tags.indexOf(tag);
+  if(k >= 0) tags.splice(k, 1); else {
+    tags.push(tag);
+    const opostos = {novato:['semnovato','experiente'], semnovato:['novato'], experiente:['novato'], prio:['ultimo'], ultimo:['prio']}[tag] || [];
+    opostos.forEach(o=>{ const j = tags.indexOf(o); if(j >= 0) tags.splice(j, 1); });
+  }
+  m.regras[s] = {tags, nota:r.nota}; salvarModelos(); atualizarTelasModelos();
+}
+function notaRegraSetor(i, v){
+  const m = modeloProprio(modeloEditando); if(!m) return;
+  const s = m.setores[i]; m.regras = Object.assign({}, m.regras || {});
+  m.regras[s] = {tags: regraDoSetor(m, s).tags, nota: limparNomeSetor(v)}; salvarModelos();
+}
+// renomear / apagar setor leva a regra junto
+function moverRegraSetor(m, antigo, novo){
+  if(!m || !m.regras || !m.regras[antigo]) return;
+  m.regras = Object.assign({}, m.regras);
+  if(novo) m.regras[novo] = m.regras[antigo];
+  delete m.regras[antigo];
+}
+// lista pronta do Verdemar (orientação da coordenadora, 14/10/2026). Criada uma vez; depois é editável como qualquer modelo.
+const MODELO_VERDEMAR = {id:'verdemar', nome:'Verdemar', chave:'VERDEMAR', setores:[
+  ['Frios', ['prio','semnovato']], ['Iogurte', ['prio','semnovato']], ['Bomboniere', ['prio','semnovato']], ['Macarrão', ['prio','semnovato']],
+  ['Biscoito', ['prio','semnovato']], ['Temperos', ['prio','semnovato']], ['Molhos', ['prio','semnovato']],
+  ['Mercearia', []], ['Geladeira', []], ['Hortifruti', []], ['Padaria', []], ['Pet', []],
+  ['Bazar', ['experiente'], 'produtos mais caros'],
+  ['Adega', ['novato'], 'peça a peça (acordado com o cliente)'], ['Perfumaria', ['novato'], 'peça a peça'],
+  ['Cigarros do caixa', ['novato'], 'quem acabar o setor · peça a peça'], ['Ganchos do caixa', ['novato'], 'quem acabar o setor · peça a peça'],
+  ['Limpeza', ['ultimo'], 'mais tranquilo, dá pra contar no fim'], ['Bebidas', ['ultimo'], 'mais tranquilo, dá pra contar no fim'],
+  ['Estoque', []]]};
+const AVISO_VERDEMAR = 'NÃO CONTAR: café e chá do Verdemar · frutas secas';
+// marcado no modelo base "supermercado" (sincroniza): se ele apagar a lista Verdemar, ela não volta sozinha
+function garantirModeloVerdemar(lista){
+  const sup = lista.find(m=>m && m.id === 'supermercado');
+  const vm = lista.find(m=>m && m.id === MODELO_VERDEMAR.id);
+  if(vm && !vm.avisoV1){ vm.avisos = vm.avisos ? vm.avisos + '\n' + AVISO_VERDEMAR : AVISO_VERDEMAR; vm.avisoV1 = true; }
+  if(!sup || sup.verdemarCriado || vm){ if(sup) sup.verdemarCriado = true; return lista; }
+  const regras = {};
+  MODELO_VERDEMAR.setores.forEach(([s, tags, nota])=>{ if(tags.length || nota) regras[s] = {tags, nota: nota || ''}; });
+  lista.push({id:MODELO_VERDEMAR.id, nome:MODELO_VERDEMAR.nome, chave:MODELO_VERDEMAR.chave, setores:MODELO_VERDEMAR.setores.map(x=>x[0]), regras, avisos:AVISO_VERDEMAR, avisoV1:true});
+  sup.verdemarCriado = true;
+  return lista;
+}
 function corrigirModelos(lista){
   lista = lista || [];
   lista.forEach(m=>{ if(m && Array.isArray(m.setores)) m.setores = m.setores.map(nomeSetorAtual).filter((x,i,a)=>a.indexOf(x)===i); });
-  return garantirModelosBase(lista);
+  return garantirModeloVerdemar(garantirModelosBase(lista));
 }
 function migrarLoja(l){
   (l.pessoas||[]).forEach(p=>{ if(p.presenca==='ausente' || p.presenca==='suspensao') p.presenca = 'falta'; });
@@ -2170,7 +2262,7 @@ function renomearSetor(i, valor){
   if(!novo){ toast('O nome do setor não pode ficar vazio.'); atualizarTelasModelos(); return; }
   if(novo===antigo) return;
   if(m.setores.some((s,k)=>k!==i && mesmoNome(s,novo))){ toast('Esse setor já existe nesta lista.'); atualizarTelasModelos(); return; }
-  m.setores[i] = novo;
+  m.setores[i] = novo; moverRegraSetor(m, antigo, novo);
   if(loja.modelo===m.id && loja.setores[antigo]){ loja.setores[novo] = loja.setores[antigo]; delete loja.setores[antigo]; salvarLoja(); }
   salvarModelos();
   atualizarTelasModelos();
@@ -2188,7 +2280,7 @@ function removerSetorModelo(i){
   const s = m.setores[i];
   const emUso = loja.modelo===m.id ? (loja.setores[s]||[]).filter(x=>(x.nome||'').trim()).length : 0;
   if(emUso && !confirm(`O setor "${s}" tem ${emUso} pessoa(s) na loja atual. Remover mesmo assim?`)) return;
-  m.setores.splice(i,1);
+  m.setores.splice(i,1); moverRegraSetor(m, s, null);
   if(loja.modelo===m.id){ delete loja.setores[s]; salvarLoja(); }
   salvarModelos(); atualizarTelasModelos();
 }
@@ -3152,14 +3244,17 @@ function htmlEditorSetoresLoja(){
   const m = modeloPorId(loja.modelo);
   modeloEditando = m.id;
   let h = `<div class="card" id="cardEditorSetoresLoja"><h2>Editar setores · ${esc(m.nome)}</h2>
-    <p class="hint">${m.base ? `Vale para todas as ${ROTULO_TIPO[m.tipo]} daqui para frente (PC e celular).` : 'Vale para todas as lojas que usam esta lista.'} Quem já está num setor renomeado continua nele.</p>`;
+    <p class="hint">${m.base ? `Vale para todas as ${ROTULO_TIPO[m.tipo]} daqui para frente (PC e celular).` : 'Vale para todas as lojas que usam esta lista.'} Quem já está num setor renomeado continua nele.</p>
+    <label>Avisos desta lista (aparecem no topo da distribuição; um por linha)</label>
+    <textarea rows="2" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 9px;color:var(--text);font-size:.88rem;font-family:inherit" placeholder="Ex.: NÃO CONTAR: café e chá do Verdemar" onchange="avisosDoModelo(this.value)">${esc(m.avisos || '')}</textarea>
+    <p class="hint">Embaixo de cada setor: 🔥 prioridade · 🚫 sem novato · ⭐ só experiente · 🎓 bom para novato · 🕐 por último, e uma observação. Aparecem na distribuição e o app avisa se um novato cair num setor 🚫/⭐.</p>`;
   if(!m.setores.length) h += `<p class="hint">Nenhum setor ainda. Adicione abaixo.</p>`;
   m.setores.forEach((st,i)=>{
     h += `<div class="setor-row"><span class="hint" style="width:20px;margin:0;text-align:right">${i+1}</span>
       <input type="text" value="${esc(st)}" onchange="renomearSetor(${i},this.value)" aria-label="Nome do setor ${i+1}">
       <button class="pill" onclick="moverSetor(${i},-1)" ${i===0?'disabled':''} aria-label="Subir">↑</button>
       <button class="pill" onclick="moverSetor(${i},1)" ${i===m.setores.length-1?'disabled':''} aria-label="Descer">↓</button>
-      <button class="pill remover" onclick="removerSetorModelo(${i})" aria-label="Apagar">×</button></div>`;
+      <button class="pill remover" onclick="removerSetorModelo(${i})" aria-label="Apagar">×</button></div>${htmlRegrasEditor(m, i)}`;
   });
   h += `<div class="setor-row" style="margin-top:12px"><input type="text" id="novoSetorLoja" placeholder="Nome do novo setor" onkeydown="if(event.key==='Enter')adicionarSetorLoja()">
       <button class="btn small" onclick="adicionarSetorLoja()">Adicionar</button></div>
@@ -3213,13 +3308,17 @@ function renderSetores(){
   const temHist = historicoAtivo().length > 0;
   atualizarPerfis();
   const comPerfis = !!indicePerfis(segParaPerfis());
-  let html = `<div class="card"><div class="hint">${loja.nome?'<b>'+esc(loja.nome)+'</b> · ':''}${disponiveis.length} disponível(is) · ${semSetor.length} ainda sem setor${semSetor.length?': '+semSetor.map(esc).join(', '):''}</div>
+  const modeloAtualObj = modeloPorId(loja.modelo);
+  const temRegras = setoresAtuais().some(st=>{ const r = regraDoSetor(modeloAtualObj, st); return r.tags.length || r.nota; });
+  let html = modeloAtualObj.avisos ? `<div class="msg warn aviso-lista">⚠ ${esc(modeloAtualObj.avisos).replace(/\n/g,'<br>⚠ ')}</div>` : '';
+  html += `<div class="card"><div class="hint">${loja.nome?'<b>'+esc(loja.nome)+'</b> · ':''}${disponiveis.length} disponível(is) · ${semSetor.length} ainda sem setor${semSetor.length?': '+semSetor.map(esc).join(', '):''}</div>
     <div class="hint" style="margin-top:6px">${comPerfis || temHist
       ? 'Sugestões: em cada setor, quem está sem setor e já contou ali, primeiro quem rende mais e erra menos naquele setor (⚡ ritmo acima da média da equipe ali · ✔ menos erros que a média). Toque em 📊 para ver todo mundo. Só entram se você tocar.'
       : 'Dica: as sugestões aparecem quando o robô tiver lojas com resumo (ou depois de "Salvar no histórico").'}</div></div>`;
   setoresAtuais().forEach((setor, si)=>{
     const linhas = loja.setores[setor] || [];
-    html += `<div class="card setor-card"><h2 class="setor-titulo"><span>${esc(setor)} <small>${linhas.filter(l=>l.nome).length || ''}</small></span><button class="pill" type="button" data-rank="${si}" title="Quem é bom neste setor">📊 Quem é bom</button></h2>`;
+    const regra = regraDoSetor(modeloAtualObj, setor);
+    html += `<div class="card setor-card${regra.tags.includes('prio') ? ' setor-prio' : ''}"><h2 class="setor-titulo"><span>${esc(setor)} <small>${linhas.filter(l=>l.nome).length || ''}</small></span><button class="pill" type="button" data-rank="${si}" title="Quem é bom neste setor">📊 Quem é bom</button></h2>${etiquetasRegraHtml(regra)}${avisosRegraHtml(regra, linhas)}`;
     linhas.forEach((item,i)=>{
       html += `<div class="setor-row">`;
       if(item.tipo==='manual'){
@@ -3231,11 +3330,14 @@ function renderSetores(){
       }
       html += `${item.nome ? `<button class="pill treino ${item.treino ? 'on' : ''}" onclick="alternarTreino(${si},${i})" title="Em treinamento: primeira vez neste setor" aria-label="Treinamento">🎓</button>` : ''}<button class="btn small danger" onclick="removerLinha(${si},${i})" aria-label="Remover">×</button></div>`;
     });
-    const sug = sugestoesSetor(setor, semSetor, est);
+    const novatoProibido = regra.tags.includes('semnovato') || regra.tags.includes('experiente');
+    const sug = sugestoesSetor(setor, novatoProibido ? semSetor.filter(n=>!ehNovatoNaLoja(n)) : semSetor, est);
+    const novatosLivres = regra.tags.includes('novato') ? semSetor.filter(n=>ehNovatoNaLoja(n)) : [];
+    if(novatosLivres.length) html += `<div class="sugestoes">Novatos: ${novatosLivres.slice(0, 4).map(n=>`<button class="chip-sug" data-si="${si}" data-nome="${esc(n)}">+ ${esc(n)} 🎓</button>`).join('')}</div>`;
     if(sug.length) html += `<div class="sugestoes">Sugestão: ${sug.map(x=>`<button class="chip-sug" data-si="${si}" data-nome="${esc(x.nome)}">+ ${esc(x.nome)} · ${Math.max(x.lojas, x.vezesHist)}×${x.rapido ? ' ⚡' : ''}${x.poucoErro ? ' ✔' : ''}</button>`).join('')}</div>`;
     html += `<button class="btn small secondary" style="margin-top:8px" onclick="adicionarLinha(${si})">+ Adicionar pessoa</button></div>`;
   });
-  html += `<p class="hint">• = já está em outro setor. 🎓 = em treinamento (primeira vez contando neste setor): aparece no resumo do conferente.</p>`;
+  html += `<p class="hint">• = já está em outro setor. 🎓 = em treinamento (primeira vez contando neste setor): aparece no resumo do conferente.${temRegras ? ' Etiquetas do setor: 🔥 prioridade (contar primeiro) · 🚫 sem novato · ⭐ só experiente · 🎓 bom para novato · 🕐 por último. Novato = estagiário ou quem está com 🎓.' : ''}</p>`;
   div.innerHTML = html;
 }
 function alternarTreino(si, i){
