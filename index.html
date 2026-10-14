@@ -362,6 +362,13 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .aviso-local{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);border-radius:10px;padding:10px 12px;font-size:.82rem;margin:12px 0 0;line-height:1.35;}
 .aviso-local b{display:block;margin-bottom:2px;}
 .aviso-local button{margin-top:8px;background:transparent;color:var(--warn);border:1px solid var(--warn);border-radius:7px;padding:6px 10px;font-weight:700;font-size:.8rem;cursor:pointer;font-family:inherit;}
+.erro-card{border:1px solid var(--border);border-radius:9px;padding:8px 10px;margin:0 0 7px;background:var(--bg);}
+.erro-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;font-size:.88rem;}
+.erro-badge{white-space:nowrap;font-size:.72rem;font-weight:700;border-radius:10px;padding:2px 8px;}
+.erro-num{font-size:.85rem;margin:2px 0;}
+.erro-resumo{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.8rem;color:var(--muted, inherit);margin:4px 0 8px;}
+.erro-grupo{border-bottom:1px solid var(--border);padding:6px 0;}
+.erro-grupo summary{cursor:pointer;padding:4px 0;font-size:.9rem;}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--text);color:var(--bg);border-radius:9px;padding:10px 12px;font-size:.82rem;max-width:520px;margin:0 auto;}
 </style>
 </head>
@@ -501,8 +508,8 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
   <section id="presenca" class="view">
     <div class="card">
       <h2>Carregar equipe da loja</h2>
-      <label>Arquivo da escala (.xlsx — pode ter várias lojas em colunas diferentes)</label>
-      <input type="file" id="arquivoEscala" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/octet-stream">
+      <label>Escala da empresa: arquivo .xlsx <b>ou imagem</b> (print/foto da planilha) — pode ter várias lojas em colunas</label>
+      <input type="file" id="arquivoEscala" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/octet-stream,image/*">
       <button class="btn" onclick="analisarArquivo()">Analisar arquivo</button>
       <button class="btn secondary" onclick="levarEscalaParaPresenca()">Usar a escala montada na Viagem</button>
       <div id="msgAnalise"></div>
@@ -602,13 +609,15 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
         <p class="hint">Cole aqui a linha que a função "mostrarLinkDoApp" do robô mostrou (termina com ?chave=...). Só precisa fazer uma vez em cada aparelho.</p>
       </details>
       <div class="acoes"><button class="btn" onclick="atualizarDoRobo(true)">Atualizar agora</button>
-        <button class="btn secondary" onclick="abrirResumoRobo()">Resumo da viagem</button></div>
+        <button class="btn secondary" onclick="abrirResumoRobo()">Resumo da viagem</button>
+        <button class="btn secondary" onclick="abrirRelatorioEstagiarios()">🎓 Estagiários</button></div>
       <div class="busca-robo"><span class="lupa" aria-hidden="true">🔍</span>
         <input type="text" inputmode="search" enterkeyhint="search" id="buscaRobo" placeholder="Pesquisar loja ou conferente" autocomplete="off" oninput="roboBusca=this.value; renderRobo()"></div>
     </div>
     <div id="listaRobo"></div>
     <div id="detalheRobo"></div>
     <div id="conferentesRobo"></div>
+    <div id="relEstagiarios"></div>
 
     <h2 style="font-size:1rem;margin:22px 0 8px">Calcular manualmente</h2>
     <p class="hint" style="margin-bottom:10px">Para uma loja que não veio por e-mail: escolha os 3 arquivos abaixo.</p>
@@ -2298,10 +2307,265 @@ const RE_LOJA = /^(.+?)\s*\|\s*(\d+)\s*$/;
 const RE_FIM_LISTA = /^(obs|observa[cç](ão|ao|ões|oes)|refer[eê]ncia)\b/i;
 const RE_IGNORAR = /(in[ií]cio programado)|^\d{1,2}[\/.\-]\d{1,2}([\/.\-]\d{2,4})?$|^\d+([.,]\d+)?$/i;
 
+/* ---- Escala em IMAGEM (foto ou print da planilha): leitura no próprio aparelho (Tesseract, grátis) ----
+   O leitor (~3 MB) só é baixado na 1ª vez que escolher uma imagem; depois fica guardado no aparelho.
+   A imagem é remontada em linhas e colunas (como a planilha): linha em branco = espaço maior entre as linhas
+   (para achar os estagiários), fonte azul = FREE, e cada nome é conferido com o cadastro da equipe. */
+const OCR_CDN = {
+  script:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+  worker:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+  core:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
+  lang:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/por@1.0.0/4.0.0_best_int'
+};
+let origemEscala = 'xlsx', ocrInfo = null;
+function ehImagem(f){ return !!f && (/^image\//i.test(f.type || '') || /\.(jpe?g|png|webp|bmp|gif)$/i.test(f.name || '')); }
+function carregarScript(url){
+  return new Promise((ok, falha)=>{ const s = document.createElement('script'); s.src = url; s.onload = ok; s.onerror = ()=>falha(new Error('script')); document.head.appendChild(s); });
+}
+async function leitorOCR(progresso){
+  if(typeof Tesseract === 'undefined') await carregarScript(OCR_CDN.script);
+  return Tesseract.createWorker('por', 1, {workerPath:OCR_CDN.worker, corePath:OCR_CDN.core, langPath:OCR_CDN.lang,
+    logger: m=>{ if(progresso && m && typeof m.progress === 'number') progresso(m.status, m.progress); }});
+}
+// imagem → canvas num tamanho bom para leitura (letra pequena de print do WhatsApp é ampliada)
+async function canvasDaImagem(f){
+  const url = URL.createObjectURL(f);
+  try{
+    const img = await new Promise((ok, falha)=>{ const i = new Image(); i.onload = ()=>ok(i); i.onerror = falha; i.src = url; });
+    let esc = 1; const w = img.naturalWidth, h = img.naturalHeight;
+    if(w < 1400) esc = Math.min(3, 1600 / w);
+    if(w * esc > 2600) esc = 2600 / w;
+    if(h * esc > 5000) esc = Math.min(esc, 5000 / h);
+    const cv = document.createElement('canvas'); cv.width = Math.round(w * esc); cv.height = Math.round(h * esc);
+    const ctx = cv.getContext('2d', {willReadFrequently:true});
+    ctx.imageSmoothingQuality = 'high';
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    return cv;
+  } finally { URL.revokeObjectURL(url); }
+}
+// cor da letra dentro de um retângulo: média dos pixels bem mais escuros que o fundo
+function corDaLetra(ctx, b){
+  const x = Math.max(0, b.x0), y = Math.max(0, b.y0), w = Math.max(1, b.x1 - x), h = Math.max(1, b.y1 - y);
+  let d; try{ d = ctx.getImageData(x, y, w, h).data; }catch(e){ return null; }
+  const lum = []; for(let i=0;i<d.length;i+=4) lum.push(0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]);
+  const ord = lum.slice().sort((a,b)=>a-b);
+  const fundo = ord[Math.floor(ord.length * 0.85)], limite = fundo - 70;
+  let r = 0, g = 0, bl = 0, n = 0;
+  for(let i=0, j=0; i<d.length; i+=4, j++) if(lum[j] < limite){ r += d[i]; g += d[i+1]; bl += d[i+2]; n++; }
+  return n >= 8 ? [r/n, g/n, bl/n] : null;
+}
+const corEhAzul = c => !!c && c[2] - c[0] > 45 && c[2] - c[1] > 15 && c[2] > 90;
+// erros comuns de leitura em nomes: 0→O, 1→I, 5→S, 8→B dentro de palavras
+function limparTextoOCR(t){
+  let v = String(t || '').replace(/[“”"«»_~`^*•°]/g, ' ').replace(/\s+/g, ' ').trim();
+  v = v.replace(/^[|!\[\]().,;:'—–_¦-]+\s*/, '').replace(/\s*[|!\[\].,;:'—–_¦-]+$/, '');
+  // "LOJA I 227" / "LOJA l 227" / "LOJA ] 227" → "LOJA | 227"
+  v = v.replace(/\s+[|Il\]\[!¦]\s*(\d{1,5})\s*$/, ' | $1');
+  if(!/[:\/]/.test(v) && /[A-Za-zÀ-ÿ]{3}/.test(v) && !/\|\s*\d+$/.test(v) && !/\s\d{3,5}$/.test(v))
+    v = v.replace(/([A-Za-zÀ-ÿ])[0](?=[A-Za-zÀ-ÿ])/g, '$1O').replace(/([A-Za-zÀ-ÿ])[1](?=[A-Za-zÀ-ÿ])/g, '$1I')
+         .replace(/([A-Za-zÀ-ÿ])[5](?=[A-Za-zÀ-ÿ])/g, '$1S').replace(/([A-Za-zÀ-ÿ])[8](?=[A-Za-zÀ-ÿ])/g, '$1B');
+  return v;
+}
+function distanciaEdicao(a, b){
+  if(a === b) return 0;
+  const m = a.length, n = b.length; if(!m || !n) return Math.max(m, n);
+  let ant = Array.from({length:n+1}, (_,j)=>j);
+  for(let i=1;i<=m;i++){
+    const cur = [i];
+    for(let j=1;j<=n;j++) cur[j] = Math.min(ant[j] + 1, cur[j-1] + 1, ant[j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    ant = cur;
+  }
+  return ant[n];
+}
+// procura o nome lido no cadastro (CLT, freelancers, RJ): devolve o nome do cadastro quando a diferença é pequena e não há empate
+function nomeDoCadastroOCR(lido){
+  const k = normalizarNome(lido); if(k.length < 5) return null;
+  const nomes = [...new Set([...(db.clt||[]), ...(db.fl||[]), ...(db.rj||[])].map(x=>x.nome).filter(Boolean))];
+  let melhor = null, dMelhor = 99, dSegundo = 99;
+  nomes.forEach(n=>{
+    const d = distanciaEdicao(k, normalizarNome(n));
+    if(d < dMelhor){ dSegundo = dMelhor; dMelhor = d; melhor = n; } else if(d < dSegundo) dSegundo = d;
+  });
+  if(!melhor) return null;
+  const tol = Math.max(1, Math.floor(k.length * 0.15));
+  return (dMelhor === 0 || (dMelhor <= tol && dSegundo > dMelhor)) ? {nome:melhor, dist:dMelhor} : null;
+}
+// palavras (com posição) → tabela de linhas e colunas, como a planilha
+function tabelaDaLeitura(palavras, ctx){
+  const pal = palavras.filter(w=>w && String(w.text || '').trim() && w.bbox);   // sem corte por confiança: o leitor às vezes dá nota baixa a palavra certa (o cadastro confere depois)
+  if(!pal.length) return {aoa:[], azuis:new Set()};
+  const alturas = pal.map(w=>w.bbox.y1 - w.bbox.y0).sort((a,b)=>a-b);
+  const hMed = alturas[Math.floor(alturas.length/2)] || 12;
+  // 1) linhas: palavras com o centro na mesma altura
+  pal.sort((a,b)=>(a.bbox.y0 + a.bbox.y1) - (b.bbox.y0 + b.bbox.y1));
+  const linhas = [];
+  pal.forEach(w=>{
+    const yc = (w.bbox.y0 + w.bbox.y1) / 2;
+    const l = linhas.find(x=>Math.abs(x.yc - yc) < hMed * 0.6);
+    if(l){ l.ws.push(w); l.yc = (l.yc * (l.ws.length - 1) + yc) / l.ws.length; } else linhas.push({yc, ws:[w]});
+  });
+  linhas.sort((a,b)=>a.yc - b.yc);
+  // 2) células: dentro da linha, um espaço grande separa colunas
+  const celulas = [];
+  linhas.forEach((l, li)=>{
+    l.ws.sort((a,b)=>a.bbox.x0 - b.bbox.x0);
+    let atual = null;
+    l.ws.forEach(w=>{
+      if(atual && w.bbox.x0 - atual.x1 < hMed * 1.6){ atual.ws.push(w); atual.x1 = Math.max(atual.x1, w.bbox.x1); atual.y0 = Math.min(atual.y0, w.bbox.y0); atual.y1 = Math.max(atual.y1, w.bbox.y1); }
+      else { atual = {li, ws:[w], x0:w.bbox.x0, x1:w.bbox.x1, y0:w.bbox.y0, y1:w.bbox.y1}; celulas.push(atual); }
+    });
+  });
+  // linha de grade lida como "—" e número de matrícula colado no nome ("467 — ADRIELLI…"): sai da frente do nome
+  const ehGrade = w => /^[|—–_¦\-]+$/.test(String(w.text).trim());
+  celulas.forEach(c=>{
+    let i = 0;
+    while(i < c.ws.length - 1 && (ehGrade(c.ws[i]) || (/^\d{1,5}$/.test(String(c.ws[i].text).trim()) && c.ws.slice(i+1).some(w=>/[A-Za-zÀ-ÿ]{3}/.test(w.text)) && !c.ws.slice(i+1).some(w=>/^\d{3,5}$/.test(String(w.text).trim()))))) i++;
+    if(i){ c.ws = c.ws.slice(i); c.x0 = c.ws[0].bbox.x0; }
+    c.texto = limparTextoOCR(c.ws.map(w=>w.text).join(' ').replace(/^[—–_¦-]+/, '')); c.xc = (c.x0 + c.x1) / 2;
+  });
+  // 3) colunas: pelo começo das células (texto alinhado à esquerda); título centralizado cai na coluna que o cobre
+  const xs = celulas.map(c=>c.x0).sort((a,b)=>a-b), grupos = [];
+  xs.forEach(x=>{ const g = grupos[grupos.length-1]; if(g && x - g.fim < hMed * 2) { g.fim = x; g.n++; } else grupos.push({ini:x, fim:x, n:1}); });
+  let colunas = grupos.filter(g=>g.n >= 3);
+  if(!colunas.length) colunas = grupos;
+  colunas.forEach(g=>{ g.dir = Math.max(...celulas.filter(c=>c.x0 >= g.ini - hMed && c.x0 <= g.fim + hMed).map(c=>c.x1), g.fim); });
+  const colDe = c=>{
+    let ix = colunas.findIndex(g=>c.x0 >= g.ini - hMed && c.x0 <= g.fim + hMed);
+    if(ix < 0) ix = colunas.findIndex(g=>c.xc >= g.ini - hMed && c.xc <= g.dir + hMed);
+    if(ix < 0){ let d = 1e9; colunas.forEach((g,j)=>{ const dd = Math.abs(c.x0 - g.ini); if(dd < d){ d = dd; ix = j; } }); }
+    return ix;
+  };
+  // 4) linhas em branco: espaço entre linhas bem maior que o normal
+  const passos = []; for(let i=1;i<linhas.length;i++) passos.push(linhas[i].yc - linhas[i-1].yc);
+  const ord = passos.slice().sort((a,b)=>a-b);
+  const passo = Math.max(hMed * 1.15, ord[Math.floor(ord.length * 0.3)] || hMed * 1.5);
+  const linhaReal = []; let r = 0;
+  linhas.forEach((l, i)=>{ if(i){ const vazias = Math.min(3, Math.max(0, Math.round((l.yc - linhas[i-1].yc) / passo) - 1)); r += 1 + vazias; } linhaReal[i] = r; });
+  const aoa = Array.from({length: r + 1}, ()=>Array(colunas.length).fill(''));
+  const azuis = new Set();
+  celulas.forEach(c=>{
+    const row = linhaReal[c.li], col = colDe(c);
+    const ja = aoa[row][col], soNum = t => /^\d{1,5}$/.test(t);
+    // matrícula e nome na mesma coluna: fica só o nome
+    aoa[row][col] = !ja ? c.texto : soNum(ja) && /[A-Za-zÀ-ÿ]{3}/.test(c.texto) ? c.texto : soNum(c.texto) && /[A-Za-zÀ-ÿ]{3}/.test(ja) ? ja : ja + ' ' + c.texto;
+    if(ctx && /[A-Za-zÀ-ÿ]{3}/.test(c.texto) && corEhAzul(corDaLetra(ctx, c))) azuis.add(normalizarNome(c.texto));
+  });
+  return {aoa, azuis};
+}
+// troca o nome lido pelo do cadastro (quando bate) e guarda o que mudou para mostrar na conferência
+function corrigirNomesOCR(aoa, azuis){
+  const corrigidos = [], semCadastro = [], azuisFinal = new Set();
+  aoa.forEach((lin, r)=>lin.forEach((v, c)=>{
+    if(!v || !pareceNome(v)) return;
+    const achado = nomeDoCadastroOCR(v);
+    const era = normalizarNome(v);
+    if(achado){
+      if(normalizarNome(achado.nome) !== era) corrigidos.push([v, achado.nome]);
+      aoa[r][c] = achado.nome;
+    } else { aoa[r][c] = v.toUpperCase(); semCadastro.push(aoa[r][c]); }
+    if(azuis.has(era)) azuisFinal.add(normalizarNome(aoa[r][c]));
+  }));
+  return {corrigidos, semCadastro, azuis: azuisFinal};
+}
+function detectarLojasNoAoa(){
+  const achadas = [];
+  const maxCols = aoaAtual.reduce((m,r)=>Math.max(m,r.length),0);
+  for(let c=0;c<maxCols;c++){
+    for(let r=0;r<aoaAtual.length;r++){
+      const m = lojaNaCelula(aoaAtual, r, c);
+      if(m){
+        const dataAcima = (aoaAtual[r-1] && aoaAtual[r-1][c] || '').toString().trim();
+        const ini = String((aoaAtual[r+1] && aoaAtual[r+1][c]) || '').match(/in[ií]cio\s+programado\s*:?\s*(\d{1,2})\s*[:h.]\s*(\d{2})/i);
+        achadas.push({col:c, row:r, loja:m.loja, codigo:m.codigo, data:(dataAcima.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/) || [dataAcima])[0], inicio: ini ? ini[1].padStart(2,'0') + ':' + ini[2] : ''});
+      }
+    }
+  }
+  return achadas;
+}
+async function analisarImagemEscala(f){
+  const msg = document.getElementById('msgAnalise');
+  const avisar = t => { msg.innerHTML = `<div class="msg ok">${t}</div>`; };
+  avisar('Lendo a imagem… Na 1ª vez o app baixa o leitor (cerca de 3 MB, só uma vez).');
+  let worker = null;
+  try{
+    const cv = await canvasDaImagem(f);
+    worker = await leitorOCR((st, p)=>{ if(/recogniz/i.test(st)) avisar(`Lendo a imagem… ${Math.round(p*100)}%`); else if(/load|download/i.test(st)) avisar('Baixando o leitor de imagem (só na 1ª vez)…'); });
+    const res = await worker.recognize(cv);
+    const {aoa, azuis} = tabelaDaLeitura((res && res.data && res.data.words) || [], cv.getContext('2d', {willReadFrequently:true}));
+    if(!aoa.length){ msg.innerHTML = '<div class="msg warn">Não consegui ler nada nessa imagem. Tente um print mais nítido (sem cortar os nomes).</div>'; return; }
+    const corr = corrigirNomesOCR(aoa, azuis);
+    aoaAtual = aoa; freeNaPlanilha = corr.azuis; origemEscala = 'imagem';
+    ocrInfo = {corrigidos: corr.corrigidos, semCadastro: corr.semCadastro};
+    lojasDetectadas = detectarLojasNoAoa();
+    const sel = document.getElementById('selecaoLoja'), bloco = document.getElementById('blocoSelecaoLoja');
+    if(!lojasDetectadas.length){
+      // sem o nome da loja na imagem: usa a coluna com mais nomes
+      const cont = (aoa[0] || []).map((_, c)=>aoa.filter(l=>pareceNome(l[c])).length);
+      const col = cont.indexOf(Math.max(...cont));
+      if(col < 0 || !cont[col]){ bloco.style.display = 'none'; msg.innerHTML = '<div class="msg warn">Não achei nomes nessa imagem. Tente um print mais nítido.</div>'; return; }
+      const data = (aoa.flat().join(' ').match(/\d{1,2}\/\d{1,2}\/\d{2,4}/) || [''])[0];
+      lojasDetectadas = [{col, row:-1, loja:'', codigo:'', data, inicio:'', semLoja:true}];
+    }
+    sel.innerHTML = lojasDetectadas.map((l,i)=>`<option value="${i}">${l.semLoja ? 'Nomes da imagem (loja não encontrada)' : esc(l.loja) + ' | ' + esc(l.codigo)}${l.data?' — '+esc(l.data):''}</option>`).join('');
+    bloco.style.display = '';
+    msg.innerHTML = `<div class="msg ok">Imagem lida: ${lojasDetectadas[0].semLoja ? 'não achei o nome da loja (preencha depois em "Nome da loja")' : lojasDetectadas.length + ' loja(s) encontrada(s)'}. Toque em "Importar esta loja" e confira os nomes.</div>`;
+  }catch(err){
+    msg.innerHTML = `<div class="msg warn">Não consegui ler a imagem${navigator.onLine === false ? ': na 1ª vez precisa de internet para baixar o leitor' : ''}. Tente de novo ou use o arquivo Excel.</div>`;
+  }finally{
+    if(worker) try{ await worker.terminate(); }catch(e){}
+  }
+}
+// depois de importar uma loja lida de imagem: confere os nomes antes de usar
+function conferirNomesDaImagem(){
+  const info = ocrInfo || {corrigidos:[], semCadastro:[]};
+  const corr = new Map(info.corrigidos.map(([de, para])=>[normalizarNome(para), de]));
+  const lista = loja.pessoas.map((p, ix)=>({p, ix})).filter(({p})=>!p.coordenador);
+  const box = abrirFolha('Confira os nomes lidos da imagem',
+    `<p class="hint">Corrija o que o leitor errou. ✓ = está no cadastro · ✎ = corrigido pelo cadastro · ⚠ = não achei no cadastro (confira).</p>
+     <div style="max-height:52vh;overflow:auto">${loja.pessoas.map((p, ix)=>{
+       const k = normalizarNome(p.nome), noCad = noCadastroCLT(p.nome) || noCadastroFL(p.nome);
+       const icone = corr.has(k) ? `<span title="lido: ${esc(corr.get(k))}">✎</span>` : noCad ? '✓' : '<span style="color:var(--danger)">⚠</span>';
+       return `<div style="border-bottom:1px solid var(--border);padding:6px 0">
+         <div style="display:flex;gap:6px;align-items:center"><span style="width:18px;text-align:center">${icone}</span>
+           <input type="text" data-nome="${ix}" value="${esc(p.nome)}" style="flex:1;min-width:0"></div>
+         <div style="display:flex;gap:16px;align-items:center;margin:4px 0 0 24px;font-size:.8rem;flex-wrap:wrap">
+           <label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" data-free="${ix}" ${ehFree(p)?'checked':''}>Free</label>
+           <label style="margin:0;display:flex;align-items:center;gap:4px"><input type="checkbox" data-estag="${ix}" ${p.estagiario?'checked':''}>Estagiário</label>
+           <button type="button" class="btn small secondary" data-tirar="${ix}" style="padding:3px 10px;margin:0">Tirar</button>
+           ${corr.has(k) ? `<span class="hint">lido: ${esc(corr.get(k))}</span>` : ''}</div></div>`;
+     }).join('')}</div>
+     <p class="hint">${lista.length} pessoa(s). Depois dá para ajustar em "Editar lista" (Coord., Instrutor…).</p>`,
+    'Usar estes nomes', b=>{
+      const tirar = new Set([...b.querySelectorAll('[data-tirar].tirado')].map(x=>+x.dataset.tirar));
+      const novos = [];
+      loja.pessoas.forEach((p, ix)=>{
+        if(tirar.has(ix)) return;
+        const nome = (b.querySelector(`[data-nome="${ix}"]`).value || '').replace(/\s+/g,' ').trim().toUpperCase();
+        if(!nome) return;
+        p.nome = nome;
+        p.free = b.querySelector(`[data-free="${ix}"]`).checked ? true : (noCadastroFL(nome) ? false : undefined);
+        if(p.free === undefined) delete p.free;
+        if(b.querySelector(`[data-estag="${ix}"]`).checked) p.estagiario = true; else delete p.estagiario;
+        if(!novos.some(x=>normalizarNome(x.nome) === normalizarNome(nome))) novos.push(p);
+      });
+      loja.pessoas = novos;
+      const aprendidos = aprenderFreelancers(novos.filter(p=>p.free === true).map(p=>p.nome));
+      salvarLoja(); renderPresenca(); renderSetores();
+      ocrInfo = null;
+      toast(`${novos.length} pessoa(s) na Presença.${aprendidos.length ? ` ${aprendidos.length} freelancer(s) novo(s) no cadastro.` : ''}`, 5000);
+    });
+  box.querySelectorAll('[data-tirar]').forEach(bt=>bt.onclick = ()=>{
+    bt.classList.toggle('tirado'); const linha = bt.parentElement.parentElement;
+    linha.style.opacity = bt.classList.contains('tirado') ? '.4' : ''; bt.textContent = bt.classList.contains('tirado') ? 'Voltar' : 'Tirar';
+  });
+}
 async function analisarArquivo(){
   const msg = document.getElementById('msgAnalise');
   const f = document.getElementById('arquivoEscala').files[0];
-  if(!f){ msg.innerHTML = '<div class="msg warn">Escolha um arquivo .xlsx primeiro.</div>'; return; }
+  if(!f){ msg.innerHTML = '<div class="msg warn">Escolha o arquivo da escala (.xlsx) ou uma imagem (print/foto) primeiro.</div>'; return; }
+  if(ehImagem(f)) return analisarImagemEscala(f);
+  origemEscala = 'xlsx'; ocrInfo = null;
   if(!bibliotecaOk(msg)) return;
   try{
     const buf = await f.arrayBuffer();
@@ -2385,7 +2649,8 @@ function importarLojaEscolhida(){
     freeNaPlanilha.has(normalizarNome(n)) ? {free:true} : {}, estag.has(normalizarNome(n)) ? {estagiario:true} : {})), item.loja, item.data, {codigo:item.codigo, inicio:item.inicio});
   // quem está em azul em qualquer loja da planilha e ainda não está no cadastro entra como freelancer NOVO
   const todosAzuis = [];
-  lojasDetectadas.forEach(l=>nomesDaLojaDetectada(l).forEach(n=>{ if(freeNaPlanilha.has(normalizarNome(n))) todosAzuis.push(n); }));
+  // na imagem a cor pode enganar: os freelancers novos só entram depois da conferência dos nomes
+  if(origemEscala !== 'imagem') lojasDetectadas.forEach(l=>nomesDaLojaDetectada(l).forEach(n=>{ if(freeNaPlanilha.has(normalizarNome(n))) todosAzuis.push(n); }));
   const aprendidos = aprenderFreelancers(todosAzuis);
   // as demais lojas da planilha ficam guardadas para transferências (enviar / receber)
   loja.outrasLojas = lojasDetectadas.filter(l=>l!==item).map(l=>({loja:l.loja, codigo:l.codigo, nomes:nomesDaLojaDetectada(l)}));
@@ -2393,7 +2658,9 @@ function importarLojaEscolhida(){
   const qFree = loja.pessoas.filter(ehFree).length;
   document.getElementById('msgAnalise').innerHTML = `<div class="msg ok">${nomes.length} pessoa(s) carregada(s) de ${esc(item.loja)}${qFree ? ` · ${qFree} free` : ''}.</div>`
     + (estag.size ? `<div class="msg ok">${estag.size} estagiário(s) encontrado(s) no fim da lista (depois da linha em branco). Quando souber quem é o instrutor, toque em "Editar lista" › "Instrutor".</div>` : '')
-    + (aprendidos.length ? `<div class="msg ok">${aprendidos.length} freelancer(s) novo(s) adicionado(s) ao cadastro (Viagem › Equipe): ${aprendidos.map(esc).join(', ')}. Complete o gênero lá.</div>` : '');
+    + (aprendidos.length ? `<div class="msg ok">${aprendidos.length} freelancer(s) novo(s) adicionado(s) ao cadastro (Viagem › Equipe): ${aprendidos.map(esc).join(', ')}. Complete o gênero lá.</div>` : '')
+    + (origemEscala === 'imagem' ? `<div class="msg warn">Lido de imagem: confira os nomes${ocrInfo && ocrInfo.semCadastro.length ? ` (${ocrInfo.semCadastro.length} não achado(s) no cadastro)` : ''}${item.semLoja ? ' e preencha o nome da loja' : ''}.</div>` : '');
+  if(origemEscala === 'imagem') conferirNomesDaImagem();
 }
 
 function levarEscalaParaPresenca(){
@@ -4030,17 +4297,116 @@ function celulaErros(p){
   if(p.erros === null || p.erros === undefined) return '<td class="hint">—</td>';
   return `<td>${p.erros ? `<b style="color:var(--danger)">${p.erros}</b>` : '<span style="color:var(--ok)">0</span>'}</td>`;
 }
-// lista de erros de uma pessoa numa loja (ou de toda a loja)
+/* ---- Erros: visualização em cartões + compartilhar (imagem e texto) ----
+   q1 = 1ª contagem do conferente · qa = quantidade certa (ajustada). qa > q1 = faltou contar; qa < q1 = contou a mais. */
+function infoErro(e){
+  const d = (Number(e.qa)||0) - (Number(e.q1)||0);
+  return {d, txt: d > 0 ? `faltou ${fmtN(d)}` : d < 0 ? `contou ${fmtN(-d)} a mais` : 'código trocado'};
+}
+function resumoErros(lista, pessoa){
+  const falt = lista.reduce((t,e)=>t + Math.max(0, infoErro(e).d), 0), mais = lista.reduce((t,e)=>t + Math.max(0, -infoErro(e).d), 0);
+  const prec = pessoa ? precisaoDe(pessoa.pecas, pessoa.pecasErro) : null;
+  return {n: lista.length, pecas: lista.reduce((t,e)=>t + Math.abs(infoErro(e).d), 0), falt, mais, prec,
+    trocas: analisarErros(lista).trocas};
+}
+function cartaoErroHtml(e){
+  const i = infoErro(e), cor = i.d > 0 ? 'var(--warn)' : 'var(--danger)', fundo = i.d > 0 ? 'var(--warn-bg)' : 'var(--danger-bg)';
+  return `<div class="erro-card">
+    <div class="erro-topo"><b>${esc(e.descricao || e.codigo)}</b><span class="erro-badge" style="color:${cor};background:${fundo}">${esc(i.txt)}</span></div>
+    <div class="erro-num">contou <b>${fmtN(e.q1)}</b> → certo <b>${fmtN(e.qa)}</b></div>
+    <div class="hint">Seção ${esc(e.secao)}${e.setor ? ' · ' + esc(e.setor) : ''} · cód. ${esc(e.codigo)}${e.motivo ? ' · ' + esc(e.motivo.toLowerCase()) : ''}</div></div>`;
+}
+function blocoErrosHtml(lista, pessoa){
+  if(!lista.length) return '<p class="hint" style="color:var(--ok)">✔ Nenhum item ajustado.</p>';
+  const r = resumoErros(lista, pessoa);
+  const ord = lista.slice().sort((a,b)=>String(a.secao).localeCompare(String(b.secao), undefined, {numeric:true}));
+  return `<div class="erro-resumo"><span><b>${r.n}</b> erro(s)</span><span><b>${fmtN(r.pecas)}</b> peça(s)</span>${r.falt ? `<span>faltou <b>${fmtN(r.falt)}</b></span>` : ''}${r.mais ? `<span>a mais <b>${fmtN(r.mais)}</b></span>` : ''}${r.prec !== null ? `<span>precisão <b>${fmtPct(r.prec)}</b></span>` : ''}</div>
+    ${r.trocas.length ? `<div class="msg warn" style="margin:6px 0">🔄 ${r.trocas.length} troca(s) de produto parecido (ex.: sabor): ${r.trocas.map(t=>`lançou ${t.qtd} ${esc(nomeProduto(t.era.descricao))} como ${esc(nomeProduto(t.lancouComo.descricao))}${t.bateu ? ' — o total bateu' : ''}`).join(' · ')}</div>` : ''}
+    ${ord.map(cartaoErroHtml).join('')}`;
+}
+// por pessoa (loja inteira) ou por loja (uma pessoa em várias lojas)
+function gruposErrosHtml(grupos){
+  return grupos.map(g=>`<details class="erro-grupo" ${grupos.length <= 3 ? 'open' : ''}><summary><b>${esc(g.titulo)}</b> <span class="hint">· ${g.lista.length} erro(s)${g.sub ? ' · ' + esc(g.sub) : ''}</span></summary>${blocoErrosHtml(g.lista, g.pessoa)}</details>`).join('');
+}
+function gruposDaLoja(l){
+  const todos = (robo.erros||[]).filter(e=>e.id===l.id), grupos = [];
+  todos.forEach(e=>{ let g = grupos.find(x=>mesmoNomeFlex(x.titulo, e.nome)); if(!g){ g = {titulo:e.nome, lista:[], pessoa: robo.pessoas.find(p=>p.id===l.id && mesmoNomeFlex(p.nome, e.nome))}; grupos.push(g); } g.lista.push(e); });
+  return grupos.sort((a,b)=>b.lista.length - a.lista.length);
+}
+// ---- imagem (PNG) e texto
+function cartaoErroImg(e){
+  const i = infoErro(e), cor = i.d > 0 ? '#7a5200' : '#9C0006', fundo = i.d > 0 ? '#fcf0cc' : '#FFC7CE';
+  return `<div style="border:1px solid #e6e1f0;border-left:5px solid ${cor};border-radius:8px;padding:7px 9px;margin:0 0 6px">
+    <div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:13px">${esc(e.descricao || e.codigo)}</b><span style="white-space:nowrap;font-size:11px;font-weight:700;color:${cor};background:${fundo};border-radius:10px;padding:1px 8px">${esc(i.txt)}</span></div>
+    <div style="font-size:12px">contou <b>${fmtN(e.q1)}</b> → certo <b>${fmtN(e.qa)}</b></div>
+    <div style="font-size:11px;color:#62597a">Seção ${esc(e.secao)}${e.setor ? ' · ' + esc(e.setor) : ''} · cód. ${esc(e.codigo)}${e.motivo ? ' · ' + esc(e.motivo.toLowerCase()) : ''}</div></div>`;
+}
+function blocoErrosImg(lista, pessoa){
+  if(!lista.length) return '<div style="color:#006100;font-size:13px;margin-bottom:8px">✔ Nenhum item ajustado.</div>';
+  const r = resumoErros(lista, pessoa);
+  const ord = lista.slice().sort((a,b)=>String(a.secao).localeCompare(String(b.secao), undefined, {numeric:true}));
+  return `<div style="font-size:12px;color:#62597a;margin:0 0 6px">${[`<b style="color:#1c1530">${r.n}</b> erro(s)`, `<b style="color:#1c1530">${fmtN(r.pecas)}</b> peça(s)`, r.falt ? `faltou <b>${fmtN(r.falt)}</b>` : '', r.mais ? `a mais <b>${fmtN(r.mais)}</b>` : '', r.prec !== null ? `precisão <b>${fmtPct(r.prec)}</b>` : ''].filter(Boolean).join(' · ')}</div>
+    ${r.trocas.length ? `<div style="font-size:12px;background:#fcf0cc;color:#7a5200;border-radius:6px;padding:5px 8px;margin-bottom:6px">🔄 ${r.trocas.map(t=>`lançou ${t.qtd} ${esc(nomeProduto(t.era.descricao))} como ${esc(nomeProduto(t.lancouComo.descricao))}${t.bateu ? ' (o total bateu)' : ''}`).join(' · ')}</div>` : ''}
+    ${ord.map(cartaoErroImg).join('')}`;
+}
+function textoErros(titulo, sub, grupos){
+  const linhas = [`*${titulo}*`]; if(sub) linhas.push(sub);
+  grupos.forEach(g=>{
+    const r = resumoErros(g.lista, g.pessoa);
+    linhas.push('', `*${g.titulo}* — ${r.n} erro(s)${r.prec !== null ? ' · precisão ' + fmtPct(r.prec) : ''}`);
+    if(!g.lista.length) linhas.push('Nenhum item ajustado ✔');
+    g.lista.slice().sort((a,b)=>String(a.secao).localeCompare(String(b.secao), undefined, {numeric:true}))
+      .forEach(e=>linhas.push(`• ${e.descricao || e.codigo} (seç. ${e.secao}): contou ${fmtN(e.q1)}, certo ${fmtN(e.qa)} — ${infoErro(e).txt}`));
+  });
+  return linhas.join('\n');
+}
+function folhaErros(titulo, sub, grupos, umaPessoa, extraBotao){
+  const corpo = `<p class="hint">${esc(sub)}</p>
+    <div style="max-height:52vh;overflow:auto">${umaPessoa ? blocoErrosHtml(grupos[0].lista, grupos[0].pessoa) : (grupos.length ? gruposErrosHtml(grupos) : '<p class="hint">Nenhum item ajustado.</p>')}</div>
+    <div class="acoes" style="margin-top:8px"><button type="button" class="btn small" data-png>Imagem (PNG)</button>
+      <button type="button" class="btn small secondary" data-txt style="margin-left:6px">Texto / WhatsApp</button>
+      ${extraBotao ? `<button type="button" class="btn small secondary" data-extra style="margin-left:6px">${extraBotao.rotulo}</button>` : ''}</div>`;
+  const box = abrirFolha(titulo, corpo, 'Fechar', ()=>null);
+  box.querySelector('[data-cancelar]').style.display = 'none';
+  box.querySelector('[data-png]').onclick = ()=>{
+    let h = cabecalhoImagem(esc(titulo), esc(sub));
+    grupos.forEach(g=>{ if(!umaPessoa) h += `<div style="font-weight:700;margin:12px 0 4px">${esc(g.titulo)}${g.sub ? ` <span style="font-weight:400;color:#62597a;font-size:12px">· ${esc(g.sub)}</span>` : ''}</div>`; h += blocoErrosImg(g.lista, g.pessoa); });
+    h += '<div style="color:#62597a;font-size:11px;margin-top:6px">"contou" = 1ª contagem do conferente · "certo" = quantidade depois do ajuste. Só erros de conferente.</div>';
+    const quem = titulo.replace(/^Erros de\s*/i, '').replace(/^Erros da equipe$/i, 'equipe');
+    gerarImagem(h, ['Erros', quem, ...sub.split(' · ').slice(0,2)].map(x=>limpaNomeArquivo(String(x).replace(/\//g,'-').replace(/\|/g,''))).filter(Boolean).join(' - ') + '.png');
+  };
+  box.querySelector('[data-txt]').onclick = ()=>{
+    const t = textoErros(titulo, sub, grupos);
+    const b2 = abrirFolha('Texto dos erros', `<textarea id="taErros" style="width:100%;min-height:42vh;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-family:inherit;font-size:.85rem">${esc(t)}</textarea>
+      <div class="acoes"><button class="btn small" type="button" data-copiar>Copiar</button><button class="btn small secondary" type="button" data-whats style="margin-left:6px">WhatsApp</button></div>`, 'Fechar', ()=>null);
+    b2.querySelector('[data-cancelar]').style.display = 'none';
+    const ta = b2.querySelector('#taErros');
+    b2.querySelector('[data-copiar]').onclick = async ev=>{ try{ await navigator.clipboard.writeText(ta.value); }catch(e){ ta.select(); document.execCommand('copy'); } ev.target.textContent = 'Copiado ✓'; };
+    b2.querySelector('[data-whats]').onclick = ()=>window.open('https://wa.me/?text=' + encodeURIComponent(ta.value), '_blank');
+  };
+  if(extraBotao) box.querySelector('[data-extra]').onclick = ()=>{ box.remove(); extraBotao.acao(); };
+  return box;
+}
+// todos os erros de uma pessoa, loja por loja (do segmento que está aberto)
+function abrirErrosPessoa(nomeK){
+  const regs = robo.pessoas.filter(p=>normalizarNome(p.nome)===nomeK).map(p=>({p, l:robo.lojas.find(x=>x.id===p.id)}))
+    .filter(x=>x.l && segDaLoja(x.l) === segAtivo && x.l.errosItens !== null && x.l.errosItens !== undefined)
+    .sort((a,b)=>dataParaChave(b.l.data)-dataParaChave(a.l.data));
+  if(!regs.length){ toast('Nenhuma loja dessa pessoa veio com o relatório de itens ajustados.'); return; }
+  const nome = regs[0].p.nome;
+  const grupos = regs.map(({p,l})=>({titulo:`${l.data.slice(0,5)} · ${l.loja}${l.num ? ' | ' + l.num : ''}`, sub:`${fmtN(p.pecas)} peças`, lista:errosDaPessoa(l.id, p.nome), pessoa:p}));
+  const tot = grupos.reduce((t,g)=>t + g.lista.length, 0);
+  folhaErros(`Erros de ${nome}`, `${regs.length} loja(s) · ${tot} erro(s) · ${(tot/regs.length).toLocaleString('pt-BR',{maximumFractionDigits:1})} por loja`, grupos, false, {rotulo:'Abrir ficha', acao:()=>abrirFicha(nome)});
+}
+// lista de erros de uma pessoa numa loja (ou de toda a loja) — com Imagem e Texto para compartilhar
 function abrirErros(id, nome){
   const l = robo.lojas.find(x=>x.id===id); if(!l) return;
-  const lista = nome ? errosDaPessoa(id, nome) : (robo.erros||[]).filter(e=>e.id===id);
-  const titulo = nome ? `Erros de ${esc(nome)}` : `Erros da equipe na loja`;
-  const p = nome ? robo.pessoas.find(x=>x.id===id && mesmoNomeFlex(x.nome, nome)) : null;
-  const corpo = `<p class="hint">${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''} · ${esc(l.data)}${p ? ` · ${fmtN(p.pecas)} peças contadas · precisão ${fmtPct(precisaoDe(p.pecas, p.pecasErro))}` : ''}</p>
-    ${!lista.length ? '<p class="hint">Nenhum item ajustado.</p>' : `<div class="wrap-table" style="max-height:45vh;overflow:auto"><table><thead><tr>${nome ? '' : '<th>Quem</th>'}<th>Seção</th><th>Produto</th><th>1ª</th><th>Ajust.</th><th>Motivo</th></tr></thead><tbody>${
-      lista.map(e=>`<tr>${nome ? '' : `<td>${esc(e.nome)}</td>`}<td>${esc(e.secao)}</td><td>${esc(e.descricao)}<small class="hint" style="display:block">${esc(e.codigo)}</small></td><td>${e.q1}</td><td>${e.qa}</td><td class="hint">${esc(e.motivo)}</td></tr>`).join('')}</tbody></table></div>`}`;
-  const box = abrirFolha(titulo, corpo, nome ? 'Abrir ficha' : 'Fechar', ()=>{ if(nome) abrirFicha(nome); });
-  return box;
+  const sub = `${l.loja}${l.num ? ' | ' + l.num : ''} · ${l.data}`;
+  if(nome){
+    const p = robo.pessoas.find(x=>x.id===id && mesmoNomeFlex(x.nome, nome));
+    return folhaErros(`Erros de ${nome}`, sub + (p ? ` · ${fmtN(p.pecas)} peças` : ''), [{titulo:nome, lista:errosDaPessoa(id, nome), pessoa:p}], true, {rotulo:'Abrir ficha', acao:()=>abrirFicha(nome)});
+  }
+  return folhaErros('Erros da equipe', sub + ` · ${fmtN(l.errosItens)} erro(s)`, gruposDaLoja(l), false);
 }
 function renderRobo(){
   const st = document.getElementById('statusRobo'); if(!st) return;
@@ -4101,7 +4467,8 @@ function detalheConferenteRobo(){
     <div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
       regs.map(({p,l})=>{ const lista = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${lista.indexOf(p)+1}º de ${lista.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')
     }</tbody></table></div>
-    <div class="acoes"><button class="btn secondary small" onclick="abrirFicha(${esc(JSON.stringify(regs[0].p.nome))})">Abrir ficha</button><button class="btn secondary small" style="margin-left:6px" onclick="roboConfAberto=null;renderRobo()">Fechar</button></div></div>`;
+    <p class="hint" style="margin:6px 0 0">Toque numa loja para ver os erros dela.</p>
+    <div class="acoes"><button class="btn small" onclick="abrirErrosPessoa(roboConfAberto)">Erros de todas as lojas</button><button class="btn secondary small" style="margin-left:6px" onclick="abrirFicha(${esc(JSON.stringify(regs[0].p.nome))})">Abrir ficha</button><button class="btn secondary small" style="margin-left:6px" onclick="roboConfAberto=null;renderRobo()">Fechar</button></div></div>`;
 }
 // chave Drogarias / Supermercados (e o botão "Ver supermercados" da pesquisa)
 document.getElementById('produtividade').addEventListener('click', e=>{
@@ -4599,9 +4966,9 @@ async function abrirConferenteLoja(id, nome){
   pintarObs(); atualizarTexto();
   // erros (lista que já existia)
   const lista = pRobo ? errosDaPessoa(id, pRobo.nome) : [];
-  box.querySelector('[data-erros]').innerHTML = !temRel ? '' : `<div class="section-title">Erros (${lista.length})</div>${!lista.length ? '<p class="hint">Nenhum item ajustado.</p>' :
-    `<div class="wrap-table" style="max-height:30vh;overflow:auto"><table><thead><tr><th>Seção</th><th>Produto</th><th>1ª</th><th>Ajust.</th></tr></thead><tbody>${
-      lista.map(e=>`<tr><td>${esc(e.secao)}</td><td>${esc(e.descricao)}</td><td>${e.q1}</td><td>${e.qa}</td></tr>`).join('')}</tbody></table></div>`}`;
+  box.querySelector('[data-erros]').innerHTML = !temRel ? '' : `<div class="section-title">Erros (${lista.length})</div>${blocoErrosHtml(lista, pRobo)}
+    ${lista.length ? `<div class="acoes"><button type="button" class="btn small secondary" data-compart-erros>Compartilhar erros</button></div>` : ''}`;
+  const be = box.querySelector('[data-compart-erros]'); if(be) be.onclick = ()=>abrirErros(id, pRobo.nome);
   box.querySelectorAll('[data-obs]').forEach(b=>b.onclick = ()=>{
     const k = b.dataset.obs, i = nt.obs.indexOf(k);
     if(i >= 0) nt.obs.splice(i, 1); else nt.obs.push(k);
@@ -4688,6 +5055,267 @@ async function abrirMapaLoja(id){
     r.pessoas.forEach(p=>{ if(p.blocos.some(x=>(x.bs || [x.b]).includes(k))) notaResumo(id, p.nome).texto = ''; });
     salvarNotasResumo(); toast(`Trecho ${b.i}–${b.f}: ${sel.value}.`);
   });
+}
+
+/* =====================================================================
+   RELATÓRIO DOS ESTAGIÁRIOS (para o instrutor mandar à empresa)
+   Junta a Presença (quem foi marcado "Estag." e quem é o instrutor — histórico salvo + loja atual)
+   com o robô (peças, itens/h e erros de cada loja). Estagiário que contou com matrícula de treino
+   aparece no robô como "COLETOR N (EM TREINAMENTO)": dá para ligar o coletor ao nome (robo.coletoresEstag).
+   ===================================================================== */
+let relEstag = null;
+const ehEstagiarioP = p => !!p && p.estagiario && !p.coordenador && !p.instrutor;
+function registrosComEstagiarios(){
+  const regs = historicoAtivo().map(r=>({id:r.id, data:r.data, loja:r.loja, codigo:r.codigo || '', pessoas:r.pessoas || []}));
+  if(loja.pessoas.length && (loja.nome || '').trim()){
+    const chave = dataParaChave(loja.data) || dataParaChave(hojeBR());
+    const atual = {id:idRegistro(loja.nome, chave), data:chaveParaBR(chave), loja:loja.nome, codigo:loja.codigo || '', pessoas:loja.pessoas, atual:true};
+    const i = regs.findIndex(r=>r.id === atual.id); if(i >= 0) regs[i] = atual; else regs.push(atual);
+  }
+  return regs.filter(r=>r.pessoas.some(ehEstagiarioP)).sort((a,b)=>dataParaChave(a.data) - dataParaChave(b.data) || String(a.loja).localeCompare(b.loja));
+}
+function instrutoresDoRegistro(r){ return r.pessoas.filter(p=>p.instrutor && !p.coordenador).map(p=>p.nome); }
+function lojaRoboDoRegistro(r){
+  const dia = diaDe(r.data), nome = normalizarNome(r.loja);
+  return lojasRoboOrdenadas().find(l=>{
+    const dl = diaDe(l.data); if(dl === null || dia === null || Math.abs(dl - dia) > 1) return false;
+    if(r.codigo && l.num) return +l.num === +r.codigo;
+    const ln = normalizarNome(l.loja);
+    return ln && nome && (ln.includes(nome) || nome.includes(ln));
+  }) || null;
+}
+const ehColetorTreino = nome => /^COLETOR\s+\d+/i.test(String(nome || ''));
+function vinculoColetor(idLoja, nomeEstag){
+  const m = (robo.coletoresEstag || {})[idLoja] || {};
+  return m[normalizarNome(nomeEstag)] || '';
+}
+function pessoaRoboDoEstagiario(lr, nome){
+  if(!lr) return null;
+  const ps = pessoasDaLojaRobo(lr.id);
+  const v = vinculoColetor(lr.id, nome);
+  if(v){ const x = ps.find(p=>normalizarNome(p.nome) === v); if(x) return x; }
+  return ps.find(p=>mesmoNomeFlex(p.nome, nome)) || null;
+}
+function ligarColetorEstagiario(idLoja, nomeEstag, nomeColetor){
+  robo.coletoresEstag = Object.assign({}, robo.coletoresEstag || {});
+  const m = Object.assign({}, robo.coletoresEstag[idLoja] || {});
+  if(nomeColetor) m[normalizarNome(nomeEstag)] = normalizarNome(nomeColetor); else delete m[normalizarNome(nomeEstag)];
+  robo.coletoresEstag[idLoja] = m;
+  salvarRobo(); marcarAlterado('robo');
+}
+
+// monta os números de cada estagiário nas lojas escolhidas
+function calcularRelEstag(regs){
+  ajustarAtrasosRobo();
+  const est = {};
+  regs.forEach(r=>{
+    const lr = lojaRoboDoRegistro(r);
+    const temRel = !!lr && lr.errosItens !== null && lr.errosItens !== undefined;
+    const eq = lr ? equipeLojaRobo(lr) : null;
+    const ps = lr ? pessoasDaLojaRobo(lr.id) : [];
+    r.pessoas.filter(ehEstagiarioP).forEach(p=>{
+      const k = normalizarNome(p.nome);
+      const e = est[k] || (est[k] = {nome:p.nome, linhas:[]});
+      const lin = {data:r.data, loja:r.loja, codigo:r.codigo, presenca:p.presenca || null, status:textoStatus(p), lr, temRel,
+        equipe: eq && eq.ih ? eq.ih : 0, meta: eq && eq.meta ? eq.meta : 0, total: ps.length};
+      if(lr && p.presenca !== 'falta' && p.presenca !== 'atestado' && p.presenca !== 'transferido'){
+        const pr = pessoaRoboDoEstagiario(lr, p.nome);
+        if(pr){
+          Object.assign(lin, {pr, pecas:pr.pecas, horas:pr.horas, ih:pr.ih, pos: ps.indexOf(pr) + 1,
+            erros: temRel ? (pr.erros || 0) : null, pecasErro: temRel ? (pr.pecasErro || 0) : null,
+            listaErros: temRel ? errosDaPessoa(lr.id, pr.nome) : []});
+        }
+      }
+      e.linhas.push(lin);
+    });
+  });
+  const lista = Object.values(est).map(e=>{
+    const ok = e.linhas.filter(l=>l.pr);
+    const pecas = ok.reduce((t,l)=>t + l.pecas, 0), horas = ok.reduce((t,l)=>t + (Number(l.horas)||0), 0);
+    const comRel = ok.filter(l=>l.temRel);
+    const erros = comRel.reduce((t,l)=>t + l.erros, 0), pecasErro = comRel.reduce((t,l)=>t + l.pecasErro, 0);
+    const pecasComRel = comRel.reduce((t,l)=>t + l.pecas, 0);
+    const comIh = ok.filter(l=>l.ih);
+    return Object.assign(e, {lojas: ok.length, faltas: e.linhas.filter(l=>STATUS_FALTA.includes(l.presenca)).length,
+      semRobo: e.linhas.filter(l=>!l.pr && !STATUS_FALTA.includes(l.presenca) && l.presenca !== 'transferido').length,
+      pecas, horas, ih: horas ? Math.round(pecas / horas) : 0, erros, pecasErro, lojasComRel: comRel.length,
+      mediaErros: comRel.length ? erros / comRel.length : null, precisao: precisaoDe(pecasComRel, pecasErro),
+      primeiro: comIh.length > 1 ? comIh[0].ih : 0, ultimo: comIh.length > 1 ? comIh[comIh.length-1].ih : 0});
+  }).sort((a,b)=>b.ih - a.ih || a.nome.localeCompare(b.nome));
+  const instr = [...new Set(regs.flatMap(instrutoresDoRegistro).map(n=>n.toUpperCase()))];
+  const datas = regs.map(r=>r.data);
+  return {regs, lista, instrutores: instr, periodo: datas.length ? (datas[0] === datas[datas.length-1] ? datas[0] : datas[0] + ' a ' + datas[datas.length-1]) : ''};
+}
+
+function abrirRelatorioEstagiarios(){
+  const regs = registrosComEstagiarios();
+  if(!regs.length){
+    toast('Nenhum estagiário marcado ainda. Na Presença, toque em "Editar lista" › "Estag." (e "Instrutor"), e salve a loja no histórico.', 7000);
+    return;
+  }
+  const instrs = [...new Set(regs.flatMap(instrutoresDoRegistro).map(n=>n.toUpperCase()))];
+  const ultimo = diaDe(regs[regs.length-1].data);
+  const box = abrirFolha('🎓 Relatório dos estagiários',
+    `<label>Instrutor</label><select id="relEstagInstr">${instrs.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}<option value="">Todos os estagiários</option></select>
+     <label>Lojas</label>
+     <div class="checklist-estag" style="max-height:42vh;overflow:auto">${regs.map((r,ix)=>{
+       const lr = lojaRoboDoRegistro(r), ins = instrutoresDoRegistro(r);
+       return `<label><input type="checkbox" data-ix="${ix}"> <span>${esc(r.data)} · ${esc(r.loja)}<span class="hint" style="display:block">${r.pessoas.filter(ehEstagiarioP).length} estagiário(s)${ins.length ? ' · instrutor ' + esc(ins.join(', ')) : ' · sem instrutor marcado'}${lr ? '' : ' · ainda sem produtividade do robô'}${r.atual ? ' · loja atual' : ''}</span></span></label>`; }).join('')}</div>
+     <p class="hint">Peças, itens/hora e erros de cada estagiário, loja por loja. Vem da Presença (quem está marcado "Estag.") e do robô. Já vêm marcadas as lojas do instrutor nos últimos 15 dias.</p>`,
+    'Gerar relatório', b=>{
+      const escolhidos = [...b.querySelectorAll('input[data-ix]:checked')].map(cb=>regs[+cb.dataset.ix]);
+      if(!escolhidos.length) return 'Marque pelo menos uma loja.';
+      relEstag = calcularRelEstag(escolhidos);
+      renderRelEstag();
+      setTimeout(()=>{ const el = document.getElementById('relEstagiarios'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50);
+    });
+  const sel = box.querySelector('#relEstagInstr');
+  const marcar = ()=>{
+    const alvo = sel.value;
+    box.querySelectorAll('input[data-ix]').forEach(cb=>{
+      const r = regs[+cb.dataset.ix], d = diaDe(r.data);
+      const doInstr = !alvo || instrutoresDoRegistro(r).some(n=>normalizarNome(n) === normalizarNome(alvo));
+      cb.checked = doInstr && (ultimo === null || d === null || ultimo - d <= 14);
+    });
+  };
+  sel.onchange = marcar; marcar();
+}
+
+const fmtDec = (n, c) => Number(n||0).toLocaleString('pt-BR', {minimumFractionDigits:c, maximumFractionDigits:c});
+function textoErrosEstag(e){
+  if(!e.lojasComRel) return 'erros: sem relatório de ajustes';
+  return `${e.erros} erro(s) em ${e.lojasComRel} loja(s) · ${fmtDec(e.mediaErros, 1)} por loja`;
+}
+function evolucaoEstag(e){
+  if(!e.primeiro || !e.ultimo) return '';
+  const pct = Math.round((e.ultimo / e.primeiro - 1) * 100);
+  return `${fmtN(e.primeiro)} → ${fmtN(e.ultimo)} itens/h (${pct >= 0 ? '+' : ''}${pct}%)`;
+}
+function lojaCurtaEstag(l){ const n = String(l.loja || '').replace(/^.*?\s[-–]\s/, ''); return n + (l.codigo && !n.includes(l.codigo) ? ' ' + l.codigo : ''); }
+function celulaLinhaEstag(l){
+  if(STATUS_FALTA.includes(l.presenca) || l.presenca === 'transferido') return {status:l.status};
+  if(!l.lr) return {status:'aguardando o robô'};
+  if(!l.pr) return {status:'não achei no robô'};
+  return null;
+}
+function renderRelEstag(){
+  const el = document.getElementById('relEstagiarios'); if(!el) return;
+  const r = relEstag; if(!r){ el.innerHTML = ''; return; }
+  const semVinculo = [];
+  let h = `<div class="card"><h2>🎓 Relatório dos estagiários</h2>
+    <p class="hint">${r.instrutores.length ? 'Instrutor: <b>' + esc(r.instrutores.join(', ')) + '</b> · ' : ''}${esc(r.periodo)} · ${r.regs.length} loja(s)</p>
+    <div class="wrap-table"><table><thead><tr><th>Estagiário</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
+      r.lista.map(e=>`<tr><td>${esc(e.nome)}${e.faltas ? ` <span class="hint" style="color:var(--danger)">${e.faltas} falta(s)</span>` : ''}</td><td>${e.lojas}</td><td>${fmtN(e.pecas)}</td><td><b>${e.ih ? fmtN(e.ih) : '—'}</b></td><td>${e.lojasComRel ? `${e.erros} <span class="hint">(${fmtDec(e.mediaErros,1)}/loja)</span>` : '—'}</td></tr>`).join('')}</tbody></table></div>`;
+  r.lista.forEach(e=>{
+    h += `<div class="section-title" style="margin-top:14px">${esc(e.nome)}</div>
+      <p class="hint" style="margin:2px 0 6px">${fmtN(e.pecas)} peças · ${e.ih ? fmtN(e.ih) + ' itens/h' : 'sem itens/h'} · ${esc(textoErrosEstag(e))}${e.precisao !== null ? ' · precisão ' + fmtDec(e.precisao, 1) + '%' : ''}${evolucaoEstag(e) ? ' · evolução ' + esc(evolucaoEstag(e)) : ''}</p>
+      <div class="wrap-table"><table><thead><tr><th>Dia</th><th>Loja</th><th>Peças</th><th>Ip/h</th><th>Equipe</th><th>Erros</th></tr></thead><tbody>${
+        e.linhas.map(l=>{
+          const s = celulaLinhaEstag(l);
+          if(s){
+            let extra = '';
+            if(l.lr && !l.pr && !STATUS_FALTA.includes(l.presenca) && l.presenca !== 'transferido'){
+              semVinculo.push(1);
+              const ops = pessoasDaLojaRobo(l.lr.id).slice().sort((a,b)=>ehColetorTreino(b.nome) - ehColetorTreino(a.nome) || a.nome.localeCompare(b.nome));
+              extra = `<div style="margin-top:4px"><select data-ligar="${esc(l.lr.id)}" data-estag="${esc(e.nome)}" style="max-width:100%"><option value="">Qual coletor é ${esc(e.nome.split(' ')[0])}?</option>${
+                ops.map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} · ${fmtN(p.pecas)} pç</option>`).join('')}</select></div>`;
+            }
+            return `<tr><td>${esc(l.data.slice(0,5))}</td><td>${esc(lojaCurtaEstag(l))}</td><td colspan="4" class="hint">${esc(s.status)}${extra}</td></tr>`;
+          }
+          const vinc = ehColetorTreino(l.pr.nome) ? ` <span class="hint" style="display:block">col. ${esc((l.pr.nome.match(/\d+/)||[''])[0])} · <a href="#" data-desligar="${esc(l.lr.id)}" data-estag="${esc(e.nome)}">trocar</a></span>` : '';
+          return `<tr><td>${esc(l.data.slice(0,5))}</td><td>${esc(lojaCurtaEstag(l))}${vinc}</td><td>${fmtN(l.pecas)}</td><td><b>${l.ih ? fmtN(l.ih) : '—'}</b></td><td class="hint">${l.equipe ? fmtN(l.equipe) : '—'}</td><td>${l.temRel ? (l.erros ? `<a href="#" data-errosestag="${esc(l.lr.id)}" data-nome="${esc(l.pr.nome)}" style="color:var(--danger);font-weight:700">${l.erros}</a>` : '0') : '—'}</td></tr>`;
+        }).join('')}</tbody></table></div>`;
+  });
+  h += `<p class="hint">Itens/h = peças ÷ horas da contagem (quem chegou atrasado conta a partir da chegada). "Equipe" = itens/h por conferente da loja. Erros = itens ajustados no relatório de itens ajustados (só erro de conferente); "—" = a loja veio sem esse relatório.${semVinculo.length ? ' Quem contou com matrícula de treino aparece no robô como "COLETOR N (EM TREINAMENTO)": escolha o coletor na lista para ligar ao nome.' : ''}</p>
+    <div class="acoes"><button class="btn small" onclick="exportarRelEstagPNG()">Imagem (PNG)</button>
+      <button class="btn small secondary" onclick="exportarRelEstagExcel()" style="margin-left:6px">Excel</button>
+      <button class="btn small secondary" onclick="abrirTextoRelEstag()" style="margin-left:6px">Texto / WhatsApp</button>
+      <button class="btn small secondary" onclick="relEstag=null;renderRelEstag()" style="margin-left:6px">Fechar</button></div></div>`;
+  el.innerHTML = h;
+  const refazer = ()=>{ relEstag = calcularRelEstag(relEstag.regs); renderRelEstag(); };
+  el.querySelectorAll('select[data-ligar]').forEach(s=>s.onchange = ()=>{ if(!s.value) return; ligarColetorEstagiario(s.dataset.ligar, s.dataset.estag, s.value); toast(`${s.value} ligado a ${s.dataset.estag}.`); refazer(); });
+  el.querySelectorAll('[data-desligar]').forEach(a=>a.onclick = ev=>{ ev.preventDefault(); ligarColetorEstagiario(a.dataset.desligar, a.dataset.estag, ''); refazer(); });
+  el.querySelectorAll('[data-errosestag]').forEach(a=>a.onclick = ev=>{
+    ev.preventDefault();
+    const lista = errosDaPessoa(a.dataset.errosestag, a.dataset.nome);
+    abrirErros(a.dataset.errosestag, a.dataset.nome); void lista;
+  });
+}
+function nomeArquivoRelEstag(ext){
+  const r = relEstag;
+  const instr = r.instrutores.length === 1 ? ' - ' + limpaNomeArquivo(r.instrutores[0].split(' ').slice(0,2).join(' ')) : '';
+  return `Estagiarios${instr} - ${String(r.periodo).replace(/\//g,'.')}.${ext}`;
+}
+function exportarRelEstagPNG(){
+  const r = relEstag; if(!r) return;
+  let h = cabecalhoImagem('Relatório dos estagiários', [r.instrutores.length ? 'Instrutor: ' + esc(r.instrutores.join(', ')) : '', esc(r.periodo), r.regs.length + ' loja(s)'].filter(Boolean).join(' · '));
+  h += tabelaImagem(['Estagiário','Lojas','Peças','Itens/h','Erros'], r.lista.map(e=>[esc(e.nome) + (e.faltas ? ` <span style="font-size:11px;color:#9C0006">${e.faltas} falta(s)</span>` : ''), e.lojas, fmtN(e.pecas), e.ih ? fmtN(e.ih) : '—',
+    e.lojasComRel ? `${e.erros} <span style="font-size:11px;color:#62597a">(${fmtDec(e.mediaErros,1)}/loja)</span>` : '—']), ['', 'center', 'right', 'right', 'center'], 3);
+  r.lista.forEach(e=>{
+    h += `<div style="font-weight:700;margin:16px 0 2px">${esc(e.nome)}</div><div style="color:#62597a;font-size:12px;margin-bottom:6px">${fmtN(e.pecas)} peças · ${e.ih ? fmtN(e.ih) + ' itens/h' : 'sem itens/h'} · ${esc(textoErrosEstag(e))}${e.precisao !== null ? ' · precisão ' + fmtDec(e.precisao, 1) + '%' : ''}${evolucaoEstag(e) ? '<br>Evolução: ' + esc(evolucaoEstag(e)) : ''}</div>`;
+    h += tabelaImagem(['Data','Loja','Peças','Itens/h','Equipe','Erros'], e.linhas.map(l=>{
+      const s = celulaLinhaEstag(l);
+      if(s) return [esc(l.data.slice(0,5)), esc(lojaCurtaEstag(l)), `<span style="color:#62597a">${esc(s.status)}</span>`, '', '', ''];
+      return [esc(l.data.slice(0,5)), esc(lojaCurtaEstag(l)), fmtN(l.pecas), l.ih ? fmtN(l.ih) : '—', l.equipe ? `<span style="color:#62597a">${fmtN(l.equipe)}</span>` : '—', l.temRel ? (l.erros ? `<b style="color:#9C0006">${l.erros}</b>` : '0') : '—'];
+    }), ['', '', 'right', 'right', 'right', 'center'], 3);
+  });
+  h += `<div style="color:#62597a;font-size:11px;margin-top:10px">Itens/h = peças ÷ horas da contagem. Equipe = itens/h por conferente da loja. Erros = itens ajustados por erro de conferente (— = loja sem relatório de ajustes).</div>`;
+  gerarImagem(h, nomeArquivoRelEstag('png'));
+}
+async function exportarRelEstagExcel(){
+  const r = relEstag; if(!r || !excelDisponivel()) return;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Resumo');
+  const a = cabecalhoPlanilha(ws, 'Relatório dos estagiários', [r.instrutores.length ? 'Instrutor: ' + r.instrutores.join(', ') : '', 'Período: ' + r.periodo + ' · ' + r.regs.length + ' loja(s)']);
+  const l1 = r.lista.map(e=>[e.nome, e.lojas, e.faltas, e.pecas, Math.round(e.horas*100)/100, e.ih || '', e.lojasComRel ? e.erros : '—', e.lojasComRel ? Math.round(e.mediaErros*10)/10 : '—',
+    e.lojasComRel ? e.pecasErro : '—', e.precisao === null ? '—' : Math.round(e.precisao*10)/1000, evolucaoEstag(e)]);
+  tabelaExcel(ws, a, ['ESTAGIÁRIO','LOJAS','FALTAS','PEÇAS','HORAS','ITENS/HORA','ERROS','ERROS POR LOJA','PEÇAS AJUSTADAS','PRECISÃO','EVOLUÇÃO'], l1, {
+    larguras:[larguraPara(l1.map(x=>x[0]), 28, 45), 7, 8, 10, 8, 11, 8, 14, 15, 10, 30], alinhar:['left','center','center','right','right','right','center','center','right','right','left'],
+    formatos:[null, null, null, '#,##0', '0.00', '#,##0', null, '0.0', '#,##0', '0.0%', null], congelar:true });
+  const ws2 = wb.addWorksheet('Loja por loja');
+  const b = cabecalhoPlanilha(ws2, 'Estagiários — loja por loja', ['Equipe = itens/h por conferente da loja']);
+  const l2 = [];
+  r.lista.forEach(e=>e.linhas.forEach(l=>{
+    const s = celulaLinhaEstag(l);
+    l2.push(s ? [e.nome, l.data, l.loja, s.status, '', '', '', '', ''] :
+      [e.nome, l.data, l.loja, 'PRESENTE', l.pecas, Math.round((Number(l.horas)||0)*100)/100, l.ih || '', l.equipe || '', l.temRel ? l.erros : '—']);
+  }));
+  tabelaExcel(ws2, b, ['ESTAGIÁRIO','DATA','LOJA','SITUAÇÃO','PEÇAS','HORAS','ITENS/HORA','EQUIPE (ITENS/H)','ERROS'], l2, {
+    larguras:[larguraPara(l2.map(x=>x[0]), 28, 45), 11, larguraPara(l2.map(x=>x[2]), 24, 45), 18, 10, 8, 11, 16, 8],
+    alinhar:['left','center','left','left','right','right','right','right','center'], formatos:[null, null, null, null, '#,##0', '0.00', '#,##0', '#,##0', null], congelar:true });
+  const l3 = [];
+  r.lista.forEach(e=>e.linhas.forEach(l=>(l.listaErros||[]).forEach(x=>l3.push([e.nome, l.data, l.loja, x.secao, x.setor, x.codigo, x.descricao, x.q1, x.qa, x.dif, x.motivo]))));
+  if(l3.length){
+    const ws3 = wb.addWorksheet('Erros');
+    const c = cabecalhoPlanilha(ws3, 'Erros dos estagiários', ['Itens ajustados (só erro de conferente)']);
+    tabelaExcel(ws3, c, ['ESTAGIÁRIO','DATA','LOJA','SEÇÃO','SETOR','CÓDIGO','DESCRIÇÃO','1ª CONTAGEM','AJUSTADA','DIFERENÇA','MOTIVO'], l3, {
+      larguras:[larguraPara(l3.map(x=>x[0]), 24, 40), 11, 24, 8, 16, 15, larguraPara(l3.map(x=>x[6]), 24, 45), 12, 10, 10, 20], congelar:true });
+  }
+  await salvarExcel(wb, nomeArquivoRelEstag('xlsx'));
+}
+function textoRelEstag(){
+  const r = relEstag; if(!r) return '';
+  const linhas = ['*Relatório dos estagiários*'];
+  if(r.instrutores.length) linhas.push('Instrutor: ' + r.instrutores.join(', '));
+  linhas.push(`Período: ${r.periodo} · ${r.regs.length} loja(s)`);
+  r.lista.forEach(e=>{
+    linhas.push('', `*${e.nome}*${e.faltas ? ` · ${e.faltas} falta(s)` : ''}`);
+    linhas.push(`${fmtN(e.pecas)} peças · ${e.ih ? fmtN(e.ih) + ' itens/h' : 'sem itens/h'} · ${textoErrosEstag(e)}`);
+    if(evolucaoEstag(e)) linhas.push('Evolução: ' + evolucaoEstag(e));
+    e.linhas.forEach(l=>{
+      const s = celulaLinhaEstag(l);
+      linhas.push(`• ${l.data.slice(0,5)} ${lojaCurtaEstag(l)}: ` + (s ? s.status.toLowerCase() : `${fmtN(l.pecas)} pç · ${l.ih ? fmtN(l.ih) + ' ip/h' : 's/ horário'}${l.temRel ? ` · ${l.erros} erro(s)` : ''}`));
+    });
+  });
+  return linhas.join('\n');
+}
+function abrirTextoRelEstag(){
+  const box = abrirFolha('Texto do relatório', `<textarea id="taRelEstag" style="width:100%;min-height:45vh;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-family:inherit;font-size:.85rem">${esc(textoRelEstag())}</textarea>
+    <div class="acoes"><button class="btn small" type="button" data-copiar>Copiar</button><button class="btn small secondary" type="button" data-whats style="margin-left:6px">WhatsApp</button></div>`, 'Fechar', ()=>null);
+  const ta = box.querySelector('#taRelEstag');
+  box.querySelector('[data-copiar]').onclick = async ev=>{ try{ await navigator.clipboard.writeText(ta.value); }catch(e){ ta.select(); document.execCommand('copy'); } ev.target.textContent = 'Copiado ✓'; };
+  box.querySelector('[data-whats]').onclick = ()=>window.open('https://wa.me/?text=' + encodeURIComponent(ta.value), '_blank');
+  box.querySelector('[data-cancelar]').style.display = 'none';
 }
 
 // Resumo da viagem direto das lojas que o robô recebeu (sem precisar subir Excel)
@@ -5221,9 +5849,9 @@ registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
   ()=>{ const q = lsGet(QUARTOS_KEY, {}); return !(q.coord || q.lider || q.motorista); });
 registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}, metas: robo.metas || {}, segmentos: robo.segmentos || {},
-    setoresCorr: robo.setoresCorr || {}, setoresLoja: robo.setoresLoja || {}, notasResumo: robo.notasResumo || {}}),
+    setoresCorr: robo.setoresCorr || {}, setoresLoja: robo.setoresLoja || {}, notasResumo: robo.notasResumo || {}, coletoresEstag: robo.coletoresEstag || {}}),
   v=>{ if(!v || typeof v !== 'object') return;
-       ['setoresCorr', 'setoresLoja', 'notasResumo'].forEach(k=>{ if(v[k] && typeof v[k] === 'object') robo[k] = v[k]; });
+       ['setoresCorr', 'setoresLoja', 'notasResumo', 'coletoresEstag'].forEach(k=>{ if(v[k] && typeof v[k] === 'object') robo[k] = v[k]; });
        if(v.metas && typeof v.metas === 'object'){ robo.metas = v.metas; robo.segmentos = (v.segmentos && typeof v.segmentos === 'object') ? v.segmentos : (robo.segmentos || {}); salvarRobo(); renderRobo(); }
        if(v.nomes && typeof v.nomes === 'object'){ robo.nomes = v.nomes; aplicarNomesRobo(); salvarRobo(); renderRobo(); }
        if(typeof v.link === 'string' && v.link !== robo.link){ robo.link = v.link; salvarRobo(); renderRobo(); atualizarDoRobo(false); } },
