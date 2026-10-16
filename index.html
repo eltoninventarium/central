@@ -6,8 +6,8 @@
 <title>Central de Inventário</title>
 <meta name="theme-color" content="#1c1238">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icone-192.png">
-<link rel="apple-touch-icon" href="icone-192.png">
+<link rel="icon" href="icone-ex-192.png">
+<link rel="apple-touch-icon" href="icone-ex-192.png">
 
 <script>
 try{ document.documentElement.dataset.theme = JSON.parse(localStorage.getItem('central_tema')) || 'dark'; }
@@ -1302,7 +1302,7 @@ function importarContatos(){
         const bate = todos.filter(p=>{ const n = ' ' + normalizarNome(p.nome) + ' '; return pal.every(w=>n.includes(' ' + w + ' ')); });
         return bate.length === 1 ? bate[0] : null;
       };
-      let gravados = 0, conferir = 0; const naoAchei = [];
+      let gravados = 0, conferir = 0; const naoAchei = [], novosCad = [];
       wb2.SheetNames.forEach(aba=>{
         const aoa = XLSX.utils.sheet_to_json(wb2.Sheets[aba], {header:1, defval:''});
         const cab = (aoa[0]||[]).map(c=>normalizarNome(c));
@@ -1312,19 +1312,29 @@ function importarContatos(){
         if(cN < 0) cN = cab.findIndex(c=>/^(NOME|FUNCIONARIO|FREELANCE)/.test(c));
         if(cN < 0) cN = 0;
         const cC = cab.findIndex(c=>/CONFIAN/.test(c));
+        const cG = cab.findIndex(c=>/^GENERO/.test(c)), cT = cab.findIndex(c=>/^TIPO/.test(c));
         for(let r=1; r<aoa.length; r++){
           const l = aoa[r] || [];
           const w = formatarWhats(l[cW]); const nome = String(l[cN]||'').trim();
-          if(!w || !nome) continue;
+          const gen = cG >= 0 ? normalizarNome(l[cG]) : '', tipo = cT >= 0 ? normalizarNome(l[cT]) : '';
+          if(!nome || (!w && !gen)) continue;
           if(cC >= 0 && /CONFERIR/.test(normalizarNome(l[cC]))){ conferir++; continue; }
-          const p = acharPessoa(nome);
+          let p = acharPessoa(nome);
+          // planilha "Colaboradores novos" (tem GÊNERO): quem não está no cadastro entra como novo
+          if(!p && cG >= 0){
+            p = tipo === 'CLT' ? {nome:nome.toUpperCase(), nivel:'I', genero:'', afastado:false, prioridade:99, novo:true}
+                               : {nome:nome.toUpperCase(), genero:'', afastado:false, prioridade:99, novo:true};
+            (tipo === 'CLT' ? db.clt : db.fl).push(p); porNome[normalizarNome(p.nome)] = p; todos.push(p); novosCad.push(p.nome + (tipo === 'CLT' ? ' (CLT, conferente I)' : ''));
+          }
           if(!p){ naoAchei.push(nome); continue; }
-          if(p.whats !== w){ p.whats = w; }
-          gravados++;
+          if(/^FEM/.test(gen)) p.genero = 'FEMININO'; else if(/^MASC/.test(gen)) p.genero = 'MASCULINO';
+          if(w && p.whats !== w){ p.whats = w; }
+          if(w) gravados++;
         }
       });
       saveDB(db); renderEquipe(); if(ultimaEscala) renderEscala();
       msg.innerHTML = `<div class="msg ok">${gravados} número(s) no cadastro.${conferir ? ` ${conferir} marcado(s) como Conferir ficaram de fora.` : ''}</div>` +
+        (novosCad.length ? `<div class="msg ok">${novosCad.length} pessoa(s) nova(s) no cadastro: ${esc(novosCad.slice(0,12).join(', '))}${novosCad.length>12 ? '…' : ''}. Confira o nível/preferência em Viagem › Equipe.</div>` : '') +
         (naoAchei.length ? `<div class="msg warn">Não achei no cadastro: ${esc(naoAchei.slice(0,12).join(', '))}${naoAchei.length>12 ? '…' : ''}</div>` : '');
     }catch(err){
       msg.innerHTML = '<div class="msg warn">Não consegui ler essa planilha.</div>';

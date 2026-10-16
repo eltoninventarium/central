@@ -1,6 +1,6 @@
 // Central de Inventário — funciona sem internet e se atualiza quando houver conexão
-const CACHE = 'central-202610040820';
-const ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './icone-192.png', './icone-512.png'];
+const CACHE = 'central-202610160345';
+const ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './icone-ex-192.png', './icone-ex-512.png'];
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ARQUIVOS)).then(()=>self.skipWaiting()));
 });
