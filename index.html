@@ -536,7 +536,7 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
       <!--PREVISAO-INICIO--><div id="boxPrevisao"></div><!--PREVISAO-FIM-->
       <label class="chave-linha"><input type="checkbox" id="bateVolta" onchange="alternarBateVolta(this.checked)">
         <span><b>Bate e volta</b><span class="hint" style="display:block">Liga os status "Vai direto" (vai sozinho para a loja) e "Pegar no caminho" (a van pega no trajeto).</span></span></label>
-      <p class="hint">Depois de carregar, toque em "Coord." ao lado de quem for coordenador — a planilha nem sempre marca isso de forma consistente.</p>
+      <p class="hint">O coordenador é marcado sozinho (1º nome da loja na escala, ou quem está na aba COORDENADORES do cadastro). Se errar, toque em "Coord." em Editar lista.</p>
     </div>
     <div id="listaPresenca"></div>
   </section>
@@ -1164,6 +1164,19 @@ let ultimoQuartos = null;
 
 function normalizeFuncao(f){ return (f||'').toUpperCase().replace('CONFERENTE','').trim().replace(/\s+/g,''); }
 
+const CAMPOS_EXTRAS = [['endereco', /^ENDERECO/], ['bairro', /^BAIRRO/], ['cidade', /^CIDADE/], ['obs', /^OBS/]];
+function extrasCadastro(cab){
+  const out = [];
+  (cab||[]).forEach((c,j)=>{ if(j < 6) return; const k = normalizarNome(c); const x = CAMPOS_EXTRAS.find(([_,re])=>re.test(k)); if(x && !out.some(o=>o[0]===x[0])) out.push([x[0], j]); });
+  return out;
+}
+// Coordenadores (aba COORDENADORES do cadastro): nunca entram na produtividade da equipe, mesmo quando contam
+function ehCoordenadorCadastro(nome){
+  const k = normalizarNome(nome); if(!k) return false;
+  return (db.coord||[]).some(c=>{ const n = normalizarNome(c); if(!n) return false;
+    if(n === k || mesmoNomeFlex(n, k)) return true;
+    const pal = n.split(' ').filter(x=>x.length > 2); return pal.length >= 2 && pal.every(w=>(' ' + k + ' ').includes(' ' + w + ' ')); });
+}
 // PREFERENCIA (1=melhor..4=pior) fica na própria linha da pessoa, coluna E (índice 4) em todas as abas.
 function parsePessoas(aoa, tipo){
   const registros = [];
@@ -1184,6 +1197,8 @@ function parsePessoas(aoa, tipo){
     obj.prioridade = (pref>=1 && pref<=4) ? pref : 99;
     const w = formatarWhats(row[5]);   // coluna F: WHATSAPP (opcional)
     if(w) obj.whats = w;
+    // colunas extras pelo nome do cabeçalho (endereço para a futura montagem de escalas)
+    extrasCadastro(aoa[0]).forEach(([campo, j])=>{ const v = String(row[j]==null ? '' : row[j]).trim(); if(v) obj[campo] = v; });
     registros.push(obj);
   }
   return registros;
@@ -1210,7 +1225,9 @@ function importarPlanilha(){
         if(key==='CLT') novo.clt = parsePessoas(aoa, 'clt');
         else if(key==='FREELANCE') novo.fl = parsePessoas(aoa, 'fl');
         else if(key==='RJ') novo.rj = parsePessoas(aoa, 'rj');
+        else if(/^COORDENADOR/.test(normalizarNome(key))) novo.coord = aoa.slice(1).map(l=>String((l||[])[0]||'').replace(/\s+/g,' ').trim().toUpperCase()).filter(Boolean);
       });
+      if(!novo.coord) novo.coord = db.coord || [];
       // freelancers que o app aprendeu pela escala (azul) e ainda não estão na planilha continuam no cadastro
       const jaTem = new Set([...novo.clt, ...novo.fl].map(x=>normalizarNome(x.nome)));
       (db.fl||[]).filter(x=>x.novo && !jaTem.has(normalizarNome(x.nome))).forEach(x=>novo.fl.push(x));
@@ -1221,7 +1238,7 @@ function importarPlanilha(){
       db = novo;
       saveDB(db);
       ultimaEscala = null; salvarUltimaEscala(); renderEscala();
-      msg.innerHTML = `<div class="msg ok">Importado: ${db.clt.length} CLT, ${db.fl.length} freelancers, ${db.rj.length} RJ.</div>`;
+      msg.innerHTML = `<div class="msg ok">Importado: ${db.clt.length} CLT, ${db.fl.length} freelancers, ${db.rj.length} RJ${(db.coord||[]).length ? `, ${db.coord.length} coordenador(es)` : ''}.</div>`;
       renderEquipe();
     }catch(err){
       msg.innerHTML = '<div class="msg warn">Não consegui ler esse arquivo. Confira se é o .xlsx do modelo (abas CLT, FREELANCE, RJ).</div>';
@@ -1364,12 +1381,20 @@ async function baixarCadastro(){
     ws.views = [{state:'frozen', ySplit:1}];
   };
   const pref = x => x.prioridade===99 ? '' : x.prioridade;
-  aba('CLT', ['FUNCIONÁRIO','FUNÇÃO','GENERO','AFASTADO','PREFERENCIA','WHATSAPP'],
-    db.clt.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', pref(x), x.whats||'']));
-  aba('FREELANCE', ['FREELANCE','GENERO','AFASTADO','','PRIORIDADE','WHATSAPP'],
-    db.fl.map(x=>[x.nome, x.genero||'', x.afastado ? 'AFASTADO' : '', '', pref(x), x.whats||'']), true);
-  aba('RJ', ['NOME','FUNÇÃO','GENERO','AFASTADO','','WHATSAPP'],
-    db.rj.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', '', x.whats||'']));
+  // convites (últimos 90 dias que o robô devolve): aceitou / recusou / última resposta
+  const conv = {};
+  (robo.convites||[]).forEach(c=>{ if(!c.resposta) return; const k = normalizarNome(c.nome); const x = conv[k] || (conv[k] = {sim:0, nao:0, ult:'', quando:0});
+    if(c.resposta==='SIM') x.sim++; else x.nao++;
+    const t = dataParaChave(c.respondidoEm) || 0; if(t >= x.quando){ x.quando = t; x.ult = (c.resposta==='SIM' ? 'ACEITOU ' : 'RECUSOU ') + String(c.respondidoEm||'').slice(0,10); } });
+  const extras = x => { const c = conv[normalizarNome(x.nome)] || {}; return [x.endereco||'', x.bairro||'', x.cidade||'', c.sim||'', c.nao||'', c.ult||'', x.obs||'']; };
+  const cabExtras = ['ENDEREÇO','BAIRRO','CIDADE','VIAGENS ACEITAS (90 DIAS)','VIAGENS RECUSADAS (90 DIAS)','ÚLTIMA RESPOSTA','OBS'];
+  aba('CLT', ['FUNCIONÁRIO','FUNÇÃO','GENERO','AFASTADO','PREFERENCIA','WHATSAPP', ...cabExtras],
+    db.clt.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', pref(x), x.whats||'', ...extras(x)]));
+  aba('FREELANCE', ['FREELANCE','GENERO','AFASTADO','','PRIORIDADE','WHATSAPP', ...cabExtras],
+    db.fl.map(x=>[x.nome, x.genero||'', x.afastado ? 'AFASTADO' : '', '', pref(x), x.whats||'', ...extras(x)]), true);
+  aba('RJ', ['NOME','FUNÇÃO','GENERO','AFASTADO','','WHATSAPP', ...cabExtras],
+    db.rj.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', '', x.whats||'', ...extras(x)]));
+  if((db.coord||[]).length) aba('COORDENADORES', ['COORDENADOR'], db.coord.map(n=>[n]));
   await salvarExcel(wb, `Cadastro da equipe - ${hojeBR().replace(/\//g,'.')}.xlsx`);
 }
 
@@ -2748,8 +2773,11 @@ function importarLojaEscolhida(){
   const item = lojasDetectadas[parseInt(document.getElementById('selecaoLoja').value,10)];
   if(!confirmarSubstituir()) return;
   const nomes = nomesDaLojaDetectada(item);
-  const estag = new Set(estagiariosDetectados(gruposDaLojaDetectada(item)).map(normalizarNome));
-  carregarPessoasNaLoja(nomes.map(n=>Object.assign({nome:n, coordenador:false, presenca:null},
+  const grupos = gruposDaLojaDetectada(item);
+  const estag = new Set(estagiariosDetectados(grupos).map(normalizarNome));
+  // coordenador: o 1º bloco da loja (logo abaixo do "Início programado", antes da linha em branco) ou quem está na aba COORDENADORES
+  const coordBloco = new Set(grupos.length >= 2 && grupos[0].length <= 3 ? grupos[0].map(normalizarNome) : []);
+  carregarPessoasNaLoja(nomes.map(n=>Object.assign({nome:n, coordenador: coordBloco.has(normalizarNome(n)) || ehCoordenadorCadastro(n), presenca:null},
     freeNaPlanilha.has(normalizarNome(n)) ? {free:true} : {}, estag.has(normalizarNome(n)) ? {estagiario:true} : {})), item.loja, item.data, {codigo:item.codigo, inicio:item.inicio});
   // quem está em azul em qualquer loja da planilha e ainda não está no cadastro entra como freelancer NOVO
   const todosAzuis = [];
@@ -4417,6 +4445,7 @@ function papeisLojas(){
 function papelNaLoja(idLoja, nome){
   const m = papeisLojas()[idLoja] || {};
   const k = normalizarNome(nome); if(m[k]) return m[k];
+  if(ehCoordenadorCadastro(nome)) return 'coord';
   const k2 = Object.keys(m).find(x=>mesmoNomeFlex(x, nome));
   if(k2) return m[k2];
   // matrícula de treino sem nome ("COLETOR 102 (EM TREINAMENTO)"): gente nova, fica fora como estagiário
