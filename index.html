@@ -288,6 +288,9 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .nome-ficha{cursor:pointer;}
 .ficha-rapida .linha-fr{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.9rem;}
 .evo-barra{height:8px;border-radius:4px;background:var(--accent);display:inline-block;vertical-align:middle;}
+.regra-tag.regra-p1{background:var(--danger-bg);color:var(--danger);font-weight:700;}
+.regra-tag.regra-p2{background:var(--warn-bg);color:var(--warn);font-weight:700;}
+.regra-tag.regra-p3{background:var(--ok-bg);color:var(--ok);font-weight:700;}
 .aval-setor{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:6px 0;background:var(--bg);}
 .aval-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
 .aval-bolas{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
@@ -1954,15 +1957,17 @@ const REGRAS_SETOR = {
   novato:    {ic:'🎓', rot:'Novato', dica:'bom para novato'},
   ultimo:    {ic:'🕐', rot:'Por último', dica:'mais tranquilo, deixar pro fim'}
 };
-function regraDoSetor(m, setor){ const r = (m && m.regras && m.regras[setor]) || {}; return {tags: Array.isArray(r.tags) ? r.tags : [], nota: r.nota || ''}; }
+function regraDoSetor(m, setor){ const r = (m && m.regras && m.regras[setor]) || {};
+  return {tags: Array.isArray(r.tags) ? r.tags : [], nota: r.nota || '', nivel: +r.nivel || 0, qtd: Array.isArray(r.qtd) ? r.qtd : null, perfil: r.perfil || '', junto: r.junto || ''}; }
+const PERFIL_SETOR = {assertivo:'mais assertivos e produtivos no peça a peça', forte:'os mais fortes (setor mais pesado)', medio:'depois dos mais fortes'};
 function ehNovatoNaLoja(nome, item){
   if(item && item.treino) return true;
   const p = loja.pessoas.find(x=>mesmoNome(x.nome, nome));
   return !!(p && p.estagiario && !p.coordenador && !p.instrutor);
 }
 function etiquetasRegraHtml(r){
-  if(!r.tags.length && !r.nota) return '';
-  return `<div class="regras-setor">${r.tags.filter(t=>REGRAS_SETOR[t]).map(t=>`<span class="regra-tag regra-${t}">${REGRAS_SETOR[t].ic} ${REGRAS_SETOR[t].rot}</span>`).join('')}${r.nota ? `<span class="hint">${esc(r.nota)}</span>` : ''}</div>`;
+  if(!r.tags.length && !r.nota && !r.nivel && !r.qtd && !r.junto) return '';
+  return `<div class="regras-setor">${r.nivel ? `<span class="regra-tag regra-p${r.nivel}">P${r.nivel}</span>` : ''}${r.junto ? `<span class="regra-tag">↪ mesma pessoa do ${esc(r.junto)}</span>` : r.qtd ? `<span class="regra-tag">👥 ${r.qtd[0]}${r.qtd[1] > r.qtd[0] ? '–' + r.qtd[1] : ''}</span>` : ''}${r.perfil && PERFIL_SETOR[r.perfil] ? `<span class="regra-tag">🎯 ${PERFIL_SETOR[r.perfil]}</span>` : ''}${r.tags.filter(t=>REGRAS_SETOR[t]).map(t=>`<span class="regra-tag regra-${t}">${REGRAS_SETOR[t].ic} ${REGRAS_SETOR[t].rot}</span>`).join('')}${r.nota ? `<span class="hint">${esc(r.nota)}</span>` : ''}</div>`;
 }
 function avisosRegraHtml(r, linhas){
   if(!r.tags.some(t=>t === 'semnovato' || t === 'experiente')) return '';
@@ -1973,7 +1978,26 @@ function avisosRegraHtml(r, linhas){
 function htmlRegrasEditor(m, i){
   const r = regraDoSetor(m, m.setores[i]);
   return `<div class="regras-editor">${Object.entries(REGRAS_SETOR).map(([k,v])=>`<button type="button" class="pill ${r.tags.includes(k) ? 'on' : ''}" onclick="alternarRegraSetor(${i},'${k}')" title="${esc(v.dica)}">${v.ic} ${v.rot}</button>`).join('')}
-    <input type="text" value="${esc(r.nota)}" placeholder="Observação (ex.: peça a peça, produtos caros)" onchange="notaRegraSetor(${i},this.value)"></div>`;
+    <input type="text" value="${esc(r.nota)}" placeholder="Observação (ex.: peça a peça, produtos caros)" onchange="notaRegraSetor(${i},this.value)">
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center">
+      <select onchange="campoRegraSetor(${i},'nivel',this.value)" title="Prioridade do setor na montagem da equipe"><option value="0">Prioridade —</option>${[1,2,3].map(n=>`<option value="${n}" ${r.nivel === n ? 'selected' : ''}>Prioridade ${n}</option>`).join('')}</select>
+      <span class="hint">Pessoas</span><input type="number" min="0" max="20" style="width:58px" value="${r.qtd ? r.qtd[0] : ''}" placeholder="mín" onchange="campoRegraSetor(${i},'qmin',this.value)">
+      <input type="number" min="0" max="20" style="width:58px" value="${r.qtd ? r.qtd[1] : ''}" placeholder="ideal" onchange="campoRegraSetor(${i},'qmax',this.value)">
+      <select onchange="campoRegraSetor(${i},'perfil',this.value)" title="Quem vai para este setor"><option value="">Perfil —</option>${Object.entries(PERFIL_SETOR).map(([k,v])=>`<option value="${k}" ${r.perfil === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+    </div></div>`;
+}
+function campoRegraSetor(i, campo, v){
+  const m = modeloProprio(modeloEditando); if(!m) return;
+  const s = m.setores[i]; m.regras = Object.assign({}, m.regras || {});
+  const r = Object.assign({}, (m.regras[s] || {}), {tags: regraDoSetor(m, s).tags});
+  if(campo === 'nivel'){ if(+v) r.nivel = +v; else delete r.nivel; }
+  if(campo === 'perfil'){ if(v) r.perfil = v; else delete r.perfil; }
+  if(campo === 'qmin' || campo === 'qmax'){
+    const q = (r.qtd || [0, 0]).slice(), n = Math.max(0, Math.min(20, Math.round(+v || 0)));
+    if(campo === 'qmin'){ q[0] = n; if(q[1] < n) q[1] = n; } else { q[1] = n; if(q[0] > n) q[0] = n; }
+    if(q[0] || q[1]) r.qtd = q; else delete r.qtd;
+  }
+  m.regras[s] = r; salvarModelos(); atualizarTelasModelos();
 }
 function avisosDoModelo(v){
   const m = modeloProprio(modeloEditando); if(!m) return;
@@ -1988,12 +2012,12 @@ function alternarRegraSetor(i, tag){
     const opostos = {novato:['semnovato','experiente'], semnovato:['novato'], experiente:['novato'], prio:['ultimo'], ultimo:['prio']}[tag] || [];
     opostos.forEach(o=>{ const j = tags.indexOf(o); if(j >= 0) tags.splice(j, 1); });
   }
-  m.regras[s] = {tags, nota:r.nota}; salvarModelos(); atualizarTelasModelos();
+  m.regras[s] = Object.assign({}, m.regras[s] || {}, {tags, nota:r.nota}); salvarModelos(); atualizarTelasModelos();
 }
 function notaRegraSetor(i, v){
   const m = modeloProprio(modeloEditando); if(!m) return;
   const s = m.setores[i]; m.regras = Object.assign({}, m.regras || {});
-  m.regras[s] = {tags: regraDoSetor(m, s).tags, nota: limparNomeSetor(v)}; salvarModelos();
+  m.regras[s] = Object.assign({}, m.regras[s] || {}, {tags: regraDoSetor(m, s).tags, nota: limparNomeSetor(v)}); salvarModelos();
 }
 // renomear / apagar setor leva a regra junto
 function moverRegraSetor(m, antigo, novo){
@@ -2025,10 +2049,36 @@ function garantirModeloVerdemar(lista){
   sup.verdemarCriado = true;
   return lista;
 }
+// lista pronta das drogarias Araujo (orientação do Elton, 18/10/2026): prioridade 1/2/3, pessoas por setor e perfil.
+// Criada uma vez; depois é editável em Modelos. Loja com 80 mil peças ou mais: o app aumenta as pessoas da prioridade 1.
+const MODELO_ARAUJO = {id:'araujo', nome:'Drogaria Araujo', chave:'ARAUJO', setores:[
+  ['Controlado', {nivel:1, qtd:[2,2], perfil:'assertivo', tags:['semnovato'], nota:'aqui não se pode errar'}],
+  ['Genérico', {nivel:1, qtd:[3,3], perfil:'forte', tags:['semnovato'], nota:'o medicamento com mais peças e mais cheio'}],
+  ['Medicamento A-Z', {nivel:1, qtd:[2,3], perfil:'medio'}],
+  ['Cartelado', {nivel:1, qtd:[1,1], nota:'quem conta o cartelado segue para o balcão'}],
+  ['Balcão', {nivel:1, junto:'Cartelado', nota:'mesma pessoa do cartelado, quando acabar lá'}],
+  ['Estoque', {nivel:1, qtd:[1,1]}],
+  ['Geladeira', {nivel:1, qtd:[1,2]}],
+  ['Bomboniere', {nivel:1, qtd:[3,4], nota:'mínimo 3, ideal 4'}],
+  ['Frente de caixa', {nivel:1, qtd:[1,1], nota:'frente de loja: rações grandes (10–15 kg), papel higiênico, fraldas, cadeira de rodas'}],
+  ['OTC', {nivel:1, qtd:[1,1]}],
+  ['Dermo-cosméticos', {nivel:2, qtd:[1,1]}], ['Desodorante', {nivel:2, qtd:[1,1]}], ['Preservativos', {nivel:2, qtd:[1,1]}],
+  ['Slatwall', {nivel:2, qtd:[1,1]}], ['Shampoo', {nivel:2, qtd:[1,1]}], ['Ração', {nivel:2, qtd:[1,1], nota:'sachês e rações pequenas (as grandes ficam na frente de caixa)'}],
+  ['Escova e pasta de dente', {nivel:2, qtd:[1,1]}], ['Primeiros socorros', {nivel:2, qtd:[1,1]}], ['Esmalte', {nivel:2, qtd:[1,1]}], ['Maquiagem', {nivel:2, qtd:[1,1]}],
+  ['Shampoo infantil', {nivel:3, qtd:[1,1]}], ['Bicos', {nivel:3, qtd:[1,1]}], ['Infantil e brinquedos', {nivel:3, qtd:[1,1]}], ['Fraldas', {nivel:3, qtd:[1,1]}]]};
+function garantirModeloAraujo(lista){
+  const dro = lista.find(m=>m && m.id === 'drogaria');
+  if(!dro || dro.araujoCriado || lista.some(m=>m && m.id === MODELO_ARAUJO.id)){ if(dro) dro.araujoCriado = true; return lista; }
+  const regras = {};
+  MODELO_ARAUJO.setores.forEach(([st, r])=>{ regras[st] = Object.assign({tags:[], nota:''}, JSON.parse(JSON.stringify(r))); });
+  lista.push({id:MODELO_ARAUJO.id, nome:MODELO_ARAUJO.nome, chave:MODELO_ARAUJO.chave, setores:MODELO_ARAUJO.setores.map(x=>x[0]), regras});
+  dro.araujoCriado = true;
+  return lista;
+}
 function corrigirModelos(lista){
   lista = lista || [];
   lista.forEach(m=>{ if(m && Array.isArray(m.setores)) m.setores = m.setores.map(nomeSetorAtual).filter((x,i,a)=>a.indexOf(x)===i); });
-  return garantirModeloVerdemar(garantirModelosBase(lista));
+  return garantirModeloAraujo(garantirModeloVerdemar(garantirModelosBase(lista)));
 }
 function migrarLoja(l){
   (l.pessoas||[]).forEach(p=>{ if(p.presenca==='ausente' || p.presenca==='suspensao') p.presenca = 'falta'; });
@@ -4381,6 +4431,18 @@ let roboUi = Object.assign({lojas:false, conf:false, tempo:false}, lsGet(ROBO_UI
 function alternarSecaoRobo(qual){ roboUi[qual] = !roboUi[qual]; lsSet(ROBO_UI_KEY, roboUi); renderRobo(); }
 // nomes corrigidos à mão, por nº da loja (valem também para as próximas vezes que a loja vier)
 function aplicarNomesRobo(){ const n = robo.nomes || {}; robo.lojas.forEach(l=>{ if(l.num && n[String(+l.num)]) l.loja = n[String(+l.num)]; }); }
+// arquivos incompletos: tira a loja do robô (planilha, resumo, perfis). Quando o coordenador reenviar certo, ela chega de novo.
+async function excluirLojaRobo(id){
+  const l = robo.lojas.find(x=>x.id===id); if(!l || !robo.link) return;
+  if(!confirm(`Excluir ${l.loja}${l.num ? ' | ' + l.num : ''} (${l.data}) do robô?\n\nSai da produtividade, das fichas e das sugestões. Se o coordenador reenviar os arquivos certos num e-mail novo, a loja chega de novo sozinha.`)) return;
+  try{
+    const j = await (await fetch(robo.link + (robo.link.includes('?') ? '&' : '?') + 'acao=excluir&id=' + encodeURIComponent(id))).json();
+    if(!j || !j.ok) throw new Error((j && j.erro) || 'O robô não respondeu.');
+  }catch(e){ toast('Não consegui excluir: ' + (e.message || e) + ' (o robô novo precisa estar colado e implantado).', 6000); return; }
+  robo.lojas = robo.lojas.filter(x=>x.id !== id); robo.pessoas = robo.pessoas.filter(x=>x.id !== id); robo.erros = (robo.erros||[]).filter(x=>x.id !== id);
+  delete robo.versao; perfisRobo = null; lsSet(PERFIS_KEY, null); perfisIdx = null;
+  salvarRobo(); roboLojaAberta = null; renderRobo(); toast(`${l.loja} excluída do robô.`);
+}
 function corrigirNomeLojaRobo(){
   const l = robo.lojas.find(x=>x.id===roboLojaAberta); if(!l) return;
   const novo = prompt(`Nome correto da loja ${l.num || ''}:`, l.loja);
@@ -5048,6 +5110,7 @@ function renderDetalheRobo(){
       <button class="btn secondary" onclick="exportarRankingRoboExcel()">Excel</button>
       ${l.errosItens !== null && l.errosItens !== undefined ? `<button class="btn secondary" onclick="abrirErros(roboLojaAberta)">Todos os erros</button>` : ''}
       <button class="btn secondary" onclick="corrigirNomeLojaRobo()">Corrigir nome</button>
+      <button class="btn danger" onclick="excluirLojaRobo(roboLojaAberta)">🗑️ Excluir loja</button>
       <button class="btn secondary" onclick="roboLojaAberta=null;renderDetalheRobo()">Fechar</button>
     </div></div>`;
 }
@@ -5366,7 +5429,8 @@ function atualizarPerfis(forcar){
 }
 function segParaPerfis(){ const t = tipoDaLojaAtual(); return t === 'ROUPA' ? 'OUTRO' : t; }
 // "Medicamento A-Z" e "Genérico" (distribuição) ↔ "Medicamentos" (robô); "Ração" ↔ "Pet"; plural/acentos não importam
-const ALIAS_SETOR = {'GENERICO':'MEDICAMENTO', 'MEDICAMENTO A Z':'MEDICAMENTO', 'MEDICAMENTO AZ':'MEDICAMENTO', 'RACAO':'PET', 'RACOE':'PET'};
+const ALIAS_SETOR = {'GENERICO':'MEDICAMENTO', 'MEDICAMENTO A Z':'MEDICAMENTO', 'MEDICAMENTO AZ':'MEDICAMENTO', 'RACAO':'PET', 'RACOE':'PET',
+  'DERMO COSMETICO':'DERMO', 'SHAMPOO':'PERFUMARIA', 'ESCOVA E PASTA DE DENTE':'PERFUMARIA', 'FRALDA':'INFANTIL E BRINQUEDO', 'BICO':'INFANTIL E BRINQUEDO'};
 function chaveSetorMedida(st){
   const k = normalizarNome(st).replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').map(w=>w.length > 3 ? w.replace(/S$/, '') : w).join(' ');
   return ALIAS_SETOR[k] || k;
@@ -6352,8 +6416,76 @@ function pessoasTipicasPorSetor(seg){
   });
   const out = {}; Object.keys(soma).forEach(k=>out[k] = soma[k] / lojas[k]); return out;
 }
+// peças esperadas da loja de hoje: última contagem desta mesma loja no robô
+function pecasEsperadasHoje(){
+  const num = String(loja.codigo || (String(loja.nome || '').match(/\b(\d{2,4})\b/) || [])[1] || '');
+  if(!num) return 0;
+  const ls = robo.lojas.filter(l=>+l.num === +num && l.pecas).sort((a,b)=>dataParaChave(b.data) - dataParaChave(a.data));
+  return ls.length ? ls[0].pecas : 0;
+}
+// nota da pessoa no setor pelo perfil do setor (🎯): assertivo = erra pouco e rende no peça a peça; forte = o mais rápido
+function notaPorPerfil(a, perfil){
+  const avN = a.av ? (a.av.media - 1) / 3 : null, comAv = x => avN === null ? x : 0.8 * x + 0.2 * avN;
+  if(perfil === 'assertivo'){
+    const idx = indicePerfis(segParaPerfis()), pe = perfilPessoa(idx, a.nome);
+    const ihP = pe && pe.peca.m >= 30 ? pe.peca.p / (pe.peca.m / 60) : null, base = idx && idx.tipo.peca.m >= 60 ? idx.tipo.peca.p / (idx.tipo.peca.m / 60) : null;
+    const ritP = ihP && base ? Math.max(0, Math.min(1, ihP / base - 0.5)) : a.rit;
+    return comAv(0.5 * a.err + 0.3 * ritP + 0.2 * a.exp);
+  }
+  if(perfil === 'forte') return comAv(0.55 * a.rit + 0.3 * a.exp + 0.15 * a.err);
+  return a.nota;
+}
+// distribuição pela PRIORIDADE dos setores (lista com P1/P2/P3 e pessoas por setor): P1 no mínimo → P2 → P3 → P1 até o ideal → extras
+function montarPorPrioridade(livres, setores, m, idx, est){
+  const R = st => regraDoSetor(m, st);
+  const grande = pecasEsperadasHoje() >= 80000;
+  const qtd = st => { const r = R(st); if(r.junto) return [0, 0]; let q = r.qtd ? r.qtd.slice() : [1, 1];
+    if(grande && r.nivel === 1){ q = [Math.max(q[0], q[1]), q[1] + (q[1] >= 2 || r.perfil ? 1 : 0)]; }
+    const ja = listaSetor(st).filter(it=>it.nome).length; return [Math.max(0, q[0] - ja), Math.max(0, q[1] - ja)]; };
+  const nivel = st => R(st).nivel || 2;
+  const ordemPerfil = st => ({assertivo:0, forte:1, '':2, medio:3})[R(st).perfil || ''] ?? 2;
+  // vagas em ordem de escolha: dentro de cada fase, primeiro os setores 🎯 assertivo/forte, A-Z (médio) por último
+  const vagas = [];
+  const fase = (filtro, ate) => {
+    const sts = setores.filter(filtro).sort((a,b)=>ordemPerfil(a) - ordemPerfil(b) || setores.indexOf(a) - setores.indexOf(b));
+    const feitos = {}; sts.forEach(st=>feitos[st] = vagas.filter(v=>v === st).length);
+    let mudou = true;
+    while(mudou){ mudou = false; sts.forEach(st=>{ if(feitos[st] < ate(st)){ vagas.push(st); feitos[st]++; mudou = true; } }); }
+  };
+  fase(st=>nivel(st) === 1, st=>qtd(st)[0]);
+  fase(st=>nivel(st) === 2, st=>qtd(st)[0]);
+  fase(st=>nivel(st) === 3, st=>qtd(st)[0]);
+  fase(st=>nivel(st) === 1, st=>qtd(st)[1]);
+  fase(st=>nivel(st) === 2, st=>qtd(st)[1]);
+  fase(st=>nivel(st) === 3, st=>qtd(st)[1]);
+  // sobrou gente: reforça os maiores da prioridade 1 (ideal ≥ 2), um de cada vez
+  const grandes = setores.filter(st=>nivel(st) === 1 && !R(st).junto && (qtd(st)[1] >= 2 || (R(st).qtd && R(st).qtd[1] >= 2)));
+  for(let k = 0; vagas.length < livres.length && grandes.length && k < 50; k++) vagas.push(grandes[k % grandes.length]);
+  const plano = {}; setores.forEach(st=>plano[st] = []);
+  const nota = {}; const notaDe = (st, n)=>{ const k = st + '|' + n; return nota[k] !== undefined ? nota[k] : (nota[k] = avaliarNoSetor(st, n, idx, est)); };
+  let resto = livres.slice();
+  vagas.forEach(st=>{
+    if(!resto.length) return;
+    const t = R(st).tags, semNovato = t.includes('semnovato') || t.includes('experiente');
+    let cand = resto.filter(n=>!(semNovato && ehNovatoNaLoja(n)));
+    if(t.includes('novato') && cand.some(n=>ehNovatoNaLoja(n))) cand = cand.filter(n=>ehNovatoNaLoja(n));
+    if(!cand.length) return;
+    const melhor = cand.map(n=>notaDe(st, n)).sort((a,b)=>(a.novato - b.novato) || notaPorPerfil(b, R(st).perfil) - notaPorPerfil(a, R(st).perfil))[0];
+    plano[st].push(melhor); resto = resto.filter(n=>n !== melhor.nome);
+  });
+  // "mesma pessoa de": balcão recebe quem contar o cartelado
+  setores.filter(st=>R(st).junto).forEach(st=>{ const de = setores.find(x=>mesmoSetor(x, R(st).junto)); if(de) plano[st] = plano[de].map(a=>Object.assign({}, a, {junto:de})); });
+  return {plano, livres: resto, grande};
+}
 function montarDistribuicao(){
   const setores = setoresAtuais(), m = modeloPorId(loja.modelo);
+  if(setores.some(st=>{ const r = regraDoSetor(m, st); return r.nivel || r.qtd; })){
+    const foraDaConta = new Set(loja.pessoas.filter(p=>p.coordenador || p.instrutor).map(p=>p.nome));
+    const ja = new Set(); setores.forEach(st=>listaSetor(st).forEach(it=>{ if(it.nome) ja.add(it.nome); }));
+    const livres = nomesDisponiveis().filter(n=>!ja.has(n) && !foraDaConta.has(n));
+    if(!livres.length) return {plano:{}, livres:[]};
+    return montarPorPrioridade(livres, setores, m, indicePerfis(segParaPerfis()), estatisticasHistorico());
+  }
   const foraDaConta = new Set(loja.pessoas.filter(p=>p.coordenador || p.instrutor).map(p=>p.nome));
   const ja = new Set(); setores.forEach(st=>listaSetor(st).forEach(it=>{ if(it.nome) ja.add(it.nome); }));
   let livres = nomesDisponiveis().filter(n=>!ja.has(n) && !foraDaConta.has(n));
@@ -6404,14 +6536,17 @@ function montarDistribuicao(){
   return {plano, livres};
 }
 function abrirDistribuicaoCompleta(){
-  const {plano, livres} = montarDistribuicao();
+  const {plano, livres, grande} = montarDistribuicao();
   const sts = Object.keys(plano).filter(st=>plano[st].length);
   if(!sts.length){ toast(livres.length ? 'Não consegui encaixar ninguém (regras de novato?).' : 'Todo mundo já tem setor.'); return; }
   const m = modeloPorId(loja.modelo);
-  const corpo = `<p class="hint" style="margin-top:2px">Só quem está sem setor. 🔥 prioridade recebe primeiro os melhores; novato não vai para 🚫/⭐. Quantidade de pessoas por setor: as linhas vazias que você abriu e, no resto, a média das lojas do robô. Confira e aplique — depois dá para trocar normalmente.</p>
-    ${sts.map(st=>`<div class="aval-setor"><div class="aval-topo"><b>${esc(st)}</b>${regraDoSetor(m, st).tags.includes('prio') ? ' <small>🔥</small>' : ''}<small class="hint">${plano[st].length} pessoa(s)</small></div>
-      ${plano[st].map(a=>`<div style="font-size:.88rem;margin-top:4px">${esc(nomeProprio(a.nome))} ${a.rapido ? '⚡' : ''}${a.poucoErro ? '✔' : ''}${ehNovatoNaLoja(a.nome) ? '🎓' : ''}${a.av ? ' ⭐' : ''}
-        <small class="hint">${a.ih ? fmtN(a.ih) + ' ip/h aqui' : a.lojas || a.vezesHist ? Math.max(a.lojas, a.vezesHist) + '× aqui' : 'nunca contou aqui'}</small></div>`).join('')}</div>`).join('')}
+  const porPrio = sts.some(st=>regraDoSetor(m, st).nivel);
+  const corpo = `<p class="hint" style="margin-top:2px">Só quem está sem setor. ${porPrio
+      ? `Pela prioridade dos setores: P1 no mínimo de pessoas, depois P2 e P3, depois P1 até o ideal. Controlado com os mais assertivos no peça a peça, Genérico com os mais fortes, A-Z depois deles.${grande ? ' <b>Loja grande (80 mil peças ou mais): P1 com mais gente.</b>' : ''}`
+      : 'Quantidade de pessoas por setor: as linhas vazias que você abriu e, no resto, a média das lojas do robô.'} Novato não vai para 🚫/⭐. Confira e aplique — depois dá para trocar normalmente.</p>
+    ${sts.map(st=>{ const rg = regraDoSetor(m, st); return `<div class="aval-setor"><div class="aval-topo"><b>${rg.nivel ? `<span class="regra-tag regra-p${rg.nivel}">P${rg.nivel}</span> ` : ''}${esc(st)}</b>${rg.tags.includes('prio') ? ' <small>🔥</small>' : ''}<small class="hint">${rg.junto ? '↪ mesma pessoa do ' + esc(rg.junto) : plano[st].length + ' pessoa(s)'}</small></div>
+      ${rg.junto ? '' : plano[st].map(a=>`<div style="font-size:.88rem;margin-top:4px">${esc(nomeProprio(a.nome))} ${a.rapido ? '⚡' : ''}${a.poucoErro ? '✔' : ''}${ehNovatoNaLoja(a.nome) ? '🎓' : ''}${a.av ? ' ⭐' : ''}
+        <small class="hint">${a.ih ? fmtN(a.ih) + ' ip/h aqui' : a.lojas || a.vezesHist ? Math.max(a.lojas, a.vezesHist) + '× aqui' : 'nunca contou aqui'}</small></div>`).join('')}</div>`; }).join('')}
     ${livres.length ? `<p class="hint">Sobraram sem setor: ${livres.map(esc).join(', ')}</p>` : ''}`;
   abrirFolha('✨ Distribuição sugerida', corpo, 'Aplicar', ()=>{
     sts.forEach(st=>{ const si = setoresAtuais().indexOf(st); plano[st].forEach(a=>aceitarSugestaoSemRender(si, a.nome)); });
@@ -6783,7 +6918,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 18/10/2026 10:26</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 18/10/2026 11:16</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
