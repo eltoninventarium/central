@@ -285,6 +285,9 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .chip-obs{border:1px solid var(--border);background:var(--bg);color:var(--muted);border-radius:16px;padding:6px 10px;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;}
 .chip-obs.ativo{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
 .erro-dono{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.nome-ficha{cursor:pointer;}
+.ficha-rapida .linha-fr{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.9rem;}
+.evo-barra{height:8px;border-radius:4px;background:var(--accent);display:inline-block;vertical-align:middle;}
 .aval-setor{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:6px 0;background:var(--bg);}
 .aval-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
 .aval-bolas{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
@@ -3206,7 +3209,7 @@ function renderPresenca(){
           ${p.instrutor ? '' : `<button class="pill coordpill ${p.estagiario?'on':''}" onclick="toggleEstagiario(${i})">Estag.</button>`}` : ''}
         ${statusVisiveis().map(([st,d])=>`<button class="pill ${st} ${p.presenca===st?'on':''}" onclick="marcarPresenca(${i},'${st}')">${d.rotulo}</button>`).join('')}
         ${editandoLista ? `<button class="pill transferir" onclick="abrirTransferir(${i})">Transferir</button>` : ''}`;
-    html += `<div class="pessoa-row ${p.coordenador?'coord':''}" id="pres-${i}"><span class="pessoa-nome">${esc(p.nome)}${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}${histAtraso}${marcaAtraso}</span>
+    html += `<div class="pessoa-row ${p.coordenador?'coord':''}" id="pres-${i}"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" onclick="abrirFichaRapida(${i})">${esc(p.nome)} <small class="hint">ⓘ</small></span>${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}${histAtraso}${marcaAtraso}</span>
       <span class="pill-btns">
         ${botoes}
         ${editandoLista ? `<button class="pill remover" onclick="removerPessoa(${i})" aria-label="Remover">×</button>` : ''}
@@ -3462,7 +3465,8 @@ function renderSetores(){
   html += `<div class="card"><div class="hint">${loja.nome?'<b>'+esc(loja.nome)+'</b> · ':''}${disponiveis.length} disponível(is) · ${semSetor.length} ainda sem setor${semSetor.length?': '+semSetor.map(esc).join(', '):''}</div>
     <div class="hint" style="margin-top:6px">${comPerfis || temHist
       ? 'Sugestões: em cada setor, quem está sem setor e já contou ali, primeiro quem rende mais e erra menos naquele setor (⚡ ritmo acima da média da equipe ali · ✔ menos erros que a média). Toque em 📊 para ver todo mundo. Só entram se você tocar.'
-      : 'Dica: as sugestões aparecem quando o robô tiver lojas com resumo (ou depois de "Salvar no histórico").'}</div></div>`;
+      : 'Dica: as sugestões aparecem quando o robô tiver lojas com resumo (ou depois de "Salvar no histórico").'}</div>
+    ${semSetor.length ? `<div class="acoes" style="margin-top:8px"><button class="btn small" type="button" onclick="abrirDistribuicaoCompleta()">✨ Montar distribuição (${semSetor.length} sem setor)</button></div>` : ''}</div>`;
   setoresAtuais().forEach((setor, si)=>{
     const linhas = loja.setores[setor] || [];
     const regra = regraDoSetor(modeloAtualObj, setor);
@@ -5029,7 +5033,7 @@ function renderDetalheRobo(){
     ${caixaEquipe(equipeLojaRobo(l))}
     ${htmlAvisosLoja(l)}
     <p class="hint">${esc(textoErrosLoja(l))} Toque num nome para ver o resumo dele(a)${l.errosItens !== null && l.errosItens !== undefined ? ' e os itens ajustados' : ''}.</p>
-    ${l.resumo === 'PRONTO' ? `<div class="acoes" style="margin-top:0"><button class="btn small" onclick="abrirResumoEquipe(roboLojaAberta)">📝 Resumo da equipe</button><button class="btn small secondary" onclick="abrirMapaLoja(roboLojaAberta)">🗺️ Mapa da loja</button></div>`
+    ${l.resumo === 'PRONTO' ? `<div class="acoes" style="margin-top:0"><button class="btn small" onclick="abrirResumoEquipe(roboLojaAberta)">📝 Resumo da equipe</button><button class="btn small secondary" onclick="abrirMapaLoja(roboLojaAberta)">🗺️ Mapa da loja</button>${registroPresencaDaLojaRobo(l) ? `<button class="btn small secondary" onclick="abrirPlanejadoReal(roboLojaAberta)">🧭 Planejado × real</button>` : ''}</div>`
       : l.resumo === 'AGUARDANDO CONTROLE' ? '<p class="hint">📝 O resumo de cada conferente aparece quando chegar o e-mail do CONTROLE desta loja.</p>' : ''}
     ${previstoXReal(l)}
     <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th>${l.errosItens !== null && l.errosItens !== undefined ? '<th>Erros</th>' : ''}</tr></thead><tbody>${
@@ -6208,6 +6212,7 @@ function renderFichaAberta(todas, rankNota){
     ${whats}
     ${lojasRobo.length ? `<div class="section-title">Produtividade por loja (robô)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
       lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${segDaLoja(l) !== 'DROGARIA' ? ` <small class="hint">${ICONE_SEG[segDaLoja(l)]} ${segDaLoja(l) === 'SUPERMERCADO' ? 'supermercado' : 'outro cliente'}</small>` : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')}</tbody></table></div>` : ''}
+    ${htmlEvolucao(x.nome, (x.cad && /ESTAG/i.test(String(x.cad.nivel || x.cad.tipo || ''))) || (x.ind && x.ind.lojasRobo <= 10))}
     ${htmlAvalFicha(x.nome)}
     ${ind.registros && ind.registros.length ? `<div class="section-title">Presença (histórico das lojas)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Status</th><th>Setor</th></tr></thead><tbody>${
       ind.registros.slice().reverse().map(r=>`<tr><td>${esc(r.data)}</td><td>${esc(r.loja)}</td><td>${rotuloHist(r)}</td><td>${(r.setores||[]).map(esc).join(', ') || '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
@@ -6247,6 +6252,216 @@ document.getElementById('listaFichas').addEventListener('click', e=>{
   fichaAberta = tr.dataset.ficha; renderFichaAberta();
   const el = document.getElementById('cardFicha'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'});
 });
+
+/* ===================== FICHA RÁPIDA · DISTRIBUIÇÃO COMPLETA · EVOLUÇÃO · PLANEJADO × REAL (18/10) ===================== */
+// índice de ritmo médio e sinais da pessoa (análise de tempo do robô), todas as lojas do segmento
+function tempoDaPessoa(nome, seg){
+  const o = dadosTempo(seg || 'DROGARIA').find(x=>mesmoNomeFlex(x.nome, nome));
+  return o || null;
+}
+// melhores setores da pessoa (onde já contou), pela mesma nota das sugestões
+function melhoresSetores(nome, max){
+  const seg = segParaPerfis(), idx = indicePerfis(seg), est = estatisticasHistorico(), pe = perfilPessoa(idx, nome);
+  const nomes = new Set();
+  if(pe) Object.values(pe.setores).forEach(x=>{ if(x.nLojas) nomes.add(x.s); });
+  avaliacoesDaPessoa(nome).forEach(a=>nomes.add(a.setor));
+  return [...nomes].map(st=>avaliarNoSetor(st, nome, idx, est)).map((a, i)=>Object.assign(a, {setor:[...nomes][i]}))
+    .sort((a,b)=>b.nota - a.nota).slice(0, max || 3);
+}
+function ritmoPorTipo(nome){
+  const pe = perfilPessoa(indicePerfis(segParaPerfis()), nome); if(!pe) return {};
+  const ih = x => x.m >= 30 ? Math.round(x.p / (x.m / 60)) : null;
+  return {mult: ih(pe.mult), peca: ih(pe.peca)};
+}
+function abrirFichaRapida(i){
+  const p = loja.pessoas[i]; if(!p) return;
+  const nome = p.nome, ind = indicadoresDe(nome), est = estatisticasHistorico()[normalizarNome(nome)];
+  const bons = melhoresSetores(nome, 4), rt = ritmoPorTipo(nome), tp = tempoDaPessoa(nome, 'DROGARIA');
+  const avs = avaliacoesDaPessoa(nome), ultCom = avs.find(a=>a.c);
+  const evo = evolucaoDe(nome);
+  const linha = (k, v) => `<div class="linha-fr"><span class="hint">${k}</span><span style="text-align:right">${v}</span></div>`;
+  const corpo = `<div class="ficha-rapida">
+    <p class="hint" style="margin-top:2px">${p.estagiario ? 'Estagiário · ' : ''}${p.instrutor ? 'Instrutor · ' : ''}${ind.lojasRobo ? `${ind.lojasRobo} loja(s) no robô` : 'ainda sem lojas no robô'}${est ? ` · ${est.lojas} no histórico` : ''}</p>
+    ${linha('Ritmo', ind.ih ? `<b>${fmtN(ind.ih)} itens/h</b>` : '—')}
+    ${linha('Multiplicando · peça a peça', `${rt.mult ? fmtN(rt.mult) + ' ip/h' : '—'} · ${rt.peca ? fmtN(rt.peca) + ' ip/h' : '—'}`)}
+    ${linha('Erros', ind.lojasComRel ? `${ind.erros || 0} · precisão ${fmtPct(ind.precisao)}` : '—')}
+    ${tp ? linha('Índice de ritmo nas seções', `<b style="color:${corIndice(tp.ix)}">${fmtIx(tp.ix)}</b> ${tp.sinalHora ? '🕐' : ''}${tp.sinalDif ? '🧩' : ''}`) : ''}
+    ${est ? linha('Faltas · atrasos', `${(est.falta||0) + (est.atestado||0)} · ${est.atrasos || 0}`) : ''}
+    ${evo && evo.texto ? linha('Evolução', esc(evo.texto)) : ''}
+    <div class="section-title">Melhores setores</div>
+    ${bons.length ? bons.map(a=>linha(`<b>${esc(a.setor)}</b>${a.rapido ? ' ⚡' : ''}${a.poucoErro ? ' ✔' : ''}`,
+        [a.ih ? fmtN(a.ih) + ' ip/h' : '', a.erroMedia !== null ? fmtErroLoja(a.erroMedia) : '', a.av ? textoAval(a.av) : ''].filter(Boolean).join(' · ') || `${Math.max(a.lojas, a.vezesHist)}×`)).join('')
+      : '<p class="hint">Sem setores medidos ainda.</p>'}
+    ${ultCom ? `<p class="hint" style="margin-top:8px">💬 “${esc(ultCom.c)}” — ${esc(ultCom.setor)}, ${esc(ultCom.data)}</p>` : ''}
+    <div class="acoes"><button class="btn small secondary" type="button" data-ficha-completa>Ficha completa</button></div></div>`;
+  const box = abrirFolha(esc(nomeProprio(nome)), corpo, 'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  box.querySelector('[data-ficha-completa]').onclick = ()=>{ box.remove(); abrirFicha(nome); };
+}
+
+// ---- 5) evolução do conferente: loja a loja (robô), tendência e "pronto para setor de experiente"
+function evolucaoDe(nome){
+  const regs = robo.pessoas.filter(p=>mesmoNomeFlex(p.nome, nome)).map(p=>({p, l:robo.lojas.find(l=>l.id===p.id)}))
+    .filter(x=>x.l && segDaLoja(x.l) === 'DROGARIA' && x.p.ih).sort((a,b)=>dataParaChave(a.l.data) - dataParaChave(b.l.data));
+  if(!regs.length) return null;
+  // ritmo relativo à equipe daquela loja (tira o efeito de loja fácil/difícil) e erros por mil peças
+  const pts = regs.map(({p, l})=>{
+    const eq = pessoasDaLojaRobo(l.id).map(x=>x.ih).filter(Boolean).sort((a,b)=>a-b);
+    const med = eq.length ? eq[eq.length >> 1] : p.ih;
+    const temRel = l.errosItens !== null && l.errosItens !== undefined;
+    return {id:l.id, data:l.data, loja:l.loja, ih:p.ih, rel: med ? p.ih / med : 1, err: temRel && p.pecas ? 1000 * (p.erros || 0) / p.pecas : null,
+      errEq: temRel ? (()=>{ const xs = pessoasDaLojaRobo(l.id).filter(x=>x.pecas).map(x=>1000 * (x.erros||0) / x.pecas).sort((a,b)=>a-b); return xs.length ? xs[xs.length >> 1] : null; })() : null};
+  });
+  const media = xs => xs.length ? xs.reduce((t,x)=>t + x, 0) / xs.length : null;
+  let texto = '', tendencia = 0;
+  if(pts.length >= 4){
+    const ini = pts.slice(0, Math.min(3, pts.length >> 1)), fim = pts.slice(-3);
+    const r0 = media(ini.map(x=>x.rel)), r1 = media(fim.map(x=>x.rel));
+    const e0 = media(ini.map(x=>x.err).filter(x=>x !== null)), e1 = media(fim.map(x=>x.err).filter(x=>x !== null));
+    tendencia = r1 - r0;
+    const partes = [];
+    if(Math.abs(r1 - r0) >= 0.08) partes.push(`ritmo ${r1 > r0 ? 'subindo' : 'caindo'} (${r0 >= 1 ? '+' : ''}${Math.round((r0 - 1) * 100)}% → ${r1 >= 1 ? '+' : ''}${Math.round((r1 - 1) * 100)}% da equipe)`);
+    else partes.push(`ritmo estável (${r1 >= 1 ? '+' : ''}${Math.round((r1 - 1) * 100)}% da equipe)`);
+    if(e0 !== null && e1 !== null && Math.abs(e1 - e0) >= 0.3) partes.push(`erros ${e1 < e0 ? 'caindo' : 'subindo'}`);
+    texto = partes.join(' · ');
+  } else texto = `${pts.length} loja(s): pouco para ver tendência`;
+  // pronto para setor de experiente: nas 3 últimas, ritmo ≥ 90% da equipe e erros ≤ os da equipe
+  const ult = pts.slice(-3);
+  const pronto = ult.length >= 3 && ult.every(x=>x.rel >= 0.9) && ult.every(x=>x.err === null || x.errEq === null || x.err <= x.errEq * 1.1);
+  return {pts, texto, tendencia, pronto};
+}
+function htmlEvolucao(nome, novato){
+  const ev = evolucaoDe(nome); if(!ev || ev.pts.length < 2) return '';
+  const max = Math.max(...ev.pts.map(x=>x.rel), 1.3);
+  return `<div class="section-title">📈 Evolução (ritmo comparado à equipe de cada loja)</div>
+    <p class="hint" style="margin:0 2px 6px">${esc(ev.texto)}${novato && ev.pronto ? ' · <b style="color:var(--ok)">✅ pronto para setor de experiente</b> (3 últimas lojas no ritmo da equipe e sem errar mais que ela)' : ''}</p>
+    ${ev.pts.slice(-10).map(x=>`<div class="linha-fr" style="display:flex;justify-content:space-between;gap:8px;font-size:.82rem;padding:3px 0"><span class="hint" style="width:96px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.data.slice(0,5))} · ${esc(String(x.loja).replace(/^.*?\s[-–]\s/, ''))}</span>
+      <span style="flex:1;min-width:40px"><i class="evo-barra" style="width:${Math.round(100 * Math.min(x.rel, max) / max)}%;background:${x.rel >= 1 ? 'var(--ok)' : x.rel >= 0.8 ? 'var(--warn)' : 'var(--danger)'}"></i></span>
+      <span style="flex:none;text-align:right">${fmtN(x.ih)}/h · ${x.rel >= 1 ? '+' : ''}${Math.round((x.rel - 1) * 100)}%${x.err !== null ? ` · ${fmt1(x.err)}‰ erro` : ''}</span></div>`).join('')}`;
+}
+
+// ---- 2) distribuição completa sugerida (só preenche quem está sem setor; você confere e aplica)
+function pessoasTipicasPorSetor(seg){
+  // média de pessoas que contam cada setor por loja (perfis do robô) → proporção de cada setor na equipe
+  if(!perfisRobo || !Array.isArray(perfisRobo.lojas)) return {};
+  const soma = {}, lojas = {};
+  perfisRobo.lojas.filter(l=>(l.seg || 'DROGARIA') === seg).forEach(l=>{
+    const por = {};
+    (l.x || []).forEach(([ni, si, p, m, e, n])=>{ if(m >= 15 || n >= 10){ const k = chaveSetorMedida(perfisRobo.setores[si] || ''); (por[k] = por[k] || new Set()).add(ni); } });
+    Object.entries(por).forEach(([k, set])=>{ soma[k] = (soma[k] || 0) + set.size; lojas[k] = (lojas[k] || 0) + 1; });
+  });
+  const out = {}; Object.keys(soma).forEach(k=>out[k] = soma[k] / lojas[k]); return out;
+}
+function montarDistribuicao(){
+  const setores = setoresAtuais(), m = modeloPorId(loja.modelo);
+  const foraDaConta = new Set(loja.pessoas.filter(p=>p.coordenador || p.instrutor).map(p=>p.nome));
+  const ja = new Set(); setores.forEach(st=>listaSetor(st).forEach(it=>{ if(it.nome) ja.add(it.nome); }));
+  let livres = nomesDisponiveis().filter(n=>!ja.has(n) && !foraDaConta.has(n));
+  if(!livres.length) return {plano:{}, livres:[]};
+  const seg = segParaPerfis(), idx = indicePerfis(seg), est = estatisticasHistorico();
+  const tipicas = pessoasTipicasPorSetor(seg);
+  const tags = st => regraDoSetor(m, st).tags;
+  // vagas: linhas vazias que você já abriu valem primeiro; o resto, pela média de pessoas por setor nas lojas do robô
+  const vagasAbertas = {}; setores.forEach(st=>vagasAbertas[st] = listaSetor(st).filter(it=>!it.nome).length);
+  const peso = st => { const k = chaveNoIndice(tipicas, st); return tipicas[k] || 0; };
+  const vals = setores.map(peso).filter(Boolean).sort((a,b)=>a-b), med = vals.length ? vals[vals.length >> 1] : 1;
+  const pesos = {}; setores.forEach(st=>pesos[st] = peso(st) || med);
+  const ocup = st => listaSetor(st).filter(it=>it.nome).length;
+  // quantos entram em cada setor: proporção da equipe final (quem já está + quem falta), descontando quem já está ali;
+  // nunca menos que as linhas vazias abertas. Ajusta para somar exatamente quem está sem setor.
+  const somaP = setores.reduce((t,st)=>t + pesos[st], 0) || 1, totalFinal = livres.length + setores.reduce((t,st)=>t + ocup(st), 0);
+  const brutos = setores.map(st=>({st, x: Math.max(vagasAbertas[st], pesos[st] / somaP * totalFinal - ocup(st))}));
+  const somaB = brutos.reduce((t,b)=>t + b.x, 0) || 1;
+  brutos.forEach(b=>b.x = b.x * livres.length / somaB);
+  const alvo = {}; let dist = 0;
+  brutos.forEach(b=>{ alvo[b.st] = Math.floor(b.x); dist += alvo[b.st]; });
+  brutos.slice().sort((a,b)=>(b.x % 1) - (a.x % 1)).forEach(b=>{ if(dist < livres.length){ alvo[b.st]++; dist++; } });
+  // ordem: 🔥 prioridade primeiro, depois os normais, 🕐 por último
+  const ordem = setores.slice().sort((a,b)=>((tags(b).includes('prio') ? 1 : 0) - (tags(a).includes('prio') ? 1 : 0)) || ((tags(a).includes('ultimo') ? 1 : 0) - (tags(b).includes('ultimo') ? 1 : 0)));
+  const plano = {}; ordem.forEach(st=>plano[st] = []);
+  const nota = {}; const notaDe = (st, n)=>{ const k = st + '|' + n; return nota[k] !== undefined ? nota[k] : (nota[k] = avaliarNoSetor(st, n, idx, est)); };
+  // rodadas: em cada rodada cada setor (na ordem) pega o melhor que sobrou para ele
+  let mudou = true;
+  while(livres.length && mudou){
+    mudou = false;
+    for(const st of ordem){
+      if(plano[st].length >= alvo[st] || !livres.length) continue;
+      const t = tags(st), semNovato = t.includes('semnovato') || t.includes('experiente');
+      let cand = livres.filter(n=>!(semNovato && ehNovatoNaLoja(n)));
+      if(t.includes('novato') && cand.some(n=>ehNovatoNaLoja(n))) cand = cand.filter(n=>ehNovatoNaLoja(n));
+      if(!cand.length) continue;
+      const melhor = cand.map(n=>notaDe(st, n)).sort((a,b)=>(a.novato - b.novato) || b.nota - a.nota)[0];
+      plano[st].push(melhor); livres = livres.filter(n=>n !== melhor.nome); mudou = true;
+    }
+  }
+  // sobrou alguém (regra de novato travou o setor dele): vai para o setor permitido onde ele é melhor
+  livres.slice().forEach(n=>{
+    const ok = ordem.filter(st=>{ const t = tags(st); return !((t.includes('semnovato') || t.includes('experiente')) && ehNovatoNaLoja(n)); });
+    if(!ok.length) return;
+    const st = ok.map(st=>({st, a:notaDe(st, n)})).sort((a,b)=>b.a.nota - a.a.nota)[0].st;
+    plano[st].push(notaDe(st, n)); livres = livres.filter(x=>x !== n);
+  });
+  return {plano, livres};
+}
+function abrirDistribuicaoCompleta(){
+  const {plano, livres} = montarDistribuicao();
+  const sts = Object.keys(plano).filter(st=>plano[st].length);
+  if(!sts.length){ toast(livres.length ? 'Não consegui encaixar ninguém (regras de novato?).' : 'Todo mundo já tem setor.'); return; }
+  const m = modeloPorId(loja.modelo);
+  const corpo = `<p class="hint" style="margin-top:2px">Só quem está sem setor. 🔥 prioridade recebe primeiro os melhores; novato não vai para 🚫/⭐. Quantidade de pessoas por setor: as linhas vazias que você abriu e, no resto, a média das lojas do robô. Confira e aplique — depois dá para trocar normalmente.</p>
+    ${sts.map(st=>`<div class="aval-setor"><div class="aval-topo"><b>${esc(st)}</b>${regraDoSetor(m, st).tags.includes('prio') ? ' <small>🔥</small>' : ''}<small class="hint">${plano[st].length} pessoa(s)</small></div>
+      ${plano[st].map(a=>`<div style="font-size:.88rem;margin-top:4px">${esc(nomeProprio(a.nome))} ${a.rapido ? '⚡' : ''}${a.poucoErro ? '✔' : ''}${ehNovatoNaLoja(a.nome) ? '🎓' : ''}${a.av ? ' ⭐' : ''}
+        <small class="hint">${a.ih ? fmtN(a.ih) + ' ip/h aqui' : a.lojas || a.vezesHist ? Math.max(a.lojas, a.vezesHist) + '× aqui' : 'nunca contou aqui'}</small></div>`).join('')}</div>`).join('')}
+    ${livres.length ? `<p class="hint">Sobraram sem setor: ${livres.map(esc).join(', ')}</p>` : ''}`;
+  abrirFolha('✨ Distribuição sugerida', corpo, 'Aplicar', ()=>{
+    sts.forEach(st=>{ const si = setoresAtuais().indexOf(st); plano[st].forEach(a=>aceitarSugestaoSemRender(si, a.nome)); });
+    salvarLoja(); renderSetores(); toast('Distribuição aplicada. Confira e ajuste o que quiser.');
+  });
+}
+function aceitarSugestaoSemRender(si, nome){
+  const lista = listaSetor(setoresAtuais()[si]);
+  const vazio = lista.find(it=>it.tipo==='lista' && !it.nome);
+  if(vazio) vazio.nome = nome; else lista.push({tipo:'lista', nome});
+}
+
+// ---- 6) planejado × real: distribuição salva no histórico × onde cada um contou de fato (CONTROLE)
+async function abrirPlanejadoReal(id){
+  const l = robo.lojas.find(x=>x.id===id); if(!l) return;
+  const reg = registroPresencaDaLojaRobo(l);
+  const plan = {};
+  if(reg && reg.atual) setoresAtuais().forEach(st=>{ const ns = nomesDoSetor(st); if(ns.length) plan[st] = ns; });
+  else if(reg) Object.entries(reg.setores || {}).forEach(([st, ns])=>{ const xs = (ns||[]).map(n=>typeof n === 'string' ? n : (n && n.nome)).filter(Boolean); if(xs.length) plan[st] = xs; });
+  const box = abrirFolha(`🧭 Planejado × real · ${esc(l.loja)}`, `<div data-pr><p class="hint">Carregando…</p></div>`, 'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  const div = box.querySelector('[data-pr]');
+  if(!Object.keys(plan).length){ div.innerHTML = '<p class="hint">Não achei a distribuição desta loja no histórico (Loja › Setores e "Salvar no histórico" no dia).</p>'; return; }
+  let r = null;
+  try{ r = await obterResumo(id); }catch(e){ div.innerHTML = `<p class="hint">${esc(e.message || 'Não consegui baixar o resumo agora.')}</p>`; return; }
+  // onde cada pessoa contou de verdade: setores com 25% ou mais das peças dela
+  const real = {};
+  (r.pessoas || []).forEach(p=>{
+    const sts = setoresDaPessoa(caminhoDaPessoa(r, p)), tot = sts.reduce((t,x)=>t + x.p, 0) || 1;
+    real[normalizarNome(p.nome)] = {nome:p.nome, sts: sts.filter(x=>x.p >= 0.25 * tot).sort((a,b)=>b.p - a.p).map(x=>({s:x.s, p:x.p, m:x.m}))};
+  });
+  const achaReal = n => real[normalizarNome(n)] || Object.values(real).find(x=>mesmoNomeFlex(x.nome, n)) || null;
+  let iguais = 0, mudaram = 0;
+  const blocos = Object.entries(plan).map(([st, ns])=>{
+    const linhas = ns.map(n=>{
+      const rr = achaReal(n);
+      if(!rr) return `<div style="font-size:.86rem">❔ ${esc(nomeProprio(n))} <small class="hint">— sem dados no CONTROLE</small></div>`;
+      const ok = rr.sts.some(x=>mesmoSetor(x.s, st) || chaveSetorMedida(x.s) === chaveSetorMedida(st));
+      if(ok) iguais++; else mudaram++;
+      return `<div style="font-size:.86rem">${ok ? '✅' : '↪️'} ${esc(nomeProprio(n))} <small class="hint">— ${ok ? 'contou aqui' : 'contou em ' + rr.sts.map(x=>esc(x.s)).join(', ')}${rr.sts.length > 1 && ok ? ' e ' + rr.sts.filter(x=>!(mesmoSetor(x.s, st))).map(x=>esc(x.s)).join(', ') : ''}</small></div>`;
+    }).join('');
+    // quem não estava planejado aqui e contou aqui
+    const extras = Object.values(real).filter(x=>!ns.some(n=>mesmoNomeFlex(n, x.nome)) && x.sts.some(y=>mesmoSetor(y.s, st)));
+    const mins = Object.values(real).reduce((t,x)=>t + x.sts.filter(y=>mesmoSetor(y.s, st)).reduce((a,y)=>a + (y.m||0), 0), 0);
+    return `<div class="aval-setor"><div class="aval-topo"><b>${esc(st)}</b><small class="hint">${ns.length} planejado(s)${mins ? ' · ' + fmtMinutos(mins) + ' de contagem somados' : ''}</small></div>${linhas}
+      ${extras.length ? `<div style="font-size:.86rem;margin-top:4px">➕ <small class="hint">também contaram aqui: ${extras.map(x=>esc(nomeProprio(x.nome))).join(', ')}</small></div>` : ''}</div>`;
+  }).join('');
+  div.innerHTML = `<p class="hint" style="margin-top:2px">${iguais} no setor planejado · ${mudaram} contaram em outro setor (onde fez 25% ou mais das peças). Serve para acertar a próxima distribuição.</p>${blocos}`;
+}
+
 function abrirFicha(nome){ fichaAberta = normalizarNome(nome); abrirView('fichas'); setTimeout(()=>{ const el = document.getElementById('cardFicha'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50); }
 function exportarFichaPNG(){
   const x = pessoasDasFichas().find(t=>normalizarNome(t.nome)===fichaAberta); if(!x) return;
@@ -6568,7 +6783,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 18/10/2026 10:15</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 18/10/2026 10:26</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
