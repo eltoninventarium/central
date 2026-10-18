@@ -1958,7 +1958,8 @@ const REGRAS_SETOR = {
   ultimo:    {ic:'🕐', rot:'Por último', dica:'mais tranquilo, deixar pro fim'}
 };
 function regraDoSetor(m, setor){ const r = (m && m.regras && m.regras[setor]) || {};
-  return {tags: Array.isArray(r.tags) ? r.tags : [], nota: r.nota || '', nivel: +r.nivel || 0, qtd: Array.isArray(r.qtd) ? r.qtd : null, perfil: r.perfil || '', junto: r.junto || ''}; }
+  return {tags: Array.isArray(r.tags) ? r.tags : [], nota: r.nota || '', nivel: +r.nivel || 0, qtd: Array.isArray(r.qtd) ? r.qtd : null, perfil: r.perfil || '', junto: r.junto || '',
+    enxuto: +r.enxuto || 0, grupo: r.grupo || ''}; }
 const PERFIL_SETOR = {assertivo:'mais assertivos e produtivos no peça a peça', forte:'os mais fortes (setor mais pesado)', medio:'depois dos mais fortes'};
 function ehNovatoNaLoja(nome, item){
   if(item && item.treino) return true;
@@ -2052,14 +2053,14 @@ function garantirModeloVerdemar(lista){
 // lista pronta das drogarias Araujo (orientação do Elton, 18/10/2026): prioridade 1/2/3, pessoas por setor e perfil.
 // Criada uma vez; depois é editável em Modelos. Loja com 80 mil peças ou mais: o app aumenta as pessoas da prioridade 1.
 const MODELO_ARAUJO = {id:'araujo', nome:'Drogaria Araujo', chave:'ARAUJO', setores:[
-  ['Controlado', {nivel:1, qtd:[2,2], perfil:'assertivo', tags:['semnovato'], nota:'aqui não se pode errar'}],
-  ['Genérico', {nivel:1, qtd:[3,3], perfil:'forte', tags:['semnovato'], nota:'o medicamento com mais peças e mais cheio'}],
-  ['Medicamento A-Z', {nivel:1, qtd:[2,3], perfil:'medio'}],
-  ['Cartelado', {nivel:1, qtd:[1,1], nota:'quem conta o cartelado segue para o balcão'}],
+  ['Controlado', {nivel:1, qtd:[2,2], perfil:'assertivo', tags:['semnovato'], nota:'aqui não se pode errar', enxuto:2}],
+  ['Genérico', {nivel:1, qtd:[3,3], perfil:'forte', tags:['semnovato'], nota:'o medicamento com mais peças e mais cheio', grupo:'Medicamento'}],
+  ['Medicamento A-Z', {nivel:1, qtd:[2,3], perfil:'medio', grupo:'Medicamento'}],
+  ['Cartelado', {nivel:1, qtd:[1,1], nota:'quem conta o cartelado segue para o balcão', enxuto:1}],
   ['Balcão', {nivel:1, junto:'Cartelado', nota:'mesma pessoa do cartelado, quando acabar lá'}],
-  ['Estoque', {nivel:1, qtd:[1,1]}],
-  ['Geladeira', {nivel:1, qtd:[1,2]}],
-  ['Bomboniere', {nivel:1, qtd:[3,4], nota:'mínimo 3, ideal 4'}],
+  ['Estoque', {nivel:1, qtd:[1,1], enxuto:1}],
+  ['Geladeira', {nivel:1, qtd:[1,2], enxuto:1}],
+  ['Bomboniere', {nivel:1, qtd:[3,4], nota:'mínimo 3, ideal 4', enxuto:1}],
   ['Frente de caixa', {nivel:1, qtd:[1,1], nota:'frente de loja: rações grandes (10–15 kg), papel higiênico, fraldas, cadeira de rodas'}],
   ['OTC', {nivel:1, qtd:[1,1]}],
   ['Dermo-cosméticos', {nivel:2, qtd:[1,1]}], ['Desodorante', {nivel:2, qtd:[1,1]}], ['Preservativos', {nivel:2, qtd:[1,1]}],
@@ -2068,10 +2069,17 @@ const MODELO_ARAUJO = {id:'araujo', nome:'Drogaria Araujo', chave:'ARAUJO', seto
   ['Shampoo infantil', {nivel:3, qtd:[1,1]}], ['Bicos', {nivel:3, qtd:[1,1]}], ['Infantil e brinquedos', {nivel:3, qtd:[1,1]}], ['Fraldas', {nivel:3, qtd:[1,1]}]]};
 function garantirModeloAraujo(lista){
   const dro = lista.find(m=>m && m.id === 'drogaria');
+  // lista já criada antes da regra da equipe enxuta: completa só os campos novos (enxuto e grupo)
+  const ja = lista.find(m=>m && m.id === MODELO_ARAUJO.id);
+  if(ja && !ja.araujoV2){
+    ja.regras = ja.regras || {};
+    MODELO_ARAUJO.setores.forEach(([st, r])=>{ if(!ja.regras[st]) return; ['enxuto', 'grupo'].forEach(k=>{ if(r[k] !== undefined && ja.regras[st][k] === undefined) ja.regras[st][k] = r[k]; }); });
+    ja.araujoV2 = true;
+  }
   if(!dro || dro.araujoCriado || lista.some(m=>m && m.id === MODELO_ARAUJO.id)){ if(dro) dro.araujoCriado = true; return lista; }
   const regras = {};
   MODELO_ARAUJO.setores.forEach(([st, r])=>{ regras[st] = Object.assign({tags:[], nota:''}, JSON.parse(JSON.stringify(r))); });
-  lista.push({id:MODELO_ARAUJO.id, nome:MODELO_ARAUJO.nome, chave:MODELO_ARAUJO.chave, setores:MODELO_ARAUJO.setores.map(x=>x[0]), regras});
+  lista.push({id:MODELO_ARAUJO.id, nome:MODELO_ARAUJO.nome, chave:MODELO_ARAUJO.chave, setores:MODELO_ARAUJO.setores.map(x=>x[0]), regras, araujoV2:true});
   dro.araujoCriado = true;
   return lista;
 }
@@ -6437,8 +6445,25 @@ function notaPorPerfil(a, perfil){
 }
 // distribuição pela PRIORIDADE dos setores (lista com P1/P2/P3 e pessoas por setor): P1 no mínimo → P2 → P3 → P1 até o ideal → extras
 function montarPorPrioridade(livres, setores, m, idx, est){
-  const R = st => regraDoSetor(m, st);
+  const R0 = st => regraDoSetor(m, st);
   const grande = pecasEsperadasHoje() >= 80000;
+  // EQUIPE ENXUTA (menos gente que o mínimo da P1): primeiro os essenciais (Controlado 2, Cartelado, Estoque, Geladeira,
+  // Bomboniere 1 cada) e o resto vai para o MEDICAMENTO como um todo (Genérico + A-Z juntos). Orientação do Elton, 18/10.
+  const minP1 = setores.filter(st=>R0(st).nivel === 1 && !R0(st).junto).reduce((t,st)=>t + (R0(st).qtd ? R0(st).qtd[0] : 1), 0);
+  const enxuta = livres.length < minP1 && setores.some(st=>R0(st).enxuto);
+  const grupos = {}; setores.forEach(st=>{ const g = R0(st).grupo; if(g) (grupos[g] = grupos[g] || []).push(st); });
+  const chefeGrupo = st => { const g = R0(st).grupo; return g && grupos[g] ? grupos[g].slice().sort((a,b)=>({forte:0, assertivo:1, '':2, medio:3}[R0(a).perfil||''] - ({forte:0, assertivo:1, '':2, medio:3}[R0(b).perfil||''])))[0] : st; };
+  const R = st => {
+    const r = R0(st);
+    if(!enxuta || !r.grupo) return r;
+    const chefe = chefeGrupo(st);
+    if(chefe !== st) return Object.assign({}, r, {junto: chefe, qtd: null});
+    // o setor que lidera o grupo leva as vagas do grupo inteiro
+    const soma = grupos[r.grupo].reduce((q, x)=>{ const qq = R0(x).qtd || [1, 1]; return [q[0] + qq[0], q[1] + qq[1]]; }, [0, 0]);
+    // regra de novato do grupo: só vale se TODOS os setores do grupo tiverem (A-Z aceita novato → o medicamento aceita)
+    const tags = r.tags.filter(t=>grupos[r.grupo].every(x=>R0(x).tags.includes(t)));
+    return Object.assign({}, r, {qtd: soma, tags});
+  };
   const qtd = st => { const r = R(st); if(r.junto) return [0, 0]; let q = r.qtd ? r.qtd.slice() : [1, 1];
     if(grande && r.nivel === 1){ q = [Math.max(q[0], q[1]), q[1] + (q[1] >= 2 || r.perfil ? 1 : 0)]; }
     const ja = listaSetor(st).filter(it=>it.nome).length; return [Math.max(0, q[0] - ja), Math.max(0, q[1] - ja)]; };
@@ -6446,6 +6471,10 @@ function montarPorPrioridade(livres, setores, m, idx, est){
   const ordemPerfil = st => ({assertivo:0, forte:1, '':2, medio:3})[R(st).perfil || ''] ?? 2;
   // vagas em ordem de escolha: dentro de cada fase, primeiro os setores 🎯 assertivo/forte, A-Z (médio) por último
   const vagas = [];
+  if(enxuta){
+    setores.filter(st=>R0(st).enxuto).forEach(st=>{ for(let k = 0; k < Math.min(R0(st).enxuto, qtd(st)[1] || R0(st).enxuto); k++) vagas.push(st); });
+    Object.values(grupos).forEach(g=>{ const ch = chefeGrupo(g[0]); for(let k = 0; k < qtd(ch)[0]; k++) vagas.push(ch); });
+  }
   const fase = (filtro, ate) => {
     const sts = setores.filter(filtro).sort((a,b)=>ordemPerfil(a) - ordemPerfil(b) || setores.indexOf(a) - setores.indexOf(b));
     const feitos = {}; sts.forEach(st=>feitos[st] = vagas.filter(v=>v === st).length);
@@ -6473,9 +6502,10 @@ function montarPorPrioridade(livres, setores, m, idx, est){
     const melhor = cand.map(n=>notaDe(st, n)).sort((a,b)=>(a.novato - b.novato) || notaPorPerfil(b, R(st).perfil) - notaPorPerfil(a, R(st).perfil))[0];
     plano[st].push(melhor); resto = resto.filter(n=>n !== melhor.nome);
   });
-  // "mesma pessoa de": balcão recebe quem contar o cartelado
-  setores.filter(st=>R(st).junto).forEach(st=>{ const de = setores.find(x=>mesmoSetor(x, R(st).junto)); if(de) plano[st] = plano[de].map(a=>Object.assign({}, a, {junto:de})); });
-  return {plano, livres: resto, grande};
+  // "mesma pessoa de": balcão recebe quem contar o cartelado (equipe enxuta: A-Z junto com o Genérico)
+  setores.filter(st=>R(st).junto).forEach(st=>{ const de = setores.find(x=>x === R(st).junto) || setores.find(x=>mesmoSetor(x, R(st).junto)); if(de) plano[st] = plano[de].map(a=>Object.assign({}, a, {junto:de})); });
+  const juntos = {}; setores.forEach(st=>{ if(R(st).junto) juntos[st] = R(st).junto; });
+  return {plano, livres: resto, grande, enxuta, minP1, juntos, total: livres.length};
 }
 function montarDistribuicao(){
   const setores = setoresAtuais(), m = modeloPorId(loja.modelo);
@@ -6536,22 +6566,38 @@ function montarDistribuicao(){
   return {plano, livres};
 }
 function abrirDistribuicaoCompleta(){
-  const {plano, livres, grande} = montarDistribuicao();
+  const {plano, livres, grande, enxuta, minP1, juntos, total} = montarDistribuicao();
   const sts = Object.keys(plano).filter(st=>plano[st].length);
   if(!sts.length){ toast(livres.length ? 'Não consegui encaixar ninguém (regras de novato?).' : 'Todo mundo já tem setor.'); return; }
   const m = modeloPorId(loja.modelo);
   const porPrio = sts.some(st=>regraDoSetor(m, st).nivel);
   const corpo = `<p class="hint" style="margin-top:2px">Só quem está sem setor. ${porPrio
-      ? `Pela prioridade dos setores: P1 no mínimo de pessoas, depois P2 e P3, depois P1 até o ideal. Controlado com os mais assertivos no peça a peça, Genérico com os mais fortes, A-Z depois deles.${grande ? ' <b>Loja grande (80 mil peças ou mais): P1 com mais gente.</b>' : ''}`
+      ? `Pela prioridade dos setores: P1 no mínimo de pessoas, depois P2 e P3, depois P1 até o ideal. Controlado com os mais assertivos no peça a peça, Genérico com os mais fortes, A-Z depois deles.${grande ? ' <b>Loja grande (80 mil peças ou mais): P1 com mais gente.</b>' : ''}${enxuta ? `<br><b>Equipe enxuta</b> (${total} pessoas para ${minP1} vagas mínimas da P1): primeiro Controlado, Cartelado, Estoque, Geladeira e Bomboniere; o resto conta o medicamento como um todo (Genérico + A-Z juntos).` : ''}`
       : 'Quantidade de pessoas por setor: as linhas vazias que você abriu e, no resto, a média das lojas do robô.'} Novato não vai para 🚫/⭐. Confira e aplique — depois dá para trocar normalmente.</p>
-    ${sts.map(st=>{ const rg = regraDoSetor(m, st); return `<div class="aval-setor"><div class="aval-topo"><b>${rg.nivel ? `<span class="regra-tag regra-p${rg.nivel}">P${rg.nivel}</span> ` : ''}${esc(st)}</b>${rg.tags.includes('prio') ? ' <small>🔥</small>' : ''}<small class="hint">${rg.junto ? '↪ mesma pessoa do ' + esc(rg.junto) : plano[st].length + ' pessoa(s)'}</small></div>
-      ${rg.junto ? '' : plano[st].map(a=>`<div style="font-size:.88rem;margin-top:4px">${esc(nomeProprio(a.nome))} ${a.rapido ? '⚡' : ''}${a.poucoErro ? '✔' : ''}${ehNovatoNaLoja(a.nome) ? '🎓' : ''}${a.av ? ' ⭐' : ''}
+    ${sts.map(st=>{ const rg = regraDoSetor(m, st); return `<div class="aval-setor"><div class="aval-topo"><b>${rg.nivel ? `<span class="regra-tag regra-p${rg.nivel}">P${rg.nivel}</span> ` : ''}${esc(st)}</b>${rg.tags.includes('prio') ? ' <small>🔥</small>' : ''}<small class="hint">${(juntos && juntos[st]) || rg.junto ? (juntos && juntos[st] && !rg.junto ? '↪ mesma equipe do ' : '↪ mesma pessoa do ') + esc((juntos && juntos[st]) || rg.junto) : plano[st].length + ' pessoa(s)'}</small></div>
+      ${(juntos && juntos[st]) || rg.junto ? '' : plano[st].map(a=>`<div style="font-size:.88rem;margin-top:4px">${esc(nomeProprio(a.nome))} ${a.rapido ? '⚡' : ''}${a.poucoErro ? '✔' : ''}${ehNovatoNaLoja(a.nome) ? '🎓' : ''}${a.av ? ' ⭐' : ''}
         <small class="hint">${a.ih ? fmtN(a.ih) + ' ip/h aqui' : a.lojas || a.vezesHist ? Math.max(a.lojas, a.vezesHist) + '× aqui' : 'nunca contou aqui'}</small></div>`).join('')}</div>`; }).join('')}
-    ${livres.length ? `<p class="hint">Sobraram sem setor: ${livres.map(esc).join(', ')}</p>` : ''}`;
+    ${livres.length ? `<p class="hint">Sobraram sem setor: ${livres.map(esc).join(', ')}</p>` : ''}
+    ${htmlDepoisDoSetor(plano, m)}`;
   abrirFolha('✨ Distribuição sugerida', corpo, 'Aplicar', ()=>{
     sts.forEach(st=>{ const si = setoresAtuais().indexOf(st); plano[st].forEach(a=>aceitarSugestaoSemRender(si, a.nome)); });
     salvarLoja(); renderSetores(); toast('Distribuição aplicada. Confira e ajuste o que quiser.');
   });
+}
+// quando um setor acabar (ex.: Controlado), para onde vai cada um: quem sabe multiplicar → setores multiplicando; quem não → peça a peça
+function htmlDepoisDoSetor(plano, m){
+  const st = Object.keys(plano).find(x=>regraDoSetor(m, x).perfil === 'assertivo' && plano[x].length);
+  if(!st) return '';
+  const idx = indicePerfis(segParaPerfis());
+  const base = idx && idx.tipo.mult.m >= 60 ? idx.tipo.mult.p / (idx.tipo.mult.m / 60) : null;
+  const mult = setoresAtuais().filter(x=>ehMultiplicando(x) && x !== st);
+  const peca = setoresAtuais().filter(x=>regraDoSetor(m, x).grupo && x !== st);
+  const linhas = plano[st].map(a=>{
+    const rt = ritmoPorTipo(a.nome);
+    const sabe = rt.mult && (!base || rt.mult >= 0.85 * base);
+    return `<div style="font-size:.86rem;margin-top:3px">${esc(nomeProprio(a.nome))} <small class="hint">— ${rt.mult ? `multiplicando ${fmtN(rt.mult)} ip/h${base ? ` (equipe ${fmtN(Math.round(base))})` : ''}` : 'sem medida multiplicando'}${rt.peca ? ` · peça a peça ${fmtN(rt.peca)} ip/h` : ''} → <b>${sabe ? 'ajudar onde multiplica (' + mult.slice(0, 3).map(esc).join(', ') + ')' : 'ajudar no peça a peça (' + (peca.length ? peca.map(esc).join(' / ') : 'medicamento') + ')'}</b></small></div>`;
+  }).join('');
+  return `<div class="aval-setor"><div class="aval-topo"><b>Quando o ${esc(st)} acabar</b></div>${linhas}</div>`;
 }
 function aceitarSugestaoSemRender(si, nome){
   const lista = listaSetor(setoresAtuais()[si]);
@@ -6918,7 +6964,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 18/10/2026 11:16</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 18/10/2026 11:29</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
