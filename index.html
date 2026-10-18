@@ -4403,7 +4403,9 @@ function normLojaRobo(o){
     // erros (relatório de itens ajustados): vazio = a loja veio sem esse relatório
     errosItens:numOuNulo(o['ERROS (ITENS)']), pecasAjustadas:numOuNulo(o['PEÇAS AJUSTADAS']),
     // resumo dos conferentes: PRONTO / AGUARDANDO CONTROLE / vazio (loja sem a pasta CONTROLE)
-    resumo:String(o['RESUMO']||'')};
+    resumo:String(o['RESUMO']||''),
+    // avisos de arquivo mal enviado + coordenador (do Relatório de Gestão)
+    coordenador:String(o['COORDENADOR']||'').trim(), avisos:String(o['AVISOS DO ARQUIVO']||'').split(' · ').map(x=>x.trim()).filter(Boolean)};
 }
 function numOuNulo(v){ return (v === '' || v === null || v === undefined) ? null : (Number(v) || 0); }
 function normErroRobo(o){
@@ -4468,6 +4470,7 @@ async function atualizarDoRobo(manual, soConvites){
     if(Array.isArray(j.erros)) robo.erros = j.erros.map(normErroRobo).filter(e=>e.id);
     aplicarNomesRobo(); aplicarDonosErros();
     if(Array.isArray(j.convites)) robo.convites = j.convites;
+    if(Array.isArray(j.falhas)) robo.falhas = j.falhas;
     robo.atualizadoEm = Date.now(); robo.ultimoErro = '';
     salvarRobo();
     const respostas = (typeof aplicarRespostasConvites === 'function') ? aplicarRespostasConvites() : [];
@@ -4919,7 +4922,7 @@ function renderRobo(){
     ? (robo.lojas.length ? `<div class="card"><p class="hint" style="margin:0">Nenhuma loja de ${segAtivo === 'OUTRO' ? 'outros clientes' : rotSeg.replace(/s$/, '')} recebida ainda.${segAtivo === 'SUPERMERCADO' ? ' Assim que chegar o e-mail de um supermercado (Farid, por exemplo), ela aparece aqui.' : ''}</p>${avisoOutro}</div>` : '')
     : `<div class="card"><button class="secao-toggle ${abrirLojas?'aberta':''}" onclick="alternarSecaoRobo('lojas')"><span class="seta">▶</span> Lojas recebidas <small>(${contLojas}${placarMeta})</small></button>${avisoOutro}${
     !abrirLojas ? '' : !lojas.length ? (avisoOutro ? '' : '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>') : lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
-      <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças${l.errosItens !== null && l.errosItens !== undefined ? ` · ${l.errosItens} erro(s)` : ''} · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small>${seloMeta(equipeLojaRobo(l))}</span>
+      <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças${l.errosItens !== null && l.errosItens !== undefined ? ` · ${l.errosItens} erro(s)` : ''} · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small>${seloMeta(equipeLojaRobo(l))}${avisosDaLoja(l).length ? ` <span class="selo-meta nao">⚠️ ${avisosDaLoja(l).length} aviso(s) do arquivo</span>` : ''}</span>
       <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('')}</div>`;
   renderDetalheRobo();
   const confTodos = porConferenteRobo(idsDoSeg(segAtivo)).map((c,i)=>Object.assign({pos:i+1}, c));
@@ -5024,6 +5027,7 @@ function renderDetalheRobo(){
   div.innerHTML = `<div class="card" id="cardRankingRobo"><h2>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''} · ${esc(l.data)}</h2>
     <p class="hint">${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h líquidas · ${fmtN(l.fora)} peça(s) fora das faixas</p>
     ${caixaEquipe(equipeLojaRobo(l))}
+    ${htmlAvisosLoja(l)}
     <p class="hint">${esc(textoErrosLoja(l))} Toque num nome para ver o resumo dele(a)${l.errosItens !== null && l.errosItens !== undefined ? ' e os itens ajustados' : ''}.</p>
     ${l.resumo === 'PRONTO' ? `<div class="acoes" style="margin-top:0"><button class="btn small" onclick="abrirResumoEquipe(roboLojaAberta)">📝 Resumo da equipe</button><button class="btn small secondary" onclick="abrirMapaLoja(roboLojaAberta)">🗺️ Mapa da loja</button></div>`
       : l.resumo === 'AGUARDANDO CONTROLE' ? '<p class="hint">📝 O resumo de cada conferente aparece quando chegar o e-mail do CONTROLE desta loja.</p>' : ''}
@@ -6267,6 +6271,39 @@ function abrirLojaRobo(id){
 }
 function nomeCurto(n){ const p = String(n||'').trim().split(/\s+/); return p.length > 1 ? primeiroNome(n) + ' ' + p[p.length-1].charAt(0) + '.' : primeiroNome(n); }
 // pendências do dia (também viram o número vermelho no ícone Início)
+/* ---- ⚠️ Arquivos mal enviados (para o coordenador corrigir no dia): contagem fora da pasta, sem horário no nome,
+   sem Relatório de Itens Ajustados, sem CONTROLE, e-mail em .RAR ou sem os arquivos. Coordenador: Relatório de Gestão;
+   sem ele, quem está marcado como coordenador na presença daquela loja. */
+function avisosDaLoja(l){
+  const a = (l.avisos || []).slice();
+  if(!l.resumo && l.inicio !== undefined && robo.versao) a.push('Sem a pasta CONTROLE (o resumo dos conferentes fica de fora)');
+  return a;
+}
+function coordenadorDaLoja(l){
+  if(l.coordenador) return l.coordenador;
+  const reg = registroPresencaDaLojaRobo(l);
+  const ps = reg ? (reg.atual ? loja.pessoas : (reg.pessoas || [])) : [];
+  return ps.filter(p=>p.coordenador).map(p=>p.nome).join(', ');
+}
+function textoAvisoCoordenador(l){
+  const c = coordenadorDaLoja(l);
+  return `Oi${c ? ' ' + primeiroNome(c) : ''}! Os arquivos da loja ${l.loja}${l.num ? ' | ' + l.num : ''} (${l.data}) vieram com problema:\n` +
+    avisosDaLoja(l).map(a=>'• ' + a).join('\n') + '\nConsegue ajustar e reenviar? Assim a produtividade da equipe sai certa. Obrigado!';
+}
+function htmlAvisosLoja(l){
+  const a = avisosDaLoja(l); if(!a.length) return '';
+  const c = coordenadorDaLoja(l);
+  return `<div class="msg warn" style="margin:8px 0"><b>⚠️ Arquivo com problema</b>${c ? ` · coordenador: ${esc(nomeProprio(c))}` : ''}<br>${a.map(x=>'• ' + esc(x)).join('<br>')}
+    <div class="acoes" style="margin-top:6px"><button class="btn small secondary" type="button" onclick="enviarAvisoCoordenador('${esc(l.id)}')">📋 Mensagem para o coordenador</button></div></div>`;
+}
+function enviarAvisoCoordenador(id){
+  const l = robo.lojas.find(x=>x.id === id); if(!l) return;
+  window.open('https://wa.me/?text=' + encodeURIComponent(textoAvisoCoordenador(l)), '_blank');
+}
+function falhasRecentes(){
+  const hoje = diaDe(new Date().toLocaleDateString('pt-BR'));
+  return (robo.falhas || []).filter(f=>{ const d = diaDe(String(f.recebido).slice(0, 10)); return d === null || hoje === null || hoje - d <= 6; });
+}
 function pendencias(){
   const lista = [];
   if(loja.pessoas.length){
@@ -6286,6 +6323,11 @@ function pendencias(){
     const eq = equipeLojaRobo(l);
     if(eq.meta && !eq.bateu) lista.push({tipo:'danger', txt:`${l.loja}${segDaLoja(l) === 'SUPERMERCADO' ? ' (supermercado)' : ''} ficou abaixo da meta: ${fmtN(eq.ih)}/h (${eq.pct}%)`, ir:()=>abrirLojaRobo(l.id)});
   });
+  lojas.filter(l=>recente !== null && diaDe(l.data) !== null && recente - diaDe(l.data) <= 6 && avisosDaLoja(l).length).forEach(l=>{
+    const c = coordenadorDaLoja(l);
+    lista.push({tipo:'warn', txt:`⚠️ Arquivos de ${l.loja}${c ? ' (' + nomeCurto(c) + ')' : ''}: ${avisosDaLoja(l)[0]}${avisosDaLoja(l).length > 1 ? ` e mais ${avisosDaLoja(l).length - 1}` : ''}`, ir:()=>abrirLojaRobo(l.id)});
+  });
+  falhasRecentes().forEach(f=>lista.push({tipo:'danger', txt:`📧 E-mail não lido: ${f.assunto || f.anexo} — ${f.erro}`, ir:()=>abrirView('produtividade')}));
   if(!robo.link) lista.push({tipo:'warn', txt:'Robô da produtividade não ligado (cole o link)', ir:()=>abrirView('produtividade')});
   else if(robo.ultimoErro) lista.push({tipo:'danger', txt:robo.ultimoErro, ir:()=>abrirView('produtividade')});
   return lista;
@@ -6526,7 +6568,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 18/10/2026 08:06</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 18/10/2026 10:15</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
