@@ -292,6 +292,8 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 .regra-tag.regra-p2{background:var(--warn-bg);color:var(--warn);font-weight:700;}
 .regra-tag.regra-p3{background:var(--ok-bg);color:var(--ok);font-weight:700;}
 body.modo-colega .so-criador{display:none !important;}
+.bola-online{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--danger);vertical-align:middle;box-shadow:0 0 0 2px var(--panel);}
+.bola-online.on{background:#22c55e;}
 .aval-setor{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:6px 0;background:var(--bg);}
 .aval-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
 .aval-bolas{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
@@ -2218,12 +2220,13 @@ function renderSelModelo(){
     todosModelos().map(m=>`<option value="${esc(m.id)}" ${m.id===loja.modelo?'selected':''}>${esc(m.nome)}${m.id===loja.modelo && auto ? ' · automático' : ''} (${m.setores.length})</option>`).join('');
 }
 // tipo do cliente da loja atual: o que veio do robô (depois da contagem) ou o nome da loja/escala
-const RE_ROUPA = /CALVIN|KLEIN|TOMMY|HERING|RENNER|RIACHUELO|MARISA|ZARA|LACOSTE|AREZZO|RESERVA|ARAMIS|COLCCI|LUPO|MODA|ROUPA|CONFEC|VESTU|CALCAD|OUTLET|SHOPPING/;
+const RE_ROUPA = /\bZAK\b|CALVIN|KLEIN|TOMMY|HERING|RENNER|RIACHUELO|MARISA|ZARA|LACOSTE|AREZZO|RESERVA|ARAMIS|COLCCI|LUPO|MODA|ROUPA|CONFEC|VESTU|CALCAD|OUTLET|SHOPPING/;
 function clienteDaEscalaAtual(){ return (ultimaEscala && ultimaEscala.viagem && ultimaEscala.viagem.cliente) || ''; }
 function tipoDaLojaAtual(){
   let lr = null; try{ lr = lojaRoboDaPresenca(); }catch(e){ lr = null; }
   const cli = lr ? clienteDe(lr.cliente, lr.loja) : clienteDe(clienteDaEscalaAtual(), loja.nome);
   const seg = segmentoDe(cli);
+  if(seg === 'VESTUARIO') return 'ROUPA';
   if(seg !== 'OUTRO') return seg;
   const t = ' ' + normalizarNome([cli, loja.nome, lr ? lr.loja : ''].join(' ')) + ' ';
   return RE_ROUPA.test(t) ? 'ROUPA' : 'DROGARIA';
@@ -4317,13 +4320,18 @@ async function exportarResumo(){
    PRODUTIVIDADE AUTOMÁTICA (robô do Gmail no Google Apps Script)
    ===================================================================== */
 /* ---- Meta da equipe: itens/hora por conferente, uma por cliente ---- */
-const SEGMENTOS = {DROGARIA:{rotulo:'Drogaria', padrao:850}, SUPERMERCADO:{rotulo:'Supermercado', padrao:1200}, OUTRO:{rotulo:'Outro (sem meta)', padrao:0, semMeta:true}};
-const RE_DROGARIA = /ARAUJO|DROGASIL|RAIA|DROGARIA|DROGA |FARMA|PACHECO|PAGUE MENOS|PANVEL|NISSEI|VENANCIO|SAO JOAO|INDIANA/;
+const SEGMENTOS = {DROGARIA:{rotulo:'Drogaria', padrao:850}, SUPERMERCADO:{rotulo:'Supermercado', padrao:1200}, VESTUARIO:{rotulo:'Vestuário', padrao:250}, OUTRO:{rotulo:'Outro (sem meta)', padrao:0, semMeta:true}};
+const RE_DROGARIA = /ARAUJO|DROGASIL|RAIA|\bRD\b|DROGARIA|DROGA |FARMA|PACHECO|PAGUE MENOS|PANVEL|NISSEI|VENANCIO|SAO JOAO|INDIANA/;
 const RE_SUPER = /SUPERMERCADO|SUPER |SUPERNOSSO|HIPER|ATACAD|MERCADO|MART|ASSAI|CARREFOUR|VERDEMAR|EPA |APOIO|BAHAMAS|DMA|BH |FARID|FARDID|BRETAS/;
 // nome do cliente (o que aparece na tela)
 function clienteDe(cliente, loja){
   const t = normalizarNome((cliente||'') + ' ' + (loja||'')) + ' ';
   if(/ARAUJO/.test(t)) return 'ARAUJO';
+  // RD = Raia Drogasil: a bandeira vem do nome da loja (DROGASIL… / RAIA…); sem bandeira no nome, fica "RAIA DROGASIL"
+  const tl = ' ' + normalizarNome(loja||'') + ' ';
+  if(/DROGASIL/.test(tl)) return 'DROGASIL';
+  if(/RAIA/.test(tl)) return 'DROGA RAIA';
+  if(/\bRD\b|RAIA DROGASIL|RAIADROGASIL/.test(t)) return 'RAIA DROGASIL';
   if(/DROGASIL/.test(t)) return 'DROGASIL';
   if(/RAIA/.test(t)) return 'DROGA RAIA';
   if(/PACHECO|DPSP/.test(t)) return 'DROGARIA PACHECO';
@@ -4341,14 +4349,15 @@ function segmentoDe(cliente){
   const t = ' ' + normalizarNome(cliente) + ' ';
   if(RE_DROGARIA.test(t)) return 'DROGARIA';
   if(RE_SUPER.test(t)) return 'SUPERMERCADO';
+  if(RE_ROUPA.test(t)) return 'VESTUARIO';   // Zak, Calvin Klein…: meta própria (padrão 250 itens/h)
   return 'OUTRO';   // cliente desconhecido fica sem meta até ele escolher em "Cada cliente é…"
 }
 // ---- Drogarias x supermercados: a produtividade de um não se mistura com a do outro.
 // Drogaria é o padrão (clientes principais); a chave no topo de Produtividade troca para supermercados.
 // O Início, as Fichas e a nota da escala usam só drogarias.
 let segAtivo = 'DROGARIA';   // não fica salvo: o app sempre abre em Drogarias
-const ROTULO_SEG = {DROGARIA:'Drogarias', SUPERMERCADO:'Supermercados', OUTRO:'Outros clientes'};
-const ICONE_SEG = {DROGARIA:'💊', SUPERMERCADO:'🛒', OUTRO:'🏷️'};
+const ROTULO_SEG = {DROGARIA:'Drogarias', SUPERMERCADO:'Supermercados', VESTUARIO:'Vestuário', OUTRO:'Outros clientes'};
+const ICONE_SEG = {DROGARIA:'💊', SUPERMERCADO:'🛒', VESTUARIO:'👕', OUTRO:'🏷️'};
 function segDaLoja(l){ return segmentoDe(clienteDe(l.cliente, l.loja)); }
 function lojasDoSeg(seg){ return robo.lojas.filter(l=>segDaLoja(l) === seg); }
 function idsDoSeg(seg){ return new Set(lojasDoSeg(seg).map(l=>l.id)); }
@@ -4358,11 +4367,11 @@ function trocarSegmento(seg){
   renderRobo();
 }
 function chaveSegmento(){
-  const n = {DROGARIA:0, SUPERMERCADO:0, OUTRO:0};
+  const n = {DROGARIA:0, SUPERMERCADO:0, VESTUARIO:0, OUTRO:0};
   robo.lojas.forEach(l=>{ n[segDaLoja(l)]++; });
   const qtd = k => `${n[k]} loja${n[k] === 1 ? '' : 's'}`;
   // a chave tem só drogarias x supermercados; "outros clientes" (Calvin Klein…) é um atalho pequeno embaixo, só se existir
-  return `<div class="seg-chave" role="tablist" aria-label="Tipo de cliente">${['DROGARIA', 'SUPERMERCADO'].map(s=>
+  return `<div class="seg-chave" role="tablist" aria-label="Tipo de cliente">${['DROGARIA', 'SUPERMERCADO', 'VESTUARIO'].map(s=>
       `<button type="button" role="tab" aria-selected="${s===segAtivo}" class="${s===segAtivo?'ativo':''}" data-seg-chave="${s}"><span>${ICONE_SEG[s]} ${ROTULO_SEG[s]}</span><small>${qtd(s)}</small></button>`).join('')}</div>`
     + (n.OUTRO || segAtivo === 'OUTRO' ? `<button type="button" class="seg-outros ${segAtivo==='OUTRO'?'ativo':''}" data-seg-chave="${segAtivo==='OUTRO' ? 'DROGARIA' : 'OUTRO'}">${ICONE_SEG.OUTRO} Outros clientes (${qtd('OUTRO')})${segAtivo==='OUTRO' ? ' · voltar para drogarias' : ''}</button>` : '');
 }
@@ -4480,7 +4489,7 @@ let coordsCache = null, coordsAberto = true, agoraAberto = true;
 async function chamarCoords(params){
   const j = await (await fetch(robo.link + (robo.link.includes('?') ? '&' : '?') + 'acao=coords' + (params ? '&' + params : ''))).json();
   if(!j || j.erro) throw new Error((j && j.erro) || 'O robô não respondeu.');
-  coordsCache = j.coordenadores || []; return coordsCache;
+  coordsCache = j.coordenadores || []; coordsAgoraRobo = j.agora || 0; coordsBuscadoEm = Date.now(); return coordsCache;
 }
 function linkDoColega(c){ return robo.link.replace(/([?&]chave=)[^&]*/, '$1' + c.codigo); }
 function renderCoordsAcesso(){
@@ -4488,10 +4497,23 @@ function renderCoordsAcesso(){
   if(!robo.link || !souCriador()){ div.innerHTML = ''; return; }
   div.innerHTML = `<div class="card"><button class="secao-toggle ${coordsAberto ? 'aberta' : ''}" onclick="coordsAberto=!coordsAberto;renderCoordsAcesso();if(coordsAberto&&!coordsCache)carregarCoords()"><span class="seta">▶</span> 👥 Coordenadores com acesso ${coordsCache ? `<small>(${coordsCache.filter(c=>c.ativo !== false).length} ativo(s))</small>` : ''}</button>
     ${!coordsAberto ? '' : `<p class="hint" style="margin-top:6px">Cada colega recebe um link próprio. Com ele: produtividade, fichas, erros, avaliações e a presença/setores da loja dele. Sem Viagem, sem excluir, sem mexer no cadastro, nas listas de setores e nas metas. Só você vê, em tempo real, a presença e os setores de todos.</p>
-      ${!coordsCache ? '<p class="hint">Carregando…</p>' : coordsCache.length ? coordsCache.map(c=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(c.nome)}</b><small class="hist">${c.ativo !== false ? '✅ acesso ligado' : '⛔ acesso desligado'}</small></span>
+      ${!coordsCache ? '<p class="hint">Carregando…</p>' : coordsCache.length ? coordsCache.map(c=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${bolinhaOnline(c)} ${esc(c.nome)}</b><small class="hist">${textoVisto(c)} · ${c.ativo !== false ? 'acesso ligado' : '⛔ acesso desligado'}</small></span>
         <span class="pill-btns"><button class="pill" type="button" onclick="enviarLinkColega('${esc(c.id)}')">📲 Enviar link</button><button class="pill ${c.ativo !== false ? '' : 'on'}" type="button" onclick="ligarColega('${esc(c.id)}', ${c.ativo === false})">${c.ativo !== false ? 'Desligar' : 'Ligar'}</button></span></div>`).join('') : '<p class="hint">Nenhum colega ainda.</p>'}
       <div class="setor-row" style="margin-top:10px"><input type="text" id="novoColega" placeholder="Nome do coordenador"><button class="btn small" type="button" onclick="criarColega()">Adicionar</button></div>`}</div>`;
 }
+// 🟢 online = app do colega aberto na tela nos últimos 3 minutos (o app pergunta ao robô a cada minuto) · 🔴 offline
+const ONLINE_MS = 3 * 60 * 1000;
+let coordsAgoraRobo = 0, coordsBuscadoEm = 0;
+const estaOnline = c => c.visto && (coordsAgoraRobo || Date.now()) - c.visto < ONLINE_MS;
+function bolinhaOnline(c){ const on = estaOnline(c); return `<span class="bola-online ${on ? 'on' : ''}" title="${on ? 'online' : 'offline'}"></span>`; }
+function textoVisto(c){
+  if(estaOnline(c)) return 'online agora';
+  if(!c.visto) return 'offline';
+  const min = Math.round(((coordsAgoraRobo || Date.now()) - c.visto) / 60000);
+  return 'offline · visto há ' + (min < 60 ? min + ' min' : Math.round(min / 60) + ' h');
+}
+// com a Gestão aberta, a bolinha se atualiza sozinha a cada minuto
+setInterval(()=>{ const g = document.getElementById('gestao'); if(g && g.classList.contains('active') && document.visibilityState === 'visible' && souCriador() && robo.link) carregarCoords(); }, 60000);
 async function carregarCoords(){ try{ await chamarCoords(''); }catch(e){ toast('Não consegui buscar: ' + e.message + ' (cole o robô novo e faça a nova implantação).', 6000); coordsCache = []; } renderCoordsAcesso(); }
 async function criarColega(){
   const el = document.getElementById('novoColega'), nome = (el && el.value || '').trim(); if(!nome) return;
@@ -4521,7 +4543,8 @@ function renderCoordsAgora(){
     ${!agoraAberto ? '' : `<p class="hint" style="margin-top:6px">Só você vê. Atualiza sozinho a cada minuto.</p>${lojas.map(x=>{
       const ps = x.loja.pessoas || [], pres = ps.filter(p=>p.presenca === 'presente').length, falta = ps.filter(p=>p.presenca === 'falta' || p.presenca === 'atestado').length;
       const sts = Object.entries(x.loja.setores || {}).map(([st, its])=>[st, (its || []).map(it=>it && it.nome).filter(Boolean)]).filter(([, ns])=>ns.length);
-      return `<details class="aval-setor"><summary class="aval-topo"><b>${esc(nomeDe(x.id))} · ${esc(x.loja.nome || 'loja sem nome')}</b><small class="hint">${pres} presente(s)${falta ? ' · ' + falta + ' falta(s)' : ''} · ${new Date(x.em).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</small></summary>
+      const cc = (coordsCache || []).find(c=>c.id === x.id);
+      return `<details class="aval-setor"><summary class="aval-topo"><b>${cc ? bolinhaOnline(cc) + ' ' : ''}${esc(nomeDe(x.id))} · ${esc(x.loja.nome || 'loja sem nome')}</b><small class="hint">${pres} presente(s)${falta ? ' · ' + falta + ' falta(s)' : ''} · ${new Date(x.em).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</small></summary>
         ${sts.length ? sts.map(([st, ns])=>`<div style="font-size:.86rem;margin-top:4px"><b>${esc(st)}</b> <small class="hint">${ns.map(n=>esc(nomeProprio(n))).join(', ')}</small></div>`).join('') : '<p class="hint">Setores ainda não montados.</p>'}
         ${ps.filter(p=>p.presenca === 'falta' || p.presenca === 'atestado').length ? `<p class="hint" style="margin-top:6px">Faltas: ${ps.filter(p=>p.presenca === 'falta' || p.presenca === 'atestado').map(p=>esc(nomeProprio(p.nome))).join(', ')}</p>` : ''}</details>`; }).join('')}`}</div>`;
 }
@@ -5151,7 +5174,7 @@ const SETORES_LISTA = {
 };
 // opções do Mapa da loja: a lista de setores do tipo do cliente (a mesma da aba Setores) e, depois, os nomes que o robô usa
 function setoresParaMapa(seg){
-  const tipo = seg === 'SUPERMERCADO' ? 'SUPERMERCADO' : seg === 'OUTRO' ? 'ROUPA' : 'DROGARIA';
+  const tipo = seg === 'SUPERMERCADO' ? 'SUPERMERCADO' : (seg === 'OUTRO' || seg === 'VESTUARIO') ? 'ROUPA' : 'DROGARIA';
   const out = [];
   [...modeloPorId(ID_DO_TIPO[tipo]).setores, ...(tipo === 'ROUPA' ? [] : SETORES_LISTA[tipo])].forEach(x=>{ if(!out.some(y=>normalizarNome(y)===normalizarNome(x))) out.push(x); });
   return out;
@@ -5432,7 +5455,7 @@ function atualizarPerfis(forcar){
   })();
   return perfisBaixando;
 }
-function segParaPerfis(){ const t = tipoDaLojaAtual(); return t === 'ROUPA' ? 'OUTRO' : t; }
+function segParaPerfis(){ const t = tipoDaLojaAtual(); return t === 'ROUPA' ? 'VESTUARIO' : t; }
 // "Medicamento A-Z" e "Genérico" (distribuição) ↔ "Medicamentos" (robô); "Ração" ↔ "Pet"; plural/acentos não importam
 const ALIAS_SETOR = {'GENERICO':'MEDICAMENTO', 'MEDICAMENTO A Z':'MEDICAMENTO', 'MEDICAMENTO AZ':'MEDICAMENTO', 'RACAO':'PET', 'RACOE':'PET',
   'DERMO COSMETICO':'DERMO', 'SHAMPOO':'PERFUMARIA', 'ESCOVA E PASTA DE DENTE':'PERFUMARIA', 'FRALDA':'INFANTIL E BRINQUEDO', 'BICO':'INFANTIL E BRINQUEDO'};
@@ -5519,7 +5542,7 @@ function abrirRankingSetor(si){
     .sort((a,b)=>(a.novato - b.novato) || b.nota - a.nota);   // primeiro quem já contou aqui; depois quem nunca contou (bons para treinar)
   const tipoTxt = ehMultiplicando(setor) ? 'multiplicando' : 'peça a peça';
   const base = lista.find(a=>a.ihBase || a.erroBase !== null) || {};
-  const rotSeg = {DROGARIA:'nas drogarias', SUPERMERCADO:'nos supermercados', OUTRO:'nos outros clientes'}[seg];
+  const rotSeg = {DROGARIA:'nas drogarias', SUPERMERCADO:'nos supermercados', VESTUARIO:'no vestuário', OUTRO:'nos outros clientes'}[seg];
   const cab = idx ? `<p class="hint" style="margin-top:2px">Setor contado ${tipoTxt}. Média da equipe ${rotSeg}: ${base.ihBase ? fmtN(base.ihBase) + ' ip/h' : 'ritmo ainda sem dado'}${base.erroBase !== null && base.erroBase !== undefined ? ' · ' + fmtErroLoja(base.erroBase) : ''}.<br>
       ⚡ rende mais que a média aqui · ✔ erra menos que a média · 🎓 nunca contou aqui. Erro = média por loja neste setor (não é o total).</p>`
     : `<p class="hint" style="margin-top:2px">O ritmo e os erros por setor chegam do robô junto com os resumos das lojas. Por enquanto, só o histórico salvo aqui.</p>`;
@@ -6963,7 +6986,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 19/10/2026 14:52</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 19/10/2026 15:11</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
