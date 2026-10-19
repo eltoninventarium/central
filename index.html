@@ -294,6 +294,9 @@ button.btn.whats{background:#1e8e3e;color:#fff;}
 body.modo-colega .so-criador{display:none !important;}
 .bola-online{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--danger);vertical-align:middle;box-shadow:0 0 0 2px var(--panel);}
 .bola-online.on{background:#22c55e;}
+.selo-dev{cursor:pointer;margin-left:4px;font-size:.95em;}
+.dev-nome{cursor:pointer;font-weight:600;text-decoration:underline;}
+.dev-linha{font-size:.86rem;margin:3px 0;}
 .aval-setor{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:6px 0;background:var(--bg);}
 .aval-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
 .aval-bolas{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
@@ -470,7 +473,7 @@ body.modo-colega .so-criador{display:none !important;}
         <input type="text" inputmode="search" id="buscaFicha" placeholder="Pesquisar nome" autocomplete="off" oninput="renderFichas()"></div>
       <div class="row">
         <div><label>Mostrar</label><select id="filtroFicha" class="full" onchange="renderFichas()">
-          <option value="todos">Todos</option><option value="clt">Só CLT</option><option value="fl">Só freelancers</option></select></div>
+          <option value="todos">Todos</option><option value="clt">Só CLT</option><option value="fl">Só freelancers</option><option value="dev">🌱 Em desenvolvimento</option></select></div>
         <div><label>Ordenar por</label><select id="ordemFicha" class="full" onchange="renderFichas()">
           <option value="nota">Nota</option><option value="ih">Itens/hora</option><option value="erros">Mais erros</option><option value="faltas">Mais faltas</option><option value="atrasos">Mais atrasos</option><option value="nome">Nome (A-Z)</option></select></div>
       </div>
@@ -693,6 +696,7 @@ body.modo-colega .so-criador{display:none !important;}
     <div class="card"><h2 style="margin-bottom:4px">Gestão</h2><p class="hint" style="margin:0">Só aparece para você (chave do robô). Os coordenadores com código não veem esta aba.</p></div>
     <div id="coordsAcesso"></div>
     <div id="coordsAgora"></div>
+    <div id="boxDesenv"></div>
       <div class="card" id="boxMetas"><h2 style="font-size:1rem;margin:0 0 6px">🎯 Metas da equipe</h2>
         <p class="hint" style="margin-top:0">Itens/hora por conferente (padrão: drogaria 850 · supermercado 1.200).</p>
         <div id="listaMetas"></div>
@@ -987,7 +991,7 @@ function abrirView(id){
   if(id==='setores') renderSetores();
   if(id==='presenca') renderPresenca();
   if(id==='modelos') renderModelos();
-  if(id==='gestao'){ try{ renderMetas(); renderCoordsAcesso(); renderCoordsAgora(); if(!coordsCache) carregarCoords(); }catch(e){} }
+  if(id==='gestao'){ try{ renderMetas(); renderCoordsAcesso(); renderCoordsAgora(); renderDesenv(); if(!coordsCache) carregarCoords(); }catch(e){} }
   if(id==='historico') renderHistorico();
   if(id==='produtividade' && typeof renderRobo==='function'){ renderRobo(); if(robo.link && Date.now() - (robo.atualizadoEm||0) > 5*60*1000) atualizarDoRobo(false); }
 }
@@ -1544,6 +1548,7 @@ function renderEscala(){
     <button class="btn" onclick="levarEscalaParaPresenca()">Levar para Presença</button>
     <button class="btn secondary" onclick="exportarListaViagemPNG()">Lista final (imagem)</button></div>`;
   e.avisos.forEach(a=> html += `<div class="msg warn">${esc(a)}</div>`);
+  html += avisoDevHtml([...e.selecionados, ...e.freelancers].map(p=>p.nome));
   html += painelConvites();
   html += `<div class="section-title">Conferentes CLT</div><div class="wrap-table"><table><thead><tr><th>Nome</th><th>Nível</th><th>Status</th><th>Trocar por</th></tr></thead><tbody>`;
   e.selecionados.forEach((p,i)=>{ html += linhaEscala(p, i, 'clt'); });
@@ -1568,9 +1573,9 @@ function poolDisponivel(tipo, nivel){
 function linhaEscala(p, i, tipo){
   const ind = indicadoresDe(p.nome);
   const info = `<small class="hint" style="display:block;margin-top:2px">${esc(resumoIndicadores(ind))}</small>`;
-  const cols = tipo==='clt' ? `<td>${esc(p.nome)}${info}</td><td>${esc(p.nivel)}</td>` : `<td>${esc(p.nome)}${info}</td>`;
+  const cols = tipo==='clt' ? `<td>${esc(p.nome)}${seloDev(p.nome)}${info}</td><td>${esc(p.nivel)}</td>` : `<td>${esc(p.nome)}${seloDev(p.nome)}${info}</td>`;
   const pool = poolDisponivel(tipo, p.nivel);
-  const opts = pool.map(c=>`<option value="${esc(c.nome)}">${esc(c.nome)}${rotuloNota(c)}</option>`).join('');
+  const opts = pool.map(c=>`<option value="${esc(c.nome)}">${esc(c.nome)}${rotuloNota(c)}${marcaDev(c.nome)}</option>`).join('');
   return `<tr>${cols}
     <td><select onchange="mudarStatus('${tipo}',${i},this.value)">
       <option ${p.status==='Convocado'?'selected':''}>Convocado</option>
@@ -1763,7 +1768,7 @@ function painelConvites(){
            <button class="btn small secondary" onclick="convidar('${x.tipo}',${x.i})" title="Mandar o convite de novo">Reenviar</button>`;
     }
     linhas += `<div class="conv-linha"><span class="conv-pos">${pos+1}º</span>
-      <div class="conv-nome">${esc(p.nome)}<small>${esc(det.join(' · '))}</small></div>
+      <div class="conv-nome">${esc(p.nome)}${seloDev(p.nome)}<small>${esc(det.join(' · '))}</small></div>
       <span class="conv-st ${cls}">${st}</span><div class="conv-acoes">${acoes}</div></div>`;
   });
   const v = e.viagem;
@@ -3268,7 +3273,7 @@ function renderPresenca(){
   let html = `<div class="card" id="cardPresenca"><h2>${esc(loja.nome || 'Equipe')}${loja.inicio ? ` <small class="hint">· início ${esc(loja.inicio)}</small>` : ''}</h2>
     ${!loja.inicio ? '<p class="hint">Preencha o "Início programado" acima para o app marcar os atrasos.</p>' : ''}
     <div class="resumo" style="--n:${caixasResumo(c).length}">${caixasResumo(c).map(([k,v,cl,det],ix)=>`<div class="item ${cl} clicavel" role="button" tabindex="0" data-caixa="${esc(k)}" style="--span:${spansCaixas(caixasResumo(c).length)[ix]}">${k}<b>${v}</b>${det?`<small>${det}</small>`:''}</div>`).join('')}</div>
-    <p class="hint" style="margin:4px 2px 0">Toque num quadro para ver os nomes.</p>`;
+    <p class="hint" style="margin:4px 2px 0">Toque num quadro para ver os nomes.</p>${avisoDevHtml(loja.pessoas.filter(p=>!p.coordenador && !['falta','atestado','transferido'].includes(p.presenca)).map(p=>p.nome))}`;
   const est = estatisticasHistorico();
   ordemPresenca().forEach(({p,i})=>{
     const e = !p.coordenador && est[normalizarNome(p.nome)];
@@ -3288,7 +3293,7 @@ function renderPresenca(){
           ${p.instrutor ? '' : `<button class="pill coordpill ${p.estagiario?'on':''}" onclick="toggleEstagiario(${i})">Estag.</button>`}` : ''}
         ${statusVisiveis().map(([st,d])=>`<button class="pill ${st} ${p.presenca===st?'on':''}" onclick="marcarPresenca(${i},'${st}')">${d.rotulo}</button>`).join('')}
         ${editandoLista ? `<button class="pill transferir" onclick="abrirTransferir(${i})">Transferir</button>` : ''}`;
-    html += `<div class="pessoa-row ${p.coordenador?'coord':''}" id="pres-${i}"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" onclick="abrirFichaRapida(${i})">${esc(p.nome)} <small class="hint">ⓘ</small></span>${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}${histAtraso}${marcaAtraso}</span>
+    html += `<div class="pessoa-row ${p.coordenador?'coord':''}" id="pres-${i}"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" onclick="abrirFichaRapida(${i})">${esc(p.nome)} <small class="hint">ⓘ</small></span>${seloDev(p.nome)}${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}${histAtraso}${marcaAtraso}</span>
       <span class="pill-btns">
         ${botoes}
         ${editandoLista ? `<button class="pill remover" onclick="removerPessoa(${i})" aria-label="Remover">×</button>` : ''}
@@ -3541,7 +3546,7 @@ function renderSetores(){
   const modeloAtualObj = modeloPorId(loja.modelo);
   const temRegras = setoresAtuais().some(st=>{ const r = regraDoSetor(modeloAtualObj, st); return r.tags.length || r.nota; });
   let html = modeloAtualObj.avisos ? `<div class="msg warn aviso-lista">⚠ ${esc(modeloAtualObj.avisos).replace(/\n/g,'<br>⚠ ')}</div>` : '';
-  html += `<div class="card"><div class="hint">${loja.nome?'<b>'+esc(loja.nome)+'</b> · ':''}${disponiveis.length} disponível(is) · ${semSetor.length} ainda sem setor${semSetor.length?': '+semSetor.map(esc).join(', '):''}</div>
+  html += `<div class="card"><div class="hint">${loja.nome?'<b>'+esc(loja.nome)+'</b> · ':''}${disponiveis.length} disponível(is) · ${semSetor.length} ainda sem setor${semSetor.length?': '+semSetor.map(n=>esc(n)+marcaDev(n)).join(', '):''}</div>${avisoDevHtml(disponiveis)}
     <div class="hint" style="margin-top:6px">${comPerfis || temHist
       ? 'Sugestões: em cada setor, quem está sem setor e já contou ali, primeiro quem rende mais e erra menos naquele setor (⚡ ritmo acima da média da equipe ali · ✔ menos erros que a média). Toque em 📊 para ver todo mundo. Só entram se você tocar.'
       : 'Dica: as sugestões aparecem quando o robô tiver lojas com resumo (ou depois de "Salvar no histórico").'}</div>
@@ -3556,7 +3561,7 @@ function renderSetores(){
         html += `<input type="text" value="${esc(item.nome)}" placeholder="Digite o nome" oninput="editarManual(${si},${i},this.value)">`;
       } else {
         const lista = disponiveis.includes(item.nome) || !item.nome ? disponiveis : [...disponiveis, item.nome];
-        const opts = lista.map(n=>`<option value="${esc(n)}" ${n===item.nome?'selected':''}>${esc(n)}${!disponiveis.includes(n)?rotuloIndisponivel(n):''}${n!==item.nome && jaAlocados.has(n)?' •':''}</option>`).join('');
+        const opts = lista.map(n=>`<option value="${esc(n)}" ${n===item.nome?'selected':''}>${esc(n)}${marcaDev(n)}${!disponiveis.includes(n)?rotuloIndisponivel(n):''}${n!==item.nome && jaAlocados.has(n)?' •':''}</option>`).join('');
         html += `<select onchange="editarSelecao(${si},${i},this.value)"><option value="">Selecione...</option>${opts}<option value="__outro__">Outro (digitar)</option></select>`;
       }
       html += `${item.nome ? `<button class="pill treino ${item.treino ? 'on' : ''}" onclick="alternarTreino(${si},${i})" title="Em treinamento: primeira vez neste setor" aria-label="Treinamento">🎓</button>` : ''}<button class="btn small danger" onclick="removerLinha(${si},${i})" aria-label="Remover">×</button></div>`;
@@ -3564,8 +3569,8 @@ function renderSetores(){
     const novatoProibido = regra.tags.includes('semnovato') || regra.tags.includes('experiente');
     const sug = sugestoesSetor(setor, novatoProibido ? semSetor.filter(n=>!ehNovatoNaLoja(n)) : semSetor, est);
     const novatosLivres = regra.tags.includes('novato') ? semSetor.filter(n=>ehNovatoNaLoja(n)) : [];
-    if(novatosLivres.length) html += `<div class="sugestoes">Novatos: ${novatosLivres.slice(0, 4).map(n=>`<button class="chip-sug" data-si="${si}" data-nome="${esc(n)}">+ ${esc(n)} 🎓</button>`).join('')}</div>`;
-    if(sug.length) html += `<div class="sugestoes">Sugestão: ${sug.map(x=>`<button class="chip-sug" data-si="${si}" data-nome="${esc(x.nome)}">+ ${esc(x.nome)} · ${Math.max(x.lojas, x.vezesHist)}×${x.rapido ? ' ⚡' : ''}${x.poucoErro ? ' ✔' : ''}</button>`).join('')}</div>`;
+    if(novatosLivres.length) html += `<div class="sugestoes">Novatos: ${novatosLivres.slice(0, 4).map(n=>`<button class="chip-sug" data-si="${si}" data-nome="${esc(n)}">+ ${esc(n)}${marcaDev(n)} 🎓</button>`).join('')}</div>`;
+    if(sug.length) html += `<div class="sugestoes">Sugestão: ${sug.map(x=>`<button class="chip-sug" data-si="${si}" data-nome="${esc(x.nome)}">+ ${esc(x.nome)}${marcaDev(x.nome)} · ${Math.max(x.lojas, x.vezesHist)}×${x.rapido ? ' ⚡' : ''}${x.poucoErro ? ' ✔' : ''}</button>`).join('')}</div>`;
     html += `<button class="btn small secondary" style="margin-top:8px" onclick="adicionarLinha(${si})">+ Adicionar pessoa</button></div>`;
   });
   html += `<p class="hint">• = já está em outro setor. 🎓 = em treinamento (primeira vez contando neste setor): aparece no resumo do conferente.${temRegras ? ' Etiquetas do setor: 🔥 prioridade (contar primeiro) · 🚫 sem novato · ⭐ só experiente · 🎓 bom para novato · 🕐 por último. Novato = estagiário ou quem está com 🎓.' : ''}</p>`;
@@ -4549,6 +4554,259 @@ function renderCoordsAgora(){
         ${ps.filter(p=>p.presenca === 'falta' || p.presenca === 'atestado').length ? `<p class="hint" style="margin-top:6px">Faltas: ${ps.filter(p=>p.presenca === 'falta' || p.presenca === 'atestado').map(p=>esc(nomeProprio(p.nome))).join(', ')}</p>` : ''}</details>`; }).join('')}`}</div>`;
 }
 let coordsCarregando = false;
+/* =====================================================================
+   🌱 PLANO DE DESENVOLVIMENTO — conferentes que precisam do apoio dos coordenadores
+   Lista só o criador edita (Gestão); o selo 🌱 e o plano aparecem para todos.
+   Meta do plano = meta do segmento (itens/h) + erros no nível da equipe.
+   ===================================================================== */
+function listaDesenv(){ return (robo.desenv && Array.isArray(robo.desenv.lista)) ? robo.desenv.lista : []; }
+function inicioDesenv(){ return (robo.desenv && robo.desenv.inicio) || hojeBR(); }
+function emDesenv(nome){
+  if(!nome) return null;
+  const k = normalizarNome(nome);
+  return listaDesenv().find(x=>normalizarNome(x.nome) === k) || listaDesenv().find(x=>mesmoNomeFlex(x.nome, nome)) || null;
+}
+function seloDev(nome){ return emDesenv(nome) ? `<span class="selo-dev" role="button" tabindex="0" data-dev="${esc(nome)}" title="Em desenvolvimento: toque para ver o plano">🌱</span>` : ''; }
+const marcaDev = nome => emDesenv(nome) ? ' 🌱' : '';
+function salvarDesenv(lista, inicio){
+  if(!souCriador()) return;
+  robo.desenv = {lista, inicio: inicio || inicioDesenv(), em: Date.now()};
+  salvarRobo(); marcarAlterado('robo');
+}
+// toque no 🌱 em qualquer lugar abre o plano (antes do clique da linha)
+document.addEventListener('click', e=>{
+  const s = e.target.closest && e.target.closest('[data-dev]'); if(!s) return;
+  e.preventDefault(); e.stopPropagation(); abrirPlanoDev(s.dataset.dev);
+}, true);
+
+// lojas do robô da pessoa, com itens/h, % da meta do segmento e erros por mil peças (e o da equipe na mesma loja)
+function lojasDev(nome){
+  const med = xs => { xs = xs.filter(x=>x !== null && !isNaN(x)).sort((a,b)=>a-b); return xs.length ? xs[xs.length >> 1] : null; };
+  return robo.pessoas.filter(p=>mesmoNomeFlex(p.nome, nome) && p.ih).map(p=>({p, l:robo.lojas.find(l=>l.id === p.id)})).filter(x=>x.l)
+    .map(({p, l})=>{
+      const meta = metaDe(clienteDe(l.cliente, l.loja));
+      const temRel = l.errosItens !== null && l.errosItens !== undefined;
+      const eq = pessoasDaLojaRobo(l.id).filter(x=>x.pecas);
+      return {id:l.id, data:l.data, dia:dataParaChave(l.data), loja:l.loja, seg:segDaLoja(l), ih:p.ih, pecas:p.pecas, meta,
+        pm: meta ? p.ih / meta : null,
+        err: temRel && p.pecas ? 1000 * (p.erros || 0) / p.pecas : null,
+        errEq: temRel ? med(eq.map(x=>1000 * (x.erros || 0) / x.pecas)) : null};
+    }).sort((a,b)=>a.dia - b.dia);
+}
+function mediaDev(xs){
+  const m = f => { const v = xs.map(f).filter(x=>x !== null && x !== undefined && !isNaN(x)); return v.length ? v.reduce((t,x)=>t + x, 0) / v.length : null; };
+  return xs.length ? {n:xs.length, ih:Math.round(m(x=>x.ih)), pm:m(x=>x.pm), err:m(x=>x.err), errEq:m(x=>x.errEq),
+    meta:Math.round(m(x=>x.meta) || 0)} : null;
+}
+// diasPeriodo: só as lojas dos últimos N dias entram no "agora" (null = desde o início do plano)
+function planoDe(nome, diasPeriodo){
+  const item = emDesenv(nome) || {nome};
+  const ini = dataParaChave(inicioDesenv());
+  const todas = lojasDev(item.nome);
+  let corte = ini;
+  if(diasPeriodo){ const d = new Date(); d.setDate(d.getDate() - diasPeriodo); corte = Math.max(ini, +(d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0'))); }
+  const antes = mediaDev(todas.filter(x=>x.dia < ini).slice(-5));
+  const agora = mediaDev(todas.filter(x=>x.dia >= corte));
+  const ref = agora || antes;
+  const est = estatisticasHistorico()[normalizarNome(item.nome)] || null;
+  const metaSeg = ref && ref.meta ? ref.meta : metaDe('ARAUJO');
+  // situação
+  let st;
+  if(!ref) st = {k:'sem', ic:'⚪', rot:'Sem lojas no robô ainda'};
+  else {
+    const naMeta = ref.pm !== null && ref.pm >= 1, errOk = ref.err === null || ref.errEq === null || ref.err <= ref.errEq * 1.1;
+    if(naMeta && errOk) st = {k:'meta', ic:'🟢', rot:'Na meta'};
+    else if(agora && antes && ((agora.pm || 0) - (antes.pm || 0) >= 0.05 || (agora.err !== null && antes.err !== null && agora.err < antes.err * 0.8))) st = {k:'evol', ic:'🟡', rot:'Evoluindo'};
+    else if(!agora) st = {k:'espera', ic:'⏳', rot:'Aguardando lojas do plano'};
+    else st = {k:'atencao', ic:'🔴', rot:'Precisa de atenção'};
+  }
+  // foco
+  const foco = [], acoes = [];
+  if(ref && ref.pm !== null && ref.pm < 1) foco.push(`Ritmo: ${fmtN(ref.ih)} itens/h, ${Math.round(ref.pm * 100)}% da meta (${fmtN(metaSeg)})`);
+  if(ref && ref.err !== null && ref.errEq !== null && ref.err > ref.errEq * 1.2) foco.push(`Erros acima da equipe (${fmt1(ref.err)} × ${fmt1(ref.errEq)} por mil peças)`);
+  let piorSetor = null, bons = [];
+  try{
+    const idx = indicePerfis('DROGARIA'), pe = perfilPessoa(idx, item.nome);
+    if(pe) Object.entries(pe.setores).forEach(([k, ps])=>{
+      const bs = idx.setor[k]; if(!ps.nLojas || !bs || !bs.nLojas) return;
+      const em = ps.e / ps.nLojas, eb = bs.e / bs.nLojas;
+      if(em >= 1 && em > eb * 1.5 && (!piorSetor || em > piorSetor.em)) piorSetor = {s:ps.s, em};
+    });
+    bons = melhoresSetores(item.nome, 2).filter(a=>a.lojas || a.vezesHist);
+  }catch(e){}
+  if(piorSetor) foco.push(`Mais erros em ${piorSetor.s} (${fmtErroLoja(piorSetor.em)})`);
+  if(est && ((est.falta || 0) + (est.atestado || 0) >= 2 || (est.atrasos || 0) >= 2)) foco.push(`Presença: ${(est.falta||0) + (est.atestado||0)} falta(s) · ${est.atrasos || 0} atraso(s)`);
+  if(todas.length < 3) foco.push('Pouca experiência medida (' + todas.length + ' loja(s) no robô)');
+  // o que fazer
+  if(bons.length) acoes.push(`Começar onde já rende: ${bons.map(a=>a.setor).join(', ')}`);
+  let rt = {};
+  try{ rt = ritmoPorTipo(item.nome) || {}; }catch(e){}
+  if(rt.mult && rt.peca){
+    if(rt.mult >= rt.peca * 1.3) acoes.push(`Rende mais multiplicando (${fmtN(rt.mult)} × ${fmtN(rt.peca)} ip/h peça a peça): estoque, geladeira, bomboniere`);
+    else if(rt.peca >= rt.mult * 1.1) acoes.push(`Rende melhor no peça a peça (${fmtN(rt.peca)} ip/h)`);
+  }
+  if(ref && ref.pm !== null && ref.pm < 1) acoes.push('Combinar com ele(a) o ritmo no começo da loja e dar retorno no meio da contagem');
+  if(foco.some(f=>/^Erros|^Mais erros/.test(f))) acoes.push(`Conferir as primeiras seções${piorSetor ? ' de ' + piorSetor.s : ''} e colocar ao lado de um conferente forte`);
+  if(todas.length < 3) acoes.push('Variar os setores para o app conhecer o perfil');
+  if(!acoes.length && st.k === 'meta') acoes.push('Manter: já está no nível da equipe. Pode ir para setor de mais responsabilidade');
+  return {item, todas, antes, agora, st, foco, acoes, metaSeg, est};
+}
+// parceiro na loja de hoje: o melhor presente (fora do plano) no setor mais forte da pessoa
+function parceiroNaLoja(nome){
+  try{
+    const bons = melhoresSetores(nome, 1); const setor = bons[0] && bons[0].setor; if(!setor) return null;
+    const idx = indicePerfis(segParaPerfis()), est = estatisticasHistorico();
+    const cand = (loja.pessoas || []).filter(p=>p.presenca === 'presente' && !p.coordenador && !p.estagiario && !emDesenv(p.nome) && !mesmoNomeFlex(p.nome, nome))
+      .map(p=>avaliarNoSetor(setor, p.nome, idx, est)).filter(a=>a.lojas >= 2).sort((a,b)=>b.nota - a.nota);
+    return cand[0] ? {setor, nome:cand[0].nome} : null;
+  }catch(e){ return null; }
+}
+const pctDev = x => x === null || x === undefined ? '—' : Math.round(x * 100) + '%';
+const errDev = x => x === null || x === undefined ? '—' : fmt1(x) + '‰';
+function htmlPlano(pl, comParceiro, semEvo){
+  const lin = (k, a, b, c) => `<tr><td>${k}</td><td>${a}</td><td>${b}</td><td>${c}</td></tr>`;
+  const par = comParceiro ? parceiroNaLoja(pl.item.nome) : null;
+  const ult = avaliacoesDaPessoa(pl.item.nome).find(a=>a.c);
+  return `<p style="margin:2px 0 8px"><b>${pl.st.ic} ${pl.st.rot}</b> <small class="hint">· plano desde ${esc(inicioDesenv())}</small></p>
+    <div class="wrap-table"><table><thead><tr><th></th><th>Antes</th><th>No plano</th><th>Meta</th></tr></thead><tbody>
+      ${lin('Itens/h', pl.antes ? fmtN(pl.antes.ih) : '—', pl.agora ? fmtN(pl.agora.ih) : '—', fmtN(pl.metaSeg))}
+      ${lin('% da meta', pctDev(pl.antes && pl.antes.pm), pctDev(pl.agora && pl.agora.pm), '100%')}
+      ${lin('Erros (por mil peças)', errDev(pl.antes && pl.antes.err), errDev(pl.agora && pl.agora.err), pl.agora && pl.agora.errEq !== null ? '≤ ' + errDev(pl.agora.errEq) : pl.antes && pl.antes.errEq !== null ? '≤ ' + errDev(pl.antes.errEq) : 'equipe')}
+      ${lin('Lojas', pl.antes ? pl.antes.n : 0, pl.agora ? pl.agora.n : 0, '')}
+    </tbody></table></div>
+    ${pl.foco.length ? `<div class="section-title">🎯 Foco</div>${pl.foco.map(f=>`<div class="dev-linha">• ${esc(f)}</div>`).join('')}` : ''}
+    ${pl.acoes.length || par ? `<div class="section-title">🤝 Como apoiar</div>${par ? `<div class="dev-linha">• Hoje: colocar em <b>${esc(par.setor)}</b> com <b>${esc(nomeProprio(par.nome))}</b></div>` : ''}${pl.acoes.map(f=>`<div class="dev-linha">• ${esc(f)}</div>`).join('')}` : ''}
+    ${ult ? `<p class="hint" style="margin-top:8px">💬 “${esc(ult.c)}” — ${esc(ult.setor)}, ${esc(ult.data)}</p>` : ''}
+    ${semEvo ? '' : htmlEvolucao(pl.item.nome, true)}`;
+}
+function abrirPlanoDev(nome){
+  const it = emDesenv(nome); if(!it) return;
+  const pl = planoDe(it.nome);
+  const box = abrirFolha(`🌱 ${esc(nomeProprio(it.nome))}`, `<div class="ficha-rapida">${htmlPlano(pl, !!document.querySelector('#presenca.active, #setores.active'))}
+    <div class="acoes"><button class="btn small secondary" type="button" data-ficha-completa>Ficha completa</button></div></div>`, 'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  box.querySelector('[data-ficha-completa]').onclick = ()=>{ box.remove(); abrirFicha(it.nome); };
+}
+// aviso no topo da Presença / Setores / Escala: quem do plano está hoje
+function avisoDevHtml(nomes){
+  const ds = [...new Set(nomes.filter(n=>emDesenv(n)))];
+  if(!ds.length) return '';
+  return `<div class="msg ok dev-aviso">🌱 <b>${ds.length} em desenvolvimento</b> nesta equipe: ${ds.map(n=>`<span class="dev-nome" role="button" tabindex="0" data-dev="${esc(n)}">${esc(nomeProprio(n))}</span>`).join(', ')}. Toque no nome para ver o foco e como apoiar.</div>`;
+}
+
+/* ---- Gestão: lista do plano ---- */
+let devAberto = true;
+function renderDesenv(){
+  const div = document.getElementById('boxDesenv'); if(!div) return;
+  if(!souCriador()){ div.innerHTML = ''; return; }
+  const lista = listaDesenv(), pls = lista.map(x=>planoDe(x.nome));
+  const cont = k => pls.filter(p=>p.st.k === k).length;
+  div.innerHTML = `<div class="card"><button class="secao-toggle ${devAberto ? 'aberta' : ''}" onclick="devAberto=!devAberto;renderDesenv()"><span class="seta">▶</span> 🌱 Plano de desenvolvimento <small>(${lista.length})</small></button>
+    ${!devAberto ? '' : `<p class="hint" style="margin-top:6px">Quem está aqui ganha o selo 🌱 na escala, na Presença, nos Setores e nas Fichas, para todos os coordenadores. Meta: chegar à meta do segmento com erros no nível da equipe.</p>
+      ${lista.length ? `<p style="margin:4px 0 8px">🟢 ${cont('meta')} na meta · 🟡 ${cont('evol')} evoluindo · 🔴 ${cont('atencao')} atenção · ⏳ ${cont('espera')} aguardando · ⚪ ${cont('sem')} sem lojas</p>
+      <div class="acoes" style="margin-bottom:8px"><button class="btn small" type="button" onclick="abrirResumoDesenv()">📄 Resumo para a empresa</button></div>
+      ${pls.map((pl, i)=>`<div class="pessoa-row"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" data-dev="${esc(pl.item.nome)}"><b>${pl.st.ic} ${esc(pl.item.nome)}</b></span>
+          <small class="hist">${pl.st.rot}${(pl.agora || pl.antes) ? ` · ${fmtN((pl.agora || pl.antes).ih)} itens/h (${pctDev((pl.agora || pl.antes).pm)} da meta)` : ''}${pl.item.fora ? ' · fora do cadastro' : ''}</small></span>
+        <span class="pill-btns"><button class="pill" type="button" onclick="tirarDesenv(${i})">Tirar</button></span></div>`).join('')}` : '<p class="hint">Ninguém na lista ainda.</p>'}
+      <label style="margin-top:10px">Colocar no plano (cole os nomes, um por linha ou separados por vírgula)</label>
+      <textarea id="novosDesenv" class="full" rows="3" placeholder="Ex.: Daniela Benevides, Glauciley, Letizia"></textarea>
+      <div class="setor-row" style="margin-top:6px"><label style="margin:0;white-space:nowrap">Início do plano</label><input type="date" id="inicioDesenv" value="${dataParaChave(inicioDesenv()) ? String(dataParaChave(inicioDesenv())).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : ''}" onchange="mudarInicioDesenv(this.value)"><button class="btn small" type="button" onclick="adicionarDesenv()">Adicionar</button></div>`}</div>`;
+}
+function mudarInicioDesenv(v){
+  const m = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})/); if(!m) return;
+  const ta = document.getElementById('novosDesenv'), txt = ta ? ta.value : '';
+  salvarDesenv(listaDesenv(), `${m[3]}/${m[2]}/${m[1]}`); renderDesenv();
+  const ta2 = document.getElementById('novosDesenv'); if(ta2) ta2.value = txt;
+  toast('Início do plano: ' + `${m[3]}/${m[2]}/${m[1]}`);
+}
+function tirarDesenv(i){
+  const l = listaDesenv().slice(), x = l[i]; if(!x) return;
+  if(!confirm(`Tirar ${x.nome} do plano de desenvolvimento?`)) return;
+  l.splice(i, 1); salvarDesenv(l); renderDesenv(); rerenderDev();
+}
+function candidatosCadastro(txt){
+  const k = normalizarNome(txt); if(!k) return [];
+  const todos = [...new Map([...(db.clt||[]), ...(db.fl||[]), ...(db.rj||[])].map(p=>[normalizarNome(p.nome), p.nome])).values()];
+  const exato = todos.filter(n=>normalizarNome(n) === k); if(exato.length) return exato;
+  const pref = todos.filter(n=>normalizarNome(n).startsWith(k + ' '));
+  if(pref.length) return pref;
+  // nome do meio/sobrenome em outra ordem: todas as palavras digitadas aparecem no nome
+  const pal = k.split(' ');
+  return todos.filter(n=>{ const ws = normalizarNome(n).split(' '); return ws[0] === pal[0] && pal.every(p=>ws.includes(p)); });
+}
+function adicionarDesenv(){
+  const el = document.getElementById('novosDesenv'); if(!el) return;
+  const nomes = el.value.split(/[\n,;•]+/).map(s=>s.replace(/^[\s\-–*\d.)]+/, '').replace(/\s+/g, ' ').trim()).filter(s=>s.length >= 3);
+  if(!nomes.length) return;
+  const lista = listaDesenv().slice(), duvidas = [];
+  const por = n => { if(!lista.some(x=>normalizarNome(x.nome) === normalizarNome(n))) lista.push({nome:n, desde:hojeBR()}); };
+  nomes.forEach(n=>{
+    const c = candidatosCadastro(n);
+    if(c.length === 1) por(c[0]);
+    else if(!c.length){ if(!lista.some(x=>normalizarNome(x.nome) === normalizarNome(n))) lista.push({nome:n.toUpperCase(), desde:hojeBR(), fora:true}); }
+    else duvidas.push({n, c});
+  });
+  salvarDesenv(lista, inicioDesenv()); el.value = ''; renderDesenv(); rerenderDev();
+  if(!duvidas.length){ toast('Lista atualizada.'); return; }
+  const box = abrirFolha('Qual destas pessoas?', duvidas.map((d, i)=>`<label>${esc(d.n)}</label><select id="duv${i}" class="full"><option value="">— nenhuma —</option>${d.c.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select>`).join(''), 'Adicionar', b=>{
+    const l2 = listaDesenv().slice();
+    duvidas.forEach((d, i)=>{ const v = b.querySelector('#duv' + i).value; if(v && !l2.some(x=>normalizarNome(x.nome) === normalizarNome(v))) l2.push({nome:v, desde:hojeBR()}); });
+    salvarDesenv(l2); renderDesenv(); rerenderDev();
+  });
+  box.querySelector('.titulo').insertAdjacentHTML('afterend', '<p class="hint">Esses nomes batem com mais de uma pessoa do cadastro.</p>');
+}
+function rerenderDev(){
+  try{ if(document.getElementById('presenca').classList.contains('active')) renderPresenca(); }catch(e){}
+  try{ if(document.getElementById('setores').classList.contains('active')) renderSetores(); }catch(e){}
+  try{ if(ultimaEscala) renderEscala(); }catch(e){}
+  try{ if(document.getElementById('fichas').classList.contains('active')) renderFichas(); }catch(e){}
+}
+
+/* ---- 📄 Resumo para a empresa (quando ele pedir; escolhe o período) ---- */
+function dadosResumoDesenv(dias){
+  const pls = listaDesenv().map(x=>planoDe(x.nome, dias));
+  const ordem = {meta:0, evol:1, atencao:2, espera:3, sem:4};
+  pls.sort((a,b)=>ordem[a.st.k] - ordem[b.st.k] || a.item.nome.localeCompare(b.item.nome, 'pt-BR'));
+  return pls;
+}
+function rotuloPeriodoDev(dias){ return dias ? `últimos ${dias} dias` : `desde ${inicioDesenv()}`; }
+function htmlResumoDesenv(dias, paraImagem){
+  const pls = dadosResumoDesenv(dias), cont = k => pls.filter(p=>p.st.k === k).length;
+  const td = paraImagem ? 'style="padding:5px 6px;border-bottom:1px solid #e6e1f0;font-size:12px"' : '';
+  const th = paraImagem ? 'style="padding:6px;background:#efe9fb;text-align:left;font-size:12px"' : '';
+  const seta = (a, b, menorMelhor) => a === null || b === null || a === undefined || b === undefined ? '' : (menorMelhor ? b < a : b > a) ? ' ↑' : (menorMelhor ? b > a : b < a) ? ' ↓' : '';
+  return `<div style="font-weight:800;font-size:${paraImagem ? '18px' : '1.05rem'}">🌱 Plano de desenvolvimento dos conferentes</div>
+    <div class="hint" style="margin:2px 0 8px;${paraImagem ? 'color:#6b6280;font-size:12px' : ''}">Período: ${esc(rotuloPeriodoDev(dias))} · plano iniciado em ${esc(inicioDesenv())} · gerado em ${esc(hojeBR())}</div>
+    <div style="margin-bottom:8px">${pls.length} conferentes · 🟢 ${cont('meta')} na meta · 🟡 ${cont('evol')} evoluindo · 🔴 ${cont('atencao')} precisam de atenção${cont('espera') ? ` · ⏳ ${cont('espera')} aguardando lojas` : ''}${cont('sem') ? ` · ⚪ ${cont('sem')} sem lojas` : ''}</div>
+    <div class="wrap-table"><table style="width:100%;border-collapse:collapse"><thead><tr><th ${th}>Conferente</th><th ${th}>Lojas</th><th ${th}>Itens/h antes → agora</th><th ${th}>Erros ‰ antes → agora</th><th ${th}>Situação</th></tr></thead><tbody>
+    ${pls.map(pl=>`<tr><td ${td}>${esc(nomeProprio(pl.item.nome))}</td><td ${td}>${pl.agora ? pl.agora.n : 0}</td>
+      <td ${td}>${pl.antes ? fmtN(pl.antes.ih) : '—'} → ${pl.agora ? fmtN(pl.agora.ih) : '—'}${seta(pl.antes && pl.antes.ih, pl.agora && pl.agora.ih)}${pl.agora && pl.agora.pm !== null ? ` <small>(${pctDev(pl.agora.pm)})</small>` : ''}</td>
+      <td ${td}>${errDev(pl.antes && pl.antes.err)} → ${errDev(pl.agora && pl.agora.err)}${seta(pl.antes && pl.antes.err, pl.agora && pl.agora.err, true)}</td>
+      <td ${td}>${pl.st.ic} ${pl.st.rot}</td></tr>`).join('')}</tbody></table></div>
+    <div style="margin-top:8px;font-size:${paraImagem ? '11px' : '.8rem'};color:#6b6280">Meta: itens/hora da meta do segmento (drogaria ${fmtN(metaDe('ARAUJO'))}) e erros por mil peças no nível da equipe de cada loja. Antes = até 5 lojas antes do início do plano.</div>`;
+}
+function textoResumoDesenv(dias){
+  const pls = dadosResumoDesenv(dias), grupo = k => pls.filter(p=>p.st.k === k);
+  const linha = pl => `• ${nomeProprio(pl.item.nome)}${pl.agora ? `: ${fmtN(pl.agora.ih)} ip/h (${pctDev(pl.agora.pm)} da meta)${pl.antes ? `, antes ${fmtN(pl.antes.ih)}` : ''}` : pl.antes ? `: ${fmtN(pl.antes.ih)} ip/h antes do plano` : ''}${pl.st.k === 'atencao' && pl.foco[0] ? ` — ${pl.foco[0].replace(/^Ritmo: .*$/, 'ritmo abaixo da meta')}` : ''}`;
+  const blocos = [['meta', '🟢 Na meta'], ['evol', '🟡 Evoluindo'], ['atencao', '🔴 Precisam de atenção'], ['espera', '⏳ Aguardando lojas do plano'], ['sem', '⚪ Ainda sem lojas no robô']]
+    .filter(([k])=>grupo(k).length).map(([k, t])=>`*${t}*\n${grupo(k).map(linha).join('\n')}`);
+  return `*🌱 Plano de desenvolvimento — conferentes*\nPeríodo: ${rotuloPeriodoDev(dias)} (plano iniciado em ${inicioDesenv()})\n\n${blocos.join('\n\n')}\n\nMeta: ${fmtN(metaDe('ARAUJO'))} itens/h na drogaria, com erros no nível da equipe.`;
+}
+function abrirResumoDesenv(){
+  if(!listaDesenv().length){ toast('Coloque os nomes no plano primeiro.'); return; }
+  const box = abrirFolha('📄 Resumo para a empresa', `<label>Período</label><select id="perDev" class="full">
+      <option value="">Desde o início do plano</option><option value="15">Últimos 15 dias</option><option value="30">Últimos 30 dias</option><option value="60">Últimos 60 dias</option><option value="90">Últimos 90 dias</option></select>
+    <div id="prevDev" style="margin-top:10px"></div>
+    <div class="acoes"><button class="btn small" type="button" data-img>Imagem (PNG)</button><button class="btn small secondary" type="button" data-copiar>Copiar texto</button><button class="btn small whats" type="button" data-whats>WhatsApp</button></div>`, 'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  const dias = () => +box.querySelector('#perDev').value || null;
+  const prev = () => { box.querySelector('#prevDev').innerHTML = htmlResumoDesenv(dias(), false); };
+  box.querySelector('#perDev').onchange = prev; prev();
+  box.querySelector('[data-img]').onclick = ()=>gerarImagem(htmlResumoDesenv(dias(), true), `Plano de desenvolvimento - ${hojeBR().replace(/\//g, '-')}.png`);
+  box.querySelector('[data-copiar]').onclick = async ()=>{ try{ await navigator.clipboard.writeText(textoResumoDesenv(dias())); toast('Texto copiado.'); }catch(e){ toast('Não consegui copiar.'); } };
+  box.querySelector('[data-whats]').onclick = ()=>window.open('https://wa.me/?text=' + encodeURIComponent(textoResumoDesenv(dias())), '_blank');
+}
+
 function corrigirNomeLojaRobo(){
   const l = robo.lojas.find(x=>x.id===roboLojaAberta); if(!l) return;
   const novo = prompt(`Nome correto da loja ${l.num || ''}:`, l.loja);
@@ -6275,12 +6533,12 @@ function renderFichas(){
   const ordem = document.getElementById('ordemFicha').value;
   const todas = pessoasDasFichas();
   const rankNota = todas.filter(x=>x.tipo!=='fora').slice().sort((a,b)=>b.ind.nota-a.ind.nota);
-  let lista = todas.filter(x=>(!busca || normalizarNome(x.nome).includes(busca)) && (filtro==='todos' || x.tipo===filtro));
+  let lista = todas.filter(x=>(!busca || normalizarNome(x.nome).includes(busca)) && (filtro==='todos' || (filtro==='dev' ? !!emDesenv(x.nome) : x.tipo===filtro)));
   const cmp = {nota:(a,b)=>b.ind.nota-a.ind.nota, ih:(a,b)=>(b.ind.ih||0)-(a.ind.ih||0), erros:(a,b)=>(b.ind.erros||0)-(a.ind.erros||0), faltas:(a,b)=>(b.ind.faltas||0)-(a.ind.faltas||0),
     atrasos:(a,b)=>(b.ind.atrasos||0)-(a.ind.atrasos||0), nome:(a,b)=>a.nome.localeCompare(b.nome,'pt-BR')}[ordem];
   lista.sort((a,b)=>cmp(a,b) || a.nome.localeCompare(b.nome,'pt-BR'));
   div.innerHTML = lista.length ? `<table><thead><tr><th>Nome</th><th>Nota</th><th>Itens/h</th><th>Erros</th><th>Pres.</th><th>Faltas</th><th>Atrasos</th></tr></thead><tbody>${
-    lista.map(x=>`<tr class="linha-clicavel" data-ficha="${esc(normalizarNome(x.nome))}"><td>${esc(x.nome)}${x.cad && x.cad.afastado ? ' <span class="hint">(afastado)</span>' : ''}<small class="hint" style="display:block">${esc(rotuloTipo(x))}</small></td>
+    lista.map(x=>`<tr class="linha-clicavel" data-ficha="${esc(normalizarNome(x.nome))}"><td>${esc(x.nome)}${seloDev(x.nome)}${x.cad && x.cad.afastado ? ' <span class="hint">(afastado)</span>' : ''}<small class="hint" style="display:block">${esc(rotuloTipo(x))}</small></td>
       <td><b>${x.ind.nota}</b></td><td>${x.ind.ih ? fmtN(x.ind.ih) : '—'}</td><td>${x.ind.lojasComRel ? (x.ind.erros||0) : '—'}</td><td>${x.ind.presPct!=null && x.ind.lojasHist ? x.ind.presPct + '%' : '—'}</td><td>${x.ind.faltas||0}</td><td>${x.ind.atrasos||0}</td></tr>`).join('')
   }</tbody></table>` : '<p class="hint">Ninguém encontrado.</p>';
   renderFichaAberta(todas, rankNota);
@@ -6303,6 +6561,7 @@ function renderFichaAberta(todas, rankNota){
     <div class="resumo" style="--n:4">${tiles.map(([k,v,det])=>`<div class="item" style="--span:2">${k}<b>${v}</b>${det ? `<small>${det}</small>` : ''}</div>`).join('')}</div>
     <p class="hint">Nota ${ind.nota} (base: ${ind.baseNota})${pos >= 0 ? ` · ${pos+1}º de ${rankNota.length} no cadastro` : ''}${ind.setores && ind.setores.length ? ' · setores: ' + ind.setores.map(s=>`${esc(s.nome)} (${s.n}×)`).join(', ') : ''}</p>
     ${whats}
+    ${emDesenv(x.nome) ? `<div class="section-title">🌱 Plano de desenvolvimento</div>${htmlPlano(planoDe(x.nome), false, true)}` : ''}
     ${lojasRobo.length ? `<div class="section-title">Produtividade por loja (robô)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
       lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${segDaLoja(l) !== 'DROGARIA' ? ` <small class="hint">${ICONE_SEG[segDaLoja(l)]} ${segDaLoja(l) === 'SUPERMERCADO' ? 'supermercado' : 'outro cliente'}</small>` : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtIH(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')}</tbody></table></div>` : ''}
     ${htmlEvolucao(x.nome, (x.cad && /ESTAG/i.test(String(x.cad.nivel || x.cad.tipo || ''))) || (x.ind && x.ind.lojasRobo <= 10))}
@@ -6374,6 +6633,7 @@ function abrirFichaRapida(i){
   const evo = evolucaoDe(nome);
   const linha = (k, v) => `<div class="linha-fr"><span class="hint">${k}</span><span style="text-align:right">${v}</span></div>`;
   const corpo = `<div class="ficha-rapida">
+    ${emDesenv(nome) ? `<p style="margin:2px 0 4px"><span class="selo-dev dev-nome" role="button" tabindex="0" data-dev="${esc(nome)}">🌱 Em desenvolvimento · ver plano</span></p>` : ''}
     <p class="hint" style="margin-top:2px">${p.estagiario ? 'Estagiário · ' : ''}${p.instrutor ? 'Instrutor · ' : ''}${ind.lojasRobo ? `${ind.lojasRobo} loja(s) no robô` : 'ainda sem lojas no robô'}${est ? ` · ${est.lojas} no histórico` : ''}</p>
     ${linha('Ritmo', ind.ih ? `<b>${fmtN(ind.ih)} itens/h</b>` : '—')}
     ${linha('Multiplicando · peça a peça', `${rt.mult ? fmtN(rt.mult) + ' ip/h' : '—'} · ${rt.peca ? fmtN(rt.peca) + ' ip/h' : '—'}`)}
@@ -6970,10 +7230,11 @@ registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
   ()=>{ const q = lsGet(QUARTOS_KEY, {}); return !(q.coord || q.lider || q.motorista); });
 registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}, metas: robo.metas || {}, segmentos: robo.segmentos || {},
-    setoresCorr: robo.setoresCorr || {}, setoresLoja: robo.setoresLoja || {}, notasResumo: robo.notasResumo || {}, coletoresEstag: robo.coletoresEstag || {}, estimativas: robo.estimativas || [], padroesPrev: robo.padroesPrev || {}, errosDono: robo.errosDono || {}, errosDonoEm: robo.errosDonoEm || {}, setoresCorrEm: robo.setoresCorrEm || {}}),
+    setoresCorr: robo.setoresCorr || {}, setoresLoja: robo.setoresLoja || {}, notasResumo: robo.notasResumo || {}, coletoresEstag: robo.coletoresEstag || {}, estimativas: robo.estimativas || [], padroesPrev: robo.padroesPrev || {}, errosDono: robo.errosDono || {}, errosDonoEm: robo.errosDonoEm || {}, setoresCorrEm: robo.setoresCorrEm || {}, desenv: robo.desenv || null}),
   v=>{ if(!v || typeof v !== 'object') return;
        ['setoresCorr', 'setoresLoja', 'notasResumo', 'coletoresEstag', 'estimativas', 'padroesPrev', 'errosDono', 'errosDonoEm', 'setoresCorrEm'].forEach(k=>{ if(v[k] && typeof v[k] === 'object') robo[k] = v[k]; });
        if(v.errosDono && typeof v.errosDono === 'object'){ aplicarDonosErros(); salvarRobo(); }
+       if(v.desenv && typeof v.desenv === 'object' && JSON.stringify(v.desenv) !== JSON.stringify(robo.desenv || null)){ robo.desenv = v.desenv; salvarRobo(); try{ renderDesenv(); rerenderDev(); }catch(e){} }
        try{ renderEstimativasViagem(); renderPrevisao(); }catch(e){}
        if(v.metas && typeof v.metas === 'object'){ robo.metas = v.metas; robo.segmentos = (v.segmentos && typeof v.segmentos === 'object') ? v.segmentos : (robo.segmentos || {}); salvarRobo(); renderRobo(); }
        if(v.nomes && typeof v.nomes === 'object'){ robo.nomes = v.nomes; aplicarNomesRobo(); salvarRobo(); renderRobo(); }
@@ -6986,7 +7247,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 19/10/2026 15:11</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 19/10/2026 16:48</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
