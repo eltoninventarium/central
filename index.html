@@ -4487,13 +4487,22 @@ function normErroRobo(o){
     descricao:String(o['DESCRIÇÃO']||''), q1:Number(o['QTD 1ª CONTAGEM'])||0, qa:Number(o['QTD AJUSTADA'])||0, dif:Number(o['DIFERENÇA'])||0, motivo:String(o['MOTIVO']||'')};
 }
 // o PENDCTL corta o nome em 30 letras ("THIAGO EVANGELISTA JESUS DA SI"): completa pelo cadastro quando só um nome bate
+// nome cortado no coletor ("CAROLINA STEPHANIE SILVA") → nome completo do cadastro ou da escala, se só um começa igual.
+// Nome que já existe inteiro no cadastro fica como está (não vira o de outra pessoa com o nome mais longo).
+let nomesConhecidosCache = null;
+function nomesConhecidos(){
+  if(nomesConhecidosCache) return nomesConhecidosCache;
+  const xs = [...(db.clt||[]), ...(db.fl||[]), ...(db.rj||[])].map(x=>x.nome);
+  try{ historicoAtivo().forEach(r=>(r.pessoas||[]).forEach(p=>xs.push(p.nome))); (loja.pessoas||[]).forEach(p=>xs.push(p.nome)); }catch(e){}
+  return nomesConhecidosCache = [...new Map(xs.filter(Boolean).map(x=>[normalizarNome(x), x])).values()];
+}
 function nomeCompletoCadastro(nome){
   const n = String(nome || '').replace(/\s+/g,' ').trim();
-  if(n.length < 25) return n;
-  const k = normalizarNome(n);
-  const achados = [...(db.clt||[]), ...(db.fl||[]), ...(db.rj||[])].map(x=>x.nome).filter(x=>normalizarNome(x).startsWith(k));
-  const unicos = [...new Set(achados.map(normalizarNome))];
-  return unicos.length === 1 ? achados[0] : n;
+  if(n.length < 12 || n.split(' ').length < 2 || /TREINAMENTO|^COLETOR/i.test(n)) return n;
+  const k = normalizarNome(n), todos = nomesConhecidos();
+  if(todos.some(x=>normalizarNome(x) === k)) return n;
+  const achados = todos.filter(x=>normalizarNome(x).startsWith(k + ' ') || (n.length >= 25 && normalizarNome(x).startsWith(k)));
+  return achados.length === 1 ? achados[0] : n;
 }
 function normPessoaRobo(o){
   return {id:String(o['ID']||''), pos:Number(o['POSIÇÃO'])||0, nome:nomeCompletoCadastro(o['NOME']), pecas:Number(o['PEÇAS'])||0,
@@ -4540,6 +4549,7 @@ async function atualizarDoRobo(manual, soConvites){
     if(j.versao) robo.versao = String(j.versao);
     const antes = new Set(robo.lojas.map(l=>l.id));
     robo.lojas = (j.lojas||[]).map(normLojaRobo).filter(l=>l.id);
+    nomesConhecidosCache = null;
     robo.pessoas = (j.pessoas||[]).map(normPessoaRobo).filter(p=>p.id && p.nome);
     if(Array.isArray(j.erros)) robo.erros = j.erros.map(normErroRobo).filter(e=>e.id);
     aplicarNomesRobo(); aplicarDonosErros();
@@ -6964,7 +6974,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 18/10/2026 11:29</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 19/10/2026 02:42</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
