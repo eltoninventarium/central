@@ -4148,7 +4148,7 @@ function exportarConferentesRoboPNG(){
   const conf = porConferenteRobo(idsDoSeg(segAtivo)); if(!conf.length) return;
   const lojas = lojasRoboOrdenadas().filter(l=>segDaLoja(l) === segAtivo);
   let h = cabecalhoImagem('Produtividade por conferente · ' + ROTULO_SEG[segAtivo], `${lojas.length} loja(s) de ${esc(lojas[lojas.length-1].data)} a ${esc(lojas[0].data)}`);
-  h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h','Erros','Precisão'], conf.map((c,i)=>[i+1, esc(c.nome), c.lojas, fmtN(c.pecas), fmtN(c.ih), c.lojasComRel ? c.erros : '—', fmtPct(c.precisao)]), ['', '', 'center', 'right', 'right', 'center', 'right'], 4);
+  h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h','Erros','Precisão'], conf.map((c,i)=>[i+1, esc(c.nome), c.lojas, fmtN(c.pecas), fmtIH(c.ih), c.lojasComRel ? c.erros : '—', fmtPct(c.precisao)]), ['', '', 'center', 'right', 'right', 'center', 'right'], 4);
   h += `<div style="color:#62597a;font-size:11px;margin-top:10px">Itens/h = peças somadas ÷ horas somadas · Erros = itens ajustados nas seções da pessoa (o coordenador pode trocar quem errou) · Precisão = peças sem ajuste ÷ peças contadas (lojas com relatório de ajustes)</div>`;
   gerarImagem(h, `Produtividade por conferente - ${ROTULO_SEG[segAtivo]} - ${dataHojeArquivo()}.png`);
 }
@@ -4375,19 +4375,23 @@ function equipeLojaRobo(l){
   return Object.assign(equipeDe(pecas, h, clienteDe(l.cliente, l.loja), usar.length), {aparte: ps.length ? aparte : {}});
 }
 function textoMeta(eq){
-  if(!eq.meta) return `Equipe ${fmtN(eq.ih)} itens/h por conferente · sem meta para ${eq.cliente}`;
-  return `Equipe ${fmtN(eq.ih)} itens/h por conferente · meta ${eq.segmento} ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '— META BATIDA' : '— abaixo da meta'}`;
+  if(!eq.meta) return `Equipe ${fmtIH(eq.ih)} itens/h por conferente · sem meta para ${eq.cliente}`;
+  return `Equipe ${fmtIH(eq.ih)} itens/h por conferente · meta ${eq.segmento} ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '— META BATIDA' : '— abaixo da meta'}`;
 }
 function seloMeta(eq){
-  if(!eq.ih) return `<span class="selo-meta">Sem horário da contagem: itens/h não calculado</span>`;
-  if(!eq.meta) return `<span class="selo-meta">Equipe ${fmtN(eq.ih)}/h · sem meta</span>`;
-  return `<span class="selo-meta ${eq.bateu?'ok':'nao'}">${eq.bateu?'✅':'❌'} Equipe ${fmtN(eq.ih)}/h · meta ${fmtN(eq.meta)} (${eq.pct}%)</span>`;
+  if(!eq.ih) return `<span class="selo-meta">Equipe - itens/h</span>`;
+  if(!eq.meta) return `<span class="selo-meta">Equipe ${fmtIH(eq.ih)}/h · sem meta</span>`;
+  return `<span class="selo-meta ${eq.bateu?'ok':'nao'}">${eq.bateu?'✅':'❌'} Equipe ${fmtIH(eq.ih)}/h · meta ${fmtN(eq.meta)} (${eq.pct}%)</span>`;
 }
-function caixaEquipe(eq){
+// itens/hora sem valor (loja sem horário ainda): só um traço, sem mensagem
+const fmtIH = v => v ? fmtN(v) : '-';
+function caixaEquipe(eq, l){
+  if(!eq.ih && l) return `<div class="caixa-equipe"><span class="hint" style="margin:0">Produtividade da equipe${eq.pessoas ? ` (${eq.pessoas} conferente(s))` : ''}</span>
+    <b class="n">- itens/h</b></div>`;
   const cls = eq.meta ? (eq.bateu ? 'ok' : 'nao') : '';
   const falta = eq.meta && !eq.bateu ? ` · faltaram ${fmtN(eq.meta - eq.ih)} itens/h por conferente` : '';
   return `<div class="caixa-equipe ${cls}"><span class="hint" style="margin:0">Produtividade da equipe${eq.pessoas ? ` (${eq.pessoas} conferente(s))` : ''}</span>
-    <b class="n">${fmtN(eq.ih)} itens/h ${eq.meta ? (eq.bateu ? '✅' : '❌') : ''}</b>
+    <b class="n">${fmtIH(eq.ih)} itens/h ${eq.meta ? (eq.bateu ? '✅' : '❌') : ''}</b>
     <span class="hint" style="margin:0">${eq.meta ? `Meta ${esc(eq.segmento)} (${esc(eq.cliente)}): ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '· meta batida' : ''}${falta}` : `Sem meta para ${esc(eq.cliente)}. Defina em "Metas da equipe".`}</span>
     ${textoAparte(eq) ? `<span class="hint" style="margin:0">${esc(textoAparte(eq))}</span>` : ''}</div>`;
 }
@@ -4396,7 +4400,7 @@ function caixaEquipeImagem(eq){
   const cor = eq.meta ? (eq.bateu ? ['#C6EFCE','#006100'] : ['#FFC7CE','#9C0006']) : ['#F3F1F8','#1c1530'];
   return `<div style="background:${cor[0]};color:${cor[1]};border-radius:8px;padding:8px 10px;margin:0 0 12px">
     <div style="font-size:12px">Produtividade da equipe${eq.pessoas ? ` (${eq.pessoas} conferentes)` : ''}</div>
-    <div style="font-size:20px;font-weight:700">${fmtN(eq.ih)} itens/h ${eq.meta ? (eq.bateu ? '✅' : '❌') : ''}</div>
+    <div style="font-size:20px;font-weight:700">${fmtIH(eq.ih)} itens/h ${eq.meta ? (eq.bateu ? '✅' : '❌') : ''}</div>
     <div style="font-size:12px">${eq.meta ? `Meta ${esc(eq.segmento)}: ${fmtN(eq.meta)} · ${eq.pct}%${eq.bateu ? ' · meta batida' : ''}` : 'Sem meta definida'}</div>
     ${textoAparte(eq) ? `<div style="font-size:11px;margin-top:2px">${esc(textoAparte(eq))}</div>` : ''}</div>`;
 }
@@ -5016,7 +5020,7 @@ function renderRobo(){
   document.getElementById('conferentesRobo').innerHTML = confTodos.length ? `<div class="card"><button class="secao-toggle ${abrirConf?'aberta':''}" onclick="alternarSecaoRobo('conf')"><span class="seta">▶</span> Por conferente <small>(${contConf})</small></button>
     ${!abrirConf ? '' : `<p class="hint" style="margin-top:6px">Relatório de todas as lojas de ${rotSeg} do robô: peças, itens/hora (peças somadas ÷ horas somadas), erros e precisão (peças sem ajuste ÷ peças contadas, só nas lojas com relatório de itens ajustados). Toque num nome para ver as lojas e os erros dele(a).</p>
     ${!conf.length ? '<p class="hint">Nenhum conferente encontrado.</p>' : `<div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Erros</th><th>Precisão</th></tr></thead><tbody>${
-      conf.map(c=>`<tr class="linha-clicavel" data-conf="${esc(normalizarNome(c.nome))}"><td>${c.pos}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtN(c.ih)}</td><td>${c.lojasComRel ? (c.erros ? `<b style="color:var(--danger)">${c.erros}</b>` : '0') : '—'}</td><td>${fmtPct(c.precisao)}</td></tr>`).join('')
+      conf.map(c=>`<tr class="linha-clicavel" data-conf="${esc(normalizarNome(c.nome))}"><td>${c.pos}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtIH(c.ih)}</td><td>${c.lojasComRel ? (c.erros ? `<b style="color:var(--danger)">${c.erros}</b>` : '0') : '—'}</td><td>${fmtPct(c.precisao)}</td></tr>`).join('')
     }</tbody></table></div>`}
     ${detalheConferenteRobo()}`}
     ${abrirConf ? `<div class="acoes"><button class="btn secondary" onclick="exportarConferentesRoboPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarConferentesRobo()">Excel</button></div>` : ''}</div>` : '';
@@ -5086,7 +5090,7 @@ function detalheConferenteRobo(){
   if(!regs.length) return '';
   return `<div class="card" id="cardConfRobo" style="margin-top:10px;background:var(--accent-soft)"><h2 style="font-size:1rem">${esc(regs[0].p.nome)} · ${regs.length} loja(s)</h2>
     <div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
-      regs.map(({p,l})=>{ const lista = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${lista.indexOf(p)+1}º de ${lista.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')
+      regs.map(({p,l})=>{ const lista = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${marcaAtrasoRobo(p)}</td><td>${lista.indexOf(p)+1}º de ${lista.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtIH(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')
     }</tbody></table></div>
     <p class="hint" style="margin:6px 0 0">Toque numa loja para ver os erros dela.</p>
     <div class="acoes"><button class="btn small" onclick="abrirErrosPessoa(roboConfAberto)">Erros de todas as lojas</button><button class="btn secondary small" style="margin-left:6px" onclick="abrirFicha(${esc(JSON.stringify(regs[0].p.nome))})">Abrir ficha</button><button class="btn secondary small" style="margin-left:6px" onclick="roboConfAberto=null;renderRobo()">Fechar</button></div></div>`;
@@ -5109,8 +5113,8 @@ function renderDetalheRobo(){
   if(!l){ div.innerHTML = ''; return; }
   const ps = pessoasDaLojaRobo(l.id);
   div.innerHTML = `<div class="card" id="cardRankingRobo"><h2>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''} · ${esc(l.data)}</h2>
-    <p class="hint">${fmtN(l.pecas)} peças · ${String(l.horas).replace('.', ',')} h líquidas · ${fmtN(l.fora)} peça(s) fora das faixas</p>
-    ${caixaEquipe(equipeLojaRobo(l))}
+    <p class="hint">${fmtN(l.pecas)} peças · ${l.horas ? String(l.horas).replace('.', ',') : '-'} h líquidas · ${fmtN(l.fora)} peça(s) fora das faixas</p>
+    ${caixaEquipe(equipeLojaRobo(l), l)}
     ${htmlAvisosLoja(l)}
     <p class="hint">${esc(textoErrosLoja(l))} Toque num nome para ver o resumo dele(a)${l.errosItens !== null && l.errosItens !== undefined ? ' e os itens ajustados' : ''}.</p>
     ${l.resumo === 'PRONTO' ? `<div class="acoes" style="margin-top:0"><button class="btn small" onclick="abrirResumoEquipe(roboLojaAberta)">📝 Resumo da equipe</button><button class="btn small secondary" onclick="abrirMapaLoja(roboLojaAberta)">🗺️ Mapa da loja</button>${registroPresencaDaLojaRobo(l) ? `<button class="btn small secondary" onclick="abrirPlanejadoReal(roboLojaAberta)">🧭 Planejado × real</button>` : ''}</div>`
@@ -5118,7 +5122,7 @@ function renderDetalheRobo(){
     ${previstoXReal(l)}
     <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th>${l.errosItens !== null && l.errosItens !== undefined ? '<th>Erros</th>' : ''}</tr></thead><tbody>${
       (()=>{ const conf = ps.filter(p=>!papelNaLoja(l.id, p.nome)), fora = ps.filter(p=>papelNaLoja(l.id, p.nome)), cols = l.errosItens !== null && l.errosItens !== undefined ? 5 : 4;
-        const linha = (p, pos)=>`<tr class="linha-clicavel" data-erros-nome="${esc(p.nome)}"><td>${pos}</td><td>${esc(p.nome)}${papelNaLoja(l.id, p.nome) ? ` <span class="hint">(${({estagiario:'estagiário', coord:'coord.', instrutor:'instrutor'})[papelNaLoja(l.id, p.nome)]})</span>` : ''}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${cols === 5 ? celulaErros(p) : ''}</tr>`;
+        const linha = (p, pos)=>`<tr class="linha-clicavel" data-erros-nome="${esc(p.nome)}"><td>${pos}</td><td>${esc(p.nome)}${papelNaLoja(l.id, p.nome) ? ` <span class="hint">(${({estagiario:'estagiário', coord:'coord.', instrutor:'instrutor'})[papelNaLoja(l.id, p.nome)]})</span>` : ''}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${p.ih ? fmtIH(p.ih) : '-'}</td>${cols === 5 ? celulaErros(p) : ''}</tr>`;
         return conf.map((p,i)=>linha(p, i+1)).join('') + (fora.length && conf.length ? `<tr><td colspan="${cols}" class="hint" style="font-weight:700">Fora da conta da equipe</td></tr>` + fora.map(p=>linha(p, '—')).join('') : ''); })()
     }</tbody></table></div>
     ${ps.some(p=>p.tempo === 'COLETOR') ? '<p class="hint">⏱ Itens/hora pelo tempo de cada pessoa no coletor (da 1ª seção aberta à última fechada).</p>' : ''}
@@ -6123,7 +6127,7 @@ function exportarRankingRoboPNG(){
       <td style="padding:6px 8px">#</td><td style="padding:6px 8px">Nome</td><td style="padding:6px 8px;text-align:right">Peças</td><td style="padding:6px 8px;text-align:right">Itens/h</td>${l.errosItens !== null && l.errosItens !== undefined ? '<td style="padding:6px 8px;text-align:center">Erros</td>' : ''}</tr>`;
   ps.forEach((p,i)=>{ h += `<tr style="background:${i%2?'#faf8fd':'#ffffff'}"><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0">${i+1}</td>
     <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0">${esc(p.nome)}${p.atraso ? ` <span style="font-size:11px;color:#9C0006;font-weight:700">⏰ ${esc(p.chegada)}</span>` : ''}</td><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right">${fmtN(p.pecas)}</td>
-    <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right;font-weight:700">${fmtN(p.ih)}</td>${l.errosItens !== null && l.errosItens !== undefined ? `<td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:center;${p.erros ? 'color:#9C0006;font-weight:700' : 'color:#006100'}">${p.erros||0}</td>` : ''}</tr>`; });
+    <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right;font-weight:700">${fmtIH(p.ih)}</td>${l.errosItens !== null && l.errosItens !== undefined ? `<td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:center;${p.erros ? 'color:#9C0006;font-weight:700' : 'color:#006100'}">${p.erros||0}</td>` : ''}</tr>`; });
   h += '</table>';
   if(l.errosItens !== null && l.errosItens !== undefined) h += `<div style="color:#62597a;font-size:11px;margin-top:8px">${esc(textoErrosLoja(l))}</div>`;
   gerarImagem(h, nomeArquivoRobo(l, 'png'));
@@ -6293,7 +6297,7 @@ function renderFichaAberta(todas, rankNota){
     <p class="hint">Nota ${ind.nota} (base: ${ind.baseNota})${pos >= 0 ? ` · ${pos+1}º de ${rankNota.length} no cadastro` : ''}${ind.setores && ind.setores.length ? ' · setores: ' + ind.setores.map(s=>`${esc(s.nome)} (${s.n}×)`).join(', ') : ''}</p>
     ${whats}
     ${lojasRobo.length ? `<div class="section-title">Produtividade por loja (robô)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
-      lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${segDaLoja(l) !== 'DROGARIA' ? ` <small class="hint">${ICONE_SEG[segDaLoja(l)]} ${segDaLoja(l) === 'SUPERMERCADO' ? 'supermercado' : 'outro cliente'}</small>` : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtN(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')}</tbody></table></div>` : ''}
+      lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${segDaLoja(l) !== 'DROGARIA' ? ` <small class="hint">${ICONE_SEG[segDaLoja(l)]} ${segDaLoja(l) === 'SUPERMERCADO' ? 'supermercado' : 'outro cliente'}</small>` : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtIH(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')}</tbody></table></div>` : ''}
     ${htmlEvolucao(x.nome, (x.cad && /ESTAG/i.test(String(x.cad.nivel || x.cad.tipo || ''))) || (x.ind && x.ind.lojasRobo <= 10))}
     ${htmlAvalFicha(x.nome)}
     ${ind.registros && ind.registros.length ? `<div class="section-title">Presença (histórico das lojas)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Status</th><th>Setor</th></tr></thead><tbody>${
@@ -6663,7 +6667,7 @@ function exportarFichaPNG(){
   h += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">${blocosFicha(ind).map(([k,v,det])=>
     `<div style="border:1px solid #ddd6ea;border-radius:8px;padding:6px 8px;font-size:12px;color:#62597a">${k}<div style="font-size:18px;font-weight:700;color:#1c1530">${v}</div>${det?`<div style="font-size:10px">${det}</div>`:''}</div>`).join('')}</div>`;
   if(lojasRobo.length) h += `<div style="font-weight:700;margin:4px 0 6px">Produtividade por loja</div>` + tabelaImagem(['Data','Loja','Peças','Itens/h'],
-    lojasRobo.map(({p,l})=>[esc(l.data), esc(l.loja) + (segDaLoja(l) === 'SUPERMERCADO' ? ' <span style="color:#0e6b62;font-size:11px">🛒 supermercado</span>' : '') + (p.atraso ? ` <span style="color:#9C0006;font-size:11px">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtN(p.ih)]), ['', '', 'right', 'right'], 3);
+    lojasRobo.map(({p,l})=>[esc(l.data), esc(l.loja) + (segDaLoja(l) === 'SUPERMERCADO' ? ' <span style="color:#0e6b62;font-size:11px">🛒 supermercado</span>' : '') + (p.atraso ? ` <span style="color:#9C0006;font-size:11px">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtIH(p.ih)]), ['', '', 'right', 'right'], 3);
   gerarImagem(h, `Ficha - ${limpaNomeArquivo(x.nome)}.png`);
 }
 
@@ -6727,7 +6731,7 @@ function pendencias(){
   const lojas = lojasRoboOrdenadas(); const recente = lojas.length ? diaDe(lojas[0].data) : null;
   lojas.filter(l=>recente !== null && diaDe(l.data) !== null && recente - diaDe(l.data) <= 6).forEach(l=>{
     const eq = equipeLojaRobo(l);
-    if(eq.meta && !eq.bateu) lista.push({tipo:'danger', txt:`${l.loja}${segDaLoja(l) === 'SUPERMERCADO' ? ' (supermercado)' : ''} ficou abaixo da meta: ${fmtN(eq.ih)}/h (${eq.pct}%)`, ir:()=>abrirLojaRobo(l.id)});
+    if(eq.meta && eq.ih && !eq.bateu) lista.push({tipo:'danger', txt:`${l.loja}${segDaLoja(l) === 'SUPERMERCADO' ? ' (supermercado)' : ''} ficou abaixo da meta: ${fmtIH(eq.ih)}/h (${eq.pct}%)`, ir:()=>abrirLojaRobo(l.id)});
   });
   lojas.filter(l=>recente !== null && diaDe(l.data) !== null && recente - diaDe(l.data) <= 6 && avisosDaLoja(l).length).forEach(l=>{
     const c = coordenadorDaLoja(l);
@@ -6760,7 +6764,7 @@ function renderPainel(){
     const eq = equipeLojaRobo(ult);
     h += `<div class="hero ${eq.meta && !eq.bateu ? 'ruim' : ''}" onclick="abrirLojaRobo('${esc(ult.id)}')">
       <div class="rot">Última drogaria · ${esc(ult.data)} · ${esc(ult.loja)}${ult.num ? ' | ' + esc(ult.num) : ''}</div>
-      <div class="big">${fmtN(eq.ih)} <span>itens/h por conferente</span></div>
+      <div class="big">${fmtIH(eq.ih)} <span>itens/h por conferente</span></div>
       <div class="rot">${eq.meta ? `Meta ${esc(eq.segmento)} ${fmtN(eq.meta)} · ${eq.pct}% ${eq.bateu ? '· meta batida ✅' : '· abaixo da meta'}` : 'Sem meta para este cliente'}</div>
       <div class="barra-meta"><i data-w="${eq.meta ? Math.min(100, eq.pct) : 0}"></i></div></div>`;
   } else {
@@ -6782,7 +6786,7 @@ function renderPainel(){
   // supermercado fica num bloco separado (não mistura com as drogarias)
   if(ultSuper){
     const eq = equipeLojaRobo(ultSuper);
-    t.push({rot:'🛒 Último supermercado', n: eq.ih ? fmtN(eq.ih) + '/h' : '—',
+    t.push({rot:'🛒 Último supermercado', n: eq.ih ? fmtIH(eq.ih) + '/h' : '—',
       s:`${ultSuper.data} · ${ultSuper.loja}${eq.meta ? ` · ${eq.pct}% da meta ${fmtN(eq.meta)}` : (eq.ih ? ' · sem meta' : ' · sem horário da contagem')}`, ir:`abrirLojaRobo('${esc(ultSuper.id)}')`});
   }
   if(t.length) h += `<div class="tiles">${t.map(x=>`<div class="tile" onclick="${x.ir}"><div class="rot">${x.rot}</div><div class="n">${x.n}</div><small>${esc(x.s)}</small></div>`).join('')}</div>`;
@@ -6837,7 +6841,7 @@ function exportarRelatorioFinalPNG(){
   if(lr){
     const ps = pessoasDaLojaRobo(lr.id), temErros = lr.errosItens !== null && lr.errosItens !== undefined;
     h += `<div style="font-weight:700;margin:12px 0 6px">Produtividade</div>` + caixaEquipeImagem(equipeLojaRobo(lr));
-    h += tabelaImagem(['#','Nome','Peças','Itens/h', ...(temErros ? ['Erros'] : [])], ps.map((p,i)=>[i+1, esc(p.nome) + (p.atraso ? ` <span style="font-size:11px;color:#9C0006">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtN(p.ih), ...(temErros ? [p.erros ? `<b style="color:#9C0006">${p.erros}</b>` : '0'] : [])]),
+    h += tabelaImagem(['#','Nome','Peças','Itens/h', ...(temErros ? ['Erros'] : [])], ps.map((p,i)=>[i+1, esc(p.nome) + (p.atraso ? ` <span style="font-size:11px;color:#9C0006">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtIH(p.ih), ...(temErros ? [p.erros ? `<b style="color:#9C0006">${p.erros}</b>` : '0'] : [])]),
       ['', '', 'right', 'right', 'center'], 3);
     if(temErros) h += `<div style="color:#62597a;font-size:11px;margin-top:6px">${esc(textoErrosLoja(lr))}</div>`;
   } else h += `<div style="color:#62597a;font-size:12px;margin:10px 0">Produtividade ainda não chegou pelo robô.</div>`;
@@ -6974,7 +6978,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 19/10/2026 02:42</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 19/10/2026 05:03</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
