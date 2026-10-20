@@ -545,6 +545,12 @@ body.modo-colega .so-criador{display:none !important;}
       <label>Motorista</label><input type="text" id="nomeMotorista" placeholder="Nome do motorista">
     </div>
     <div class="card">
+      <h2>Quartos pedidos pela logística</h2>
+      <p class="hint">Para a equipe (além dos 3 individuais acima). Homem com homem e mulher com mulher. Deixe os dois em branco para dividir em duplas.</p>
+      <div class="row"><div><label>Quartos duplos</label><input type="number" id="qtdDuplos" min="0" placeholder="0"></div>
+        <div><label>Quartos triplos</label><input type="number" id="qtdTriplos" min="0" placeholder="0"></div></div>
+    </div>
+    <div class="card">
       <h2>Incluir gente do RJ nesta viagem</h2>
       <div id="rjQuartosList" class="hint">Nenhum cadastrado no momento.</div>
     </div>
@@ -1901,7 +1907,7 @@ function aplicarRespostasConvites(){
 const QUARTOS_KEY = 'central_quartosNomes_v1';
 (function(){
   const s = lsGet(QUARTOS_KEY, {});
-  [['nomeCoord','coord'],['nomeLider','lider'],['nomeMotorista','motorista']].forEach(([id,k])=>{
+  [['nomeCoord','coord'],['nomeLider','lider'],['nomeMotorista','motorista'],['qtdDuplos','duplos'],['qtdTriplos','triplos']].forEach(([id,k])=>{
     const el = document.getElementById(id);
     el.value = s[k] || '';
     el.addEventListener('input', ()=>{
@@ -1915,10 +1921,58 @@ function calcularQuartos(){
   const lider = document.getElementById('nomeLider').value.trim();
   const motorista = document.getElementById('nomeMotorista').value.trim();
   const rjSelecionados = [...document.querySelectorAll('.rj-check:checked')].map(chk=>db.rj[chk.dataset.idx]);
-  const grupo = [...ultimaEscala.selecionados, ...ultimaEscala.freelancers, ...rjSelecionados].filter(p=>p.status!=='Recusado');
+  const todos = [...ultimaEscala.selecionados, ...ultimaEscala.freelancers];
+  const temConf = todos.some(p=>p.status === 'Confirmado');
+  const grupo = [...todos.filter(p=>temConf ? p.status === 'Confirmado' : p.status !== 'Recusado'), ...rjSelecionados];
   const homens = grupo.filter(p=>(p.genero||'').startsWith('M'));
   const mulheres = grupo.filter(p=>(p.genero||'').startsWith('F'));
-  return {coord, lider, motorista, homens, mulheres};
+  const semGenero = grupo.filter(p=>!/^[MF]/.test(p.genero||''));
+  const div = dividirQuartos(homens, mulheres);
+  return Object.assign({coord, lider, motorista, homens, mulheres, semGenero}, div);
+}
+// pedido da logística (duplos/triplos) → quartos por gênero. Sem pedido: duplas (a sobra vai num triplo).
+function pedidoQuartos(){ const q = lsGet(QUARTOS_KEY, {}); return {D: parseInt(q.duplos, 10) || 0, T: parseInt(q.triplos, 10) || 0}; }
+function dividirQuartos(homens, mulheres){
+  const {D, T} = pedidoQuartos(), m = homens.length, f = mulheres.length;
+  const quartos = [], sobra = [];
+  const montar = (lista, gen, t, d) => {
+    let i = 0;
+    for(let k = 0; k < t && i + 3 <= lista.length; k++, i += 3) quartos.push({tipo:'Triplo', gen, pessoas:lista.slice(i, i + 3)});
+    for(let k = 0; k < d && i + 2 <= lista.length; k++, i += 2) quartos.push({tipo:'Duplo', gen, pessoas:lista.slice(i, i + 2)});
+    sobra.push(...lista.slice(i).map(p=>({gen, p})));
+  };
+  if(!D && !T){
+    [[homens, 'M'], [mulheres, 'F']].forEach(([l, g])=>{ const n = l.length; const t = n % 2 && n >= 3 ? 1 : 0; montar(l, g, t, Math.floor((n - 3 * t) / 2)); });
+    return {quartos, sobra, aviso: '', pedido:{D, T}};
+  }
+  // melhor divisão: todo mundo com quarto, usando o máximo de triplos pedidos
+  let melhor = null;
+  for(let tm = 0; tm <= T; tm++) for(let tf = 0; tf <= T - tm; tf++){
+    const rm = m - 3 * tm, rf = f - 3 * tf; if(rm < 0 || rf < 0) continue;
+    const dm0 = Math.floor(rm / 2), df0 = Math.floor(rf / 2);
+    const dm = Math.min(dm0, D), df = Math.min(df0, D - dm);
+    const fora = rm - 2 * dm + rf - 2 * df;
+    const nota = fora * 100 - (tm + tf) * 2 + dm + df;
+    if(!melhor || nota < melhor.nota) melhor = {tm, tf, dm, df, fora, nota};
+  }
+  if(!melhor) melhor = {tm:0, tf:0, dm:0, df:0};
+  montar(homens, 'M', melhor.tm, melhor.dm); montar(mulheres, 'F', melhor.tf, melhor.df);
+  let aviso = '';
+  if(sobra.length){
+    const dica = !D && T ? ` Com só triplos, homens e mulheres precisam ser múltiplos de 3 (hoje ${m} homem(ns) e ${f} mulher(es)).` : '';
+    aviso = `${sobra.length} pessoa(s) ficaram sem quarto no pedido da logística (${T} triplo(s)${D ? `, ${D} duplo(s)` : ''}).${dica}`;
+  } else if(melhor.tm + melhor.tf < T) aviso = `Sobraram ${T - melhor.tm - melhor.tf} triplo(s) do pedido sem uso.`;
+  return {quartos, sobra, aviso, pedido:{D, T}};
+}
+// combinações de homens/mulheres que fecham exatamente o pedido — usado em Viagem › Por nível
+function dicaQuartosGenero(m, f){
+  const {D, T} = pedidoQuartos(); if(!D && !T) return '';
+  const ok = [];
+  for(let tm = 0; tm <= T; tm++){ const tf = T - tm; for(let dm = 0; dm <= D; dm++){ const df = D - dm; ok.push([3 * tm + 2 * dm, 3 * tf + 2 * df]); } }
+  const pedido = `${T ? T + ' triplo(s)' : ''}${T && D ? ' + ' : ''}${D ? D + ' duplo(s)' : ''}`;
+  if(ok.some(([a, b])=>a === m && b === f)) return `🛏️ Quartos: ${m} homem(ns) e ${f} mulher(es) fecham certinho os ${pedido}.`;
+  const opcoes = [...new Set(ok.filter(([a, b])=>a >= m && b >= f).map(([a, b])=>`${a} homens + ${b} mulheres`))].slice(0, 3);
+  return `🛏️ Quartos (${pedido}): hoje ${m} homem(ns) e ${f} mulher(es). Para fechar sem sobra: ${opcoes.length ? opcoes.join(' ou ') : 'nenhuma combinação com quem já confirmou — fale com a logística'}.`;
 }
 function montarQuartos(){
   const div = document.getElementById('resultadoQuartos');
@@ -1931,16 +1985,14 @@ function montarQuartos(){
     if(nome) html += `<li>${label}: ${esc(nome)}</li>`;
   });
   html += '</ul></div>';
-  function paresDe(lista, label){
-    let out = `<div class="card"><h2>${label} (${lista.length})</h2><ol>`;
-    for(let i=0;i<lista.length;i+=2){
-      if(lista[i+1]) out += `<li>${esc(lista[i].nome)} + ${esc(lista[i+1].nome)}</li>`;
-      else out += `<li>${esc(lista[i].nome)} — sobra, avaliar manualmente (individual ou triplo)</li>`;
-    }
-    return out + '</ol></div>';
-  }
-  html += paresDe(homens, 'Quartos masculinos');
-  html += paresDe(mulheres, 'Quartos femininos');
+  const q = ultimoQuartos;
+  if(q.aviso) html += `<div class="msg warn">⚠️ ${esc(q.aviso)}</div>`;
+  if(q.semGenero.length) html += `<div class="msg warn">Sem gênero no cadastro (não entraram nos quartos): ${q.semGenero.map(p=>esc(p.nome)).join(', ')}. Complete em Viagem › Equipe.</div>`;
+  [['M', 'Quartos masculinos', homens], ['F', 'Quartos femininos', mulheres]].forEach(([g, rot, lista])=>{
+    const qs = q.quartos.filter(x=>x.gen === g), sb = q.sobra.filter(x=>x.gen === g);
+    if(!lista.length) return;
+    html += `<div class="card"><h2>${rot} (${lista.length} pessoa(s))</h2><ol>${qs.map(x=>`<li><b>${x.tipo}:</b> ${x.pessoas.map(p=>esc(p.nome)).join(' + ')}</li>`).join('')}${sb.map(x=>`<li style="color:var(--warn)">${esc(x.p.nome)}: sem quarto no pedido</li>`).join('')}</ol></div>`;
+  });
   html += '<p class="hint">Casais não são detectados automaticamente — confira manualmente antes de fechar os quartos.</p>';
   html += `<button class="btn secondary" onclick="exportarQuartos()">Exportar quartos (Excel)</button>`;
   div.innerHTML = html;
@@ -1953,15 +2005,11 @@ async function exportarQuartos(){
   if(q.coord) linhas.push(['Individual','Coordenador(a)', q.coord]);
   if(q.lider) linhas.push(['Individual','Líder Araújo', q.lider]);
   if(q.motorista) linhas.push(['Individual','Motorista', q.motorista]);
-  function add(lista, label){
-    for(let i=0;i<lista.length;i+=2){
-      const n = i/2+1;
-      if(lista[i+1]) linhas.push([label, `Quarto ${n}`, `${lista[i].nome} + ${lista[i+1].nome}`]);
-      else linhas.push([label, 'Sobra', `${lista[i].nome} (avaliar: individual ou triplo)`]);
-    }
-  }
-  add(q.homens, 'Masculino');
-  add(q.mulheres, 'Feminino');
+  ['M', 'F'].forEach(g=>{
+    const label = g === 'M' ? 'Masculino' : 'Feminino';
+    q.quartos.filter(x=>x.gen === g).forEach((x, i)=>linhas.push([label, `${x.tipo} ${i + 1}`, x.pessoas.map(p=>p.nome).join(' + ')]));
+    q.sobra.filter(x=>x.gen === g).forEach(x=>linhas.push([label, 'Sobra', `${x.p.nome} (sem quarto no pedido da logística)`]));
+  });
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Quartos');
   const r = cabecalhoPlanilha(ws, 'Divisão de quartos', [`${q.homens.length} homem(ns) · ${q.mulheres.length} mulher(es)`]);
@@ -4670,6 +4718,7 @@ function renderNiveis(){
     const f = cs.filter(p=>p.gen === 'F').length, m = cs.filter(p=>p.gen === 'M').length;
     h += `<p style="margin:8px 2px"><b>${nOk} confirmado(s)</b> · ${f} mulher(es) · ${m} homem(ns)${cs.length - f - m ? ` · ${cs.length - f - m} sem gênero` : ''}${nRec ? ` · ${nRec} recusa(s)` : ''}</p>`;
     h += campoVagasNivel() + faltamNiveis(cs);
+    { const dq = dicaQuartosGenero(cs.filter(p=>p.gen === 'M').length, cs.filter(p=>p.gen === 'F').length); if(dq) h += `<p class="msg ${/certinho/.test(dq) ? 'ok' : 'warn'}">${esc(dq)}</p>`; }
     if(nOk) h += `<div class="card" style="margin:6px 0;padding:10px">${regrasConfirmados(cs)}</div>`;
     ['IV','III','II','I','FL'].forEach(nv=>{
       const xs = cs.filter(p=>p.nv === nv); if(!xs.length) return;
@@ -7363,7 +7412,7 @@ function exportarListaViagemPNG(){
   const aguardando = temConfirmacao ? todos.filter(x=>x.p.status !== 'Confirmado' && x.p.status !== 'Recusado') : [];
   const q = calcularQuartos();
   const conf = new Set(vao.map(x=>x.p));
-  const homens = q.homens.filter(p=>conf.has(p) || db.rj.includes(p)), mulheres = q.mulheres.filter(p=>conf.has(p) || db.rj.includes(p));
+  const homens = q.homens, mulheres = q.mulheres;
   let h = cabecalhoImagem(esc([v.cidades, v.cliente ? '(' + v.cliente + ')' : ''].filter(Boolean).join(' ') || 'Viagem'),
     ['Lista final da viagem', v.datas ? esc(v.datas) : '', v.saida ? 'saída ' + esc(v.saida) : ''].filter(Boolean).join(' · '));
   const funcoes = [['Coordenador(a)', q.coord], ['Líder Araújo', q.lider], ['Motorista', q.motorista]].filter(x=>x[1]);
@@ -7371,8 +7420,10 @@ function exportarListaViagemPNG(){
   h += tabelaImagem(['#','Nome','Função','Gên.'], vao.map((x,i)=>[i+1, esc(x.p.nome), esc(x.tipo), esc((x.p.genero||'').slice(0,1))]), ['', '', '', 'center'], -1);
   h += `<div style="font-size:12px;color:#62597a;margin:6px 0 12px">${vao.length} pessoa(s)${temConfirmacao ? ' confirmada(s)' : ' (escala sem confirmações ainda)'} · ${vao.filter(x=>x.tipo==='Freelancer').length} freelancer(s)</div>`;
   if(aguardando.length) h += `<div style="font-size:12px;color:#9C5700;margin-bottom:10px"><b>Aguardando resposta:</b> ${aguardando.map(x=>esc(x.p.nome)).join(' · ')}</div>`;
-  const pares = (lista, rot) => { let o = `<div style="font-weight:700;margin:8px 0 4px">${rot} (${lista.length})</div>`; for(let i=0;i<lista.length;i+=2) o += `<div style="font-size:13px">Quarto ${i/2+1}: ${esc(lista[i].nome)}${lista[i+1] ? ' + ' + esc(lista[i+1].nome) : ' — avaliar (individual ou triplo)'}</div>`; return o; };
-  if(homens.length || mulheres.length) h += `<div style="font-weight:700;margin-top:6px">Quartos</div>` + (homens.length ? pares(homens, 'Masculinos') : '') + (mulheres.length ? pares(mulheres, 'Femininos') : '')
+  const blocoQ = (g, rot) => { const qs = q.quartos.filter(x=>x.gen === g), sb = q.sobra.filter(x=>x.gen === g); if(!qs.length && !sb.length) return '';
+    return `<div style="font-weight:700;margin:8px 0 4px">${rot}</div>` + qs.map((x, i)=>`<div style="font-size:13px">${x.tipo} ${i + 1}: ${x.pessoas.map(p=>esc(p.nome)).join(' + ')}</div>`).join('')
+      + sb.map(x=>`<div style="font-size:13px;color:#9C5700">${esc(x.p.nome)}: sem quarto no pedido</div>`).join(''); };
+  if(homens.length || mulheres.length) h += `<div style="font-weight:700;margin-top:6px">Quartos</div>` + blocoQ('M', 'Masculinos') + blocoQ('F', 'Femininos')
     + `<div style="font-size:11px;color:#62597a;margin-top:6px">Casais não são detectados automaticamente — confira antes de mandar ao hotel.</div>`;
   gerarImagem(h, `Lista da viagem - ${dataHojeArquivo()}.png`);
 }
@@ -7446,7 +7497,7 @@ if(!ui.nav2){ ui.nav2 = true; ui.view = 'inicio'; lsSet(UI_KEY, ui); }
 abrirView(document.getElementById(ui.view) ? ui.view : 'inicio');
 
 function preencherQuartosNomes(v){
-  [['nomeCoord','coord'],['nomeLider','lider'],['nomeMotorista','motorista']].forEach(([id,k])=>{ document.getElementById(id).value = (v||{})[k] || ''; });
+  [['nomeCoord','coord'],['nomeLider','lider'],['nomeMotorista','motorista'],['qtdDuplos','duplos'],['qtdTriplos','triplos']].forEach(([id,k])=>{ document.getElementById(id).value = (v||{})[k] || ''; });
 }
 registrarSinc('equipe', ()=>db,
   v=>{ const arr = x=>Array.isArray(x) ? x : []; db = {clt:arr(v&&v.clt), fl:arr(v&&v.fl), rj:arr(v&&v.rj)}; lsSet(LS_KEY, db); restaurarUltimaEscala(); renderEquipe(); renderEscala(); },
@@ -7481,7 +7532,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 20/10/2026 19:06</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 20/10/2026 19:36</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
