@@ -297,6 +297,12 @@ body.modo-colega .so-criador{display:none !important;}
 .selo-dev{cursor:pointer;margin-left:4px;font-size:.95em;}
 .dev-nome{cursor:pointer;font-weight:600;text-decoration:underline;}
 .dev-linha{font-size:.86rem;margin:3px 0;}
+.abas-nivel{display:flex;flex-wrap:wrap;gap:6px;}
+.abas-nivel button{flex:1 1 30%;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:8px;padding:8px 4px;font-size:.82rem;font-weight:600;cursor:pointer;}
+.abas-nivel button.on{background:var(--accent-fill);color:var(--accent-ink);border-color:var(--accent-fill);}
+.abas-nivel small{opacity:.75;font-weight:500;}
+.pessoa-row.nivel-ok{background:var(--ok-bg);border-radius:8px;}
+.pessoa-row.nivel-nao{background:var(--warn-bg);border-radius:8px;opacity:.8;}
 .aval-setor{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin:6px 0;background:var(--bg);}
 .aval-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
 .aval-bolas{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
@@ -522,6 +528,13 @@ body.modo-colega .so-criador{display:none !important;}
   </section>
 
   <!-- ================= VIAGEM: QUARTOS ================= -->
+  <section id="niveis" class="view">
+    <div class="card"><h2 style="margin-bottom:4px">📊 Produtividade por nível</h2>
+      <p class="hint" style="margin-top:0">A equipe separada em Conferente IV, III, II, I e Freelance, do mais produtivo para o menos. Marque ✅ ou ❌ conforme as respostas; a aba ✅ Confirmados monta a lista e confere as regras da viagem.</p>
+      <div class="acoes"><button class="btn small" type="button" onclick="exportarNiveisExcel()">Excel (uma aba por nível)</button><button class="btn small secondary" type="button" onclick="abrirListaNivelI()">Lista do Conferente I</button><button class="btn small secondary" type="button" onclick="limparStatusNiveis()">Nova lista (limpar ✅❌)</button></div>
+    </div>
+    <div class="card" id="listaNiveis"></div>
+  </section>
   <section id="quartos" class="view">
     <div class="card">
       <h2>Funções de quarto individual</h2>
@@ -960,7 +973,7 @@ function mostrarAvisoArquivo(){
    ===================================================================== */
 const GRUPOS = {
   inicio: [['inicio','Início']],
-  viagem: [['equipe','Equipe'],['escala','Nova escala'],['quartos','Quartos']],
+  viagem: [['equipe','Equipe'],['escala','Nova escala'],['niveis','Por nível'],['quartos','Quartos']],
   loja:   [['presenca','Presença'],['setores','Setores'],['historico','Histórico']],
   gestao: [['gestao','Gestão'],['modelos','Listas de setores']],
   prod:   [['produtividade','Produtividade']],
@@ -981,6 +994,7 @@ function abrirView(id){
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active', s.id===id));
   ui.view = id; ui.ultimaPorGrupo[g] = id; lsSet(UI_KEY, ui);
   if(id==='quartos') renderRJQuartosOptions();
+  if(id==='niveis') renderNiveis();
   if(id==='fichas') renderFichas();
   if(id==='inicio' && typeof renderPainel==='function') renderPainel();
   if(typeof atualizarBadges==='function') atualizarBadges();
@@ -1118,12 +1132,16 @@ function mostrarExportManual(filename, conteudo){
 // Gera uma imagem "limpa" (sem botões) a partir de um HTML de relatório
 async function gerarImagem(htmlRelatorio, filename){
   if(typeof html2canvas==='undefined'){ toast('Exportação de imagem indisponível nesta tela.'); return; }
+  toast('Gerando a imagem…', 2500);
+  await new Promise(r=>setTimeout(r, 30));   // deixa o aviso aparecer antes do trabalho pesado
   const area = document.createElement('div');
   area.style.cssText = 'position:fixed;left:-10000px;top:0;width:560px;background:#ffffff;color:#1c1530;padding:22px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.35;';
   area.innerHTML = '<div style="height:6px;border-radius:3px;background:linear-gradient(90deg,#2a1760,#4a2a96,#23336e);margin:-6px 0 14px"></div>' + htmlRelatorio;
   document.body.appendChild(area);
   try{
-    const canvas = await html2canvas(area, {backgroundColor:'#ffffff', scale:2});
+    // só copia a área da imagem (antes o html2canvas copiava o app inteiro a cada imagem: lento com muitas lojas e fichas)
+    const canvas = await html2canvas(area, {backgroundColor:'#ffffff', scale:2, logging:false,
+      ignoreElements: el => el !== area && !area.contains(el) && !el.contains(area) && el.tagName !== 'HEAD' && el.tagName !== 'STYLE' && el.tagName !== 'LINK'});
     const blob = await new Promise(res=>canvas.toBlob(res, 'image/png'));
     entregarArquivo(filename, blob);
   }catch(e){
@@ -4555,6 +4573,154 @@ function renderCoordsAgora(){
 }
 let coordsCarregando = false;
 /* =====================================================================
+   VIAGEM › POR NÍVEL — produtividade da equipe por categoria (IV, III, II, I, Freelance),
+   ✅ confirmado / ❌ recusado e a lista só com quem confirmou. Só a versão do criador (Viagem).
+   Guardado junto da escala (estado/escala._niveis), que os colegas não recebem.
+   ===================================================================== */
+const NIVEIS_KEY = 'central_niveis_v1';
+let niveis = lsGet(NIVEIS_KEY, null) || {status:{}, nivelI:null};
+let abaNivel = 'IV';
+const ABAS_NIVEL = [['IV','Conf. IV'],['III','Conf. III'],['II','Conf. II'],['I','Conf. I'],['FL','Freelance'],['OK','✅ Confirmados']];
+const ROT_NIVEL = {IV:'CONFERENTE IV', III:'CONFERENTE III', II:'CONFERENTE II', I:'CONFERENTE I', FL:'FREELANCE'};
+function salvarNiveis(){ lsSet(NIVEIS_KEY, niveis); marcarAlterado('escala'); }
+function cadastroDe(nome){ const k = normalizarNome(nome); return [...db.clt, ...db.fl].find(p=>normalizarNome(p.nome) === k) || null; }
+// quem está em cada nível (Conferente I vem da lista colada, se existir)
+function pessoasDoNivel(nv){
+  const listaI = Array.isArray(niveis.nivelI) && niveis.nivelI.length ? niveis.nivelI : null;
+  const kI = new Set((listaI || []).map(normalizarNome));
+  let base;
+  if(nv === 'I' && listaI) base = listaI.map(n=>cadastroDe(n) || {nome:n, nivel:'I', genero:''});
+  else if(nv === 'FL') base = db.fl.filter(p=>!kI.has(normalizarNome(p.nome)));
+  else base = db.clt.filter(p=>p.nivel === nv && !kI.has(normalizarNome(p.nome)) && (nv !== 'I' || !listaI));
+  return base.filter(p=>!p.afastado).map(p=>{
+    const ind = indicadoresDe(p.nome);
+    return {nome:p.nome, nv, gen:String(p.genero || '').slice(0,1).toUpperCase(), ih:ind.ih || 0, lojas:ind.lojasRobo || 0,
+      erroLoja: ind.lojasComRel ? (ind.erros || 0) / ind.lojasComRel : null, precisao: ind.lojasComRel ? ind.precisao : null,
+      nota:ind.nota, faltas:ind.faltas || 0, pref:p.prioridade, st:niveis.status[normalizarNome(p.nome)] || ''};
+  }).sort((a,b)=>(b.ih - a.ih) || (b.nota - a.nota) || a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+function marcarNivel(nome, st){
+  const k = normalizarNome(nome);
+  if(niveis.status[k] === st) delete niveis.status[k]; else niveis.status[k] = st;
+  salvarNiveis(); renderNiveis();
+}
+function confirmadosNiveis(){ return ['IV','III','II','I','FL'].flatMap(nv=>pessoasDoNivel(nv).filter(p=>p.st === 'C')); }
+function regrasConfirmados(cs){
+  const n = cs.length, menor = n < 14, q = nv => cs.filter(p=>p.nv === nv).length;
+  const ok = (cond, txt) => `<div class="dev-linha">${cond ? '✅' : '⚠️'} ${txt}</div>`;
+  return ok(q('FL') >= (menor ? 2 : 4), `Freelance BH: ${q('FL')} (mínimo ${menor ? 2 : 4})`)
+    + ok(q('IV') <= (menor ? 2 : 3), `Conferente IV: ${q('IV')} (máximo ${menor ? 2 : 3})`)
+    + ok(q('III') <= (menor ? 2 : 3), `Conferente III: ${q('III')} (máximo ${menor ? 2 : 3})`)
+    + ok(q('I') >= 3, `Conferente I: ${q('I')} (Araujo: 3 obrigatórios)`);
+}
+function linhaNivel(p, i){
+  const det = [p.gen === 'F' ? 'F' : p.gen === 'M' ? 'M' : '', p.ih ? `<b>${fmtN(p.ih)} itens/h</b>` : 'sem produtividade', p.lojas ? `${p.lojas} loja(s)` : '',
+    p.erroLoja !== null ? fmtErroLoja(p.erroLoja) : '', p.faltas ? `${p.faltas} falta(s)` : ''].filter(Boolean).join(' · ');
+  const nm = esc(p.nome).replace(/'/g, '&#39;');
+  return `<div class="pessoa-row nivel-${p.st === 'C' ? 'ok' : p.st === 'R' ? 'nao' : ''}"><span class="pessoa-nome"><span class="conv-pos">${i + 1}º</span> <span class="nome-ficha" role="button" tabindex="0" data-nivel-ficha="${esc(p.nome)}"><b>${esc(p.nome)}</b></span>${seloDev(p.nome)}<small class="hist">${det}</small></span>
+    <span class="pill-btns"><button class="pill presente ${p.st === 'C' ? 'on' : ''}" type="button" data-nivel-st="C" data-nome="${esc(p.nome)}">✅ Confirmado</button><button class="pill falta ${p.st === 'R' ? 'on' : ''}" type="button" data-nivel-st="R" data-nome="${esc(p.nome)}">❌ Recusado</button></span></div>`;
+}
+function renderNiveis(){
+  const div = document.getElementById('listaNiveis'); if(!div) return;
+  if(!souCriador()){ div.innerHTML = ''; return; }
+  const cs = confirmadosNiveis(), nOk = cs.length, nRec = Object.values(niveis.status).filter(s=>s === 'R').length;
+  let h = `<div class="abas-nivel">${ABAS_NIVEL.map(([k, r])=>`<button type="button" class="${k === abaNivel ? 'on' : ''}" data-aba-nivel="${k}">${r}${k === 'OK' ? ` (${nOk})` : ` <small>${pessoasDoNivel(k).length}</small>`}</button>`).join('')}</div>`;
+  if(abaNivel !== 'OK'){
+    const ps = pessoasDoNivel(abaNivel);
+    h += `<p class="hint" style="margin:8px 2px">${ROT_NIVEL[abaNivel]} · ${ps.length} pessoa(s), do mais produtivo para o menos (itens/h de drogaria do robô). Toque no nome para ver a ficha.${abaNivel === 'I' ? (niveis.nivelI && niveis.nivelI.length ? ' Lista vinda da planilha colada.' : ' Usando o cadastro; cole a lista atual em "Lista do Conferente I".') : ''}</p>`;
+    h += ps.length ? ps.map(linhaNivel).join('') : '<p class="hint">Ninguém neste nível.</p>';
+  } else {
+    const f = cs.filter(p=>p.gen === 'F').length, m = cs.filter(p=>p.gen === 'M').length;
+    h += `<p style="margin:8px 2px"><b>${nOk} confirmado(s)</b> · ${f} mulher(es) · ${m} homem(ns)${cs.length - f - m ? ` · ${cs.length - f - m} sem gênero` : ''}${nRec ? ` · ${nRec} recusa(s)` : ''}</p>`;
+    if(nOk) h += `<div class="card" style="margin:6px 0;padding:10px">${regrasConfirmados(cs)}</div>`;
+    ['IV','III','II','I','FL'].forEach(nv=>{
+      const xs = cs.filter(p=>p.nv === nv); if(!xs.length) return;
+      h += `<div class="section-title">${ROT_NIVEL[nv]} (${xs.length})</div>` + xs.map((p, i)=>`<div class="dev-linha">${i + 1}. <span class="nome-ficha" role="button" tabindex="0" data-nivel-ficha="${esc(p.nome)}">${esc(p.nome)}</span>${seloDev(p.nome)} <small class="hint">${p.gen || '-'} · ${p.ih ? fmtN(p.ih) + ' itens/h' : 'sem produtividade'}</small></div>`).join('');
+    });
+    if(!nOk) h += '<p class="hint">Marque ✅ Confirmado nas abas de cada nível e a lista aparece aqui.</p>';
+    else h += `<div class="acoes"><button class="btn small whats" type="button" onclick="whatsConfirmados()">Copiar / WhatsApp</button></div>`;
+  }
+  div.innerHTML = h;
+}
+document.addEventListener('click', e=>{
+  const a = e.target.closest('[data-aba-nivel]'); if(a){ abaNivel = a.dataset.abaNivel; renderNiveis(); return; }
+  const s = e.target.closest('[data-nivel-st]'); if(s){ marcarNivel(s.dataset.nome, s.dataset.nivelSt); return; }
+  const f = e.target.closest('[data-nivel-ficha]'); if(f){ abrirFicha(f.dataset.nivelFicha); }
+});
+function textoConfirmados(){
+  const cs = confirmadosNiveis();
+  return `*Equipe confirmada (${cs.length})*\n` + ['IV','III','II','I','FL'].map(nv=>{ const xs = cs.filter(p=>p.nv === nv); return xs.length ? `\n*${ROT_NIVEL[nv]}* (${xs.length})\n` + xs.map(p=>`• ${p.nome}${p.gen ? ' (' + p.gen + ')' : ''}`).join('\n') : ''; }).join('');
+}
+function whatsConfirmados(){
+  const t = textoConfirmados();
+  try{ navigator.clipboard.writeText(t); }catch(e){}
+  window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank');
+}
+function limparStatusNiveis(){
+  if(!Object.keys(niveis.status).length) return;
+  if(!confirm('Apagar todos os ✅ e ❌ para começar uma lista nova?')) return;
+  niveis.status = {}; salvarNiveis(); renderNiveis();
+}
+function abrirListaNivelI(){
+  const atual = (niveis.nivelI || []).join('\n');
+  const box = abrirFolha('Lista do Conferente I', `<p class="hint" style="margin-top:0">Cole os nomes da planilha (um por linha). A aba Conferente I passa a usar só esta lista. Quem estava como freelance e está aqui sai da aba Freelance.</p>
+    <textarea id="txtNivelI" class="full" rows="10">${esc(atual)}</textarea>`, 'Salvar', b=>{
+    const ns = b.querySelector('#txtNivelI').value.split(/\n+/).map(s=>s.replace(/\t.*$/, '').replace(/CONFERENTE\s+I\b.*/i, '').replace(/^[\s\d.)\-–]+/, '').replace(/\s+/g, ' ').trim().toUpperCase()).filter(s=>s.length >= 5 && !/^FUNCION/.test(s));
+    niveis.nivelI = ns.length ? [...new Set(ns)] : null; salvarNiveis(); abaNivel = 'I'; renderNiveis();
+    toast(ns.length ? `${ns.length} nome(s) na lista do Conferente I.` : 'Lista apagada: volta a usar o cadastro.');
+  });
+}
+// Excel: uma aba por nível (STATUS com lista Confirmado/Recusado) + aba CONFIRMADOS que se monta sozinha no Excel
+async function exportarNiveisExcel(){
+  if(!excelDisponivel()) return;
+  const wb = new ExcelJS.Workbook();
+  const COLS = ['Nº','NOME','GÊNERO','ITENS/H','LOJAS','ERROS POR LOJA','PRECISÃO','NOTA','FALTAS','STATUS'];
+  const larg = [5, 40, 9, 10, 8, 14, 11, 8, 8, 14];
+  const fundoOk = {type:'pattern', pattern:'solid', fgColor:{argb:'FFE2F5E6'}}, fundoNao = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFDE2E2'}};
+  const ordem = ['IV','III','II','I','FL'], tam = {};
+  ordem.forEach(nv=>{
+    const ps = pessoasDoNivel(nv); tam[nv] = ps.length;
+    const ws = wb.addWorksheet(ROT_NIVEL[nv]);
+    COLS.forEach((c, j)=>{ const x = ws.getCell(1, j + 1); x.value = c; x.font = {bold:true}; x.fill = FUNDO_CABECALHO; x.border = BORDA_FINA; x.alignment = {horizontal:'center'}; ws.getColumn(j + 1).width = larg[j]; });
+    ws.getCell(1, 11).value = 'ORDEM'; ws.getColumn(11).hidden = true;
+    ps.forEach((p, i)=>{
+      const r = i + 2;
+      const vals = [i + 1, p.nome, p.gen || '', p.ih || '', p.lojas || '', p.erroLoja !== null ? Math.round(p.erroLoja * 10) / 10 : '', p.precisao !== null && p.precisao !== undefined ? p.precisao / 100 : '', p.nota, p.faltas, p.st === 'C' ? 'Confirmado' : p.st === 'R' ? 'Recusado' : ''];
+      vals.forEach((v, j)=>{ const x = ws.getCell(r, j + 1); x.value = v; x.border = BORDA_FINA; if(j === 6 && v !== '') x.numFmt = '0.0%'; if(j === 3 && v !== '') x.numFmt = '#,##0'; });
+      ws.getCell(r, 10).dataValidation = {type:'list', allowBlank:true, formulae:['"Confirmado,Recusado"']};
+      ws.getCell(r, 11).value = {formula:`IF(J${r}="Confirmado",COUNTIF($J$2:J${r},"Confirmado"),"")`};
+    });
+    if(ps.length){
+      ws.addConditionalFormatting({ref:`A2:J${ps.length + 1}`, rules:[
+        {type:'expression', formulae:[`$J2="Confirmado"`], style:{fill:{type:'pattern', pattern:'solid', bgColor:{argb:'FFC6EFCE'}}}},
+        {type:'expression', formulae:[`$J2="Recusado"`], style:{fill:{type:'pattern', pattern:'solid', bgColor:{argb:'FFFFC7CE'}}}}]});
+    }
+    ws.views = [{state:'frozen', ySplit:1}];
+  });
+  // CONFIRMADOS: cada nível em duas colunas (nome | gênero), puxando quem tem STATUS = Confirmado
+  const wc = wb.addWorksheet('CONFIRMADOS');
+  wc.getCell(1, 1).value = 'Equipe confirmada'; wc.getCell(1, 1).font = {bold:true, size:14};
+  wc.getCell(2, 1).value = 'Total:'; wc.getCell(2, 1).font = {bold:true};
+  wc.getCell(2, 2).value = {formula: ordem.map(nv=>`COUNTIF('${ROT_NIVEL[nv]}'!J:J,"Confirmado")`).join('+')};
+  ordem.forEach((nv, k)=>{
+    const c = 1 + k * 3, aba = `'${ROT_NIVEL[nv]}'`;
+    const h = wc.getCell(4, c); h.value = ROT_NIVEL[nv]; h.font = {bold:true}; h.fill = FUNDO_CABECALHO; h.border = BORDA_FINA;
+    const g = wc.getCell(4, c + 1); g.value = 'GÊN.'; g.font = {bold:true}; g.fill = FUNDO_CABECALHO; g.border = BORDA_FINA;
+    wc.getCell(5, c).value = {formula:`COUNTIF(${aba}!J:J,"Confirmado")&" confirmado(s)"`}; wc.getCell(5, c).font = {italic:true, color:{argb:'FF666666'}};
+    wc.getColumn(c).width = 36; wc.getColumn(c + 1).width = 6; wc.getColumn(c + 2).width = 2;
+    for(let i = 1; i <= Math.max(tam[nv], 1); i++){
+      const r = 5 + i;
+      wc.getCell(r, c).value = {formula:`IFERROR(INDEX(${aba}!B:B,MATCH(${i},${aba}!K:K,0))&"","")`};
+      wc.getCell(r, c + 1).value = {formula:`IFERROR(INDEX(${aba}!C:C,MATCH(${i},${aba}!K:K,0))&"","")`};
+    }
+  });
+  wc.views = [{state:'frozen', ySplit:5}];
+  wb.views = [{activeTab:0}];
+  const buf = await wb.xlsx.writeBuffer();
+  entregarArquivo(`Produtividade por nivel - ${dataHojeArquivo()}.xlsx`, buf);
+}
+
+/* =====================================================================
    🌱 PLANO DE DESENVOLVIMENTO — conferentes que precisam do apoio dos coordenadores
    Lista só o criador edita (Gestão); o selo 🌱 e o plano aparecem para todos.
    Meta do plano = meta do segmento (itens/h) + erros no nível da equipe.
@@ -7218,9 +7384,10 @@ function preencherQuartosNomes(v){
 registrarSinc('equipe', ()=>db,
   v=>{ const arr = x=>Array.isArray(x) ? x : []; db = {clt:arr(v&&v.clt), fl:arr(v&&v.fl), rj:arr(v&&v.rj)}; lsSet(LS_KEY, db); restaurarUltimaEscala(); renderEquipe(); renderEscala(); },
   ()=>!(db.clt.length || db.fl.length || db.rj.length));
-registrarSinc('escala', ()=>lsGet(ESCALA_KEY, null),
-  v=>{ lsSet(ESCALA_KEY, v || null); restaurarUltimaEscala(); renderEscala(); },
-  ()=>!lsGet(ESCALA_KEY, null));
+registrarSinc('escala', ()=>{ const e = lsGet(ESCALA_KEY, null), n = lsGet(NIVEIS_KEY, null); return n ? Object.assign({}, e || {}, {_niveis:n}) : e; },
+  v=>{ if(v && v._niveis){ niveis = v._niveis; if(!niveis.status) niveis.status = {}; lsSet(NIVEIS_KEY, niveis); v = Object.assign({}, v); delete v._niveis; if(!Object.keys(v).length) v = null; try{ renderNiveis(); }catch(e){} }
+       lsSet(ESCALA_KEY, v || null); restaurarUltimaEscala(); renderEscala(); },
+  ()=>!lsGet(ESCALA_KEY, null) && !lsGet(NIVEIS_KEY, null));
 registrarSinc('loja', ()=>loja,
   v=>{ loja = migrarLoja(Object.assign({nome:'', data:'', pessoas:[], setores:{}, modelo:'drogaria'}, (v && typeof v==='object') ? v : {}));
        if(!Array.isArray(loja.pessoas)) loja.pessoas = []; if(!loja.setores || typeof loja.setores!=='object') loja.setores = {};
@@ -7247,7 +7414,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 19/10/2026 16:48</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 20/10/2026 18:38</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
