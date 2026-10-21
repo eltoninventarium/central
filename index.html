@@ -535,7 +535,7 @@ body.modo-colega .so-criador{display:none !important;}
   <section id="niveis" class="view">
     <div class="card"><h2 style="margin-bottom:4px">📊 Produtividade por nível</h2>
       <p class="hint" style="margin-top:0">A equipe separada em Conferente IV, III, II, I e Freelance, do mais produtivo para o menos. Chamou? ✉️ Convite enviado. A pessoa deu prazo? ⏳ Aguardando resposta. Respondeu? ✅ ou ❌. A aba ✅ Confirmados mostra quanto falta, confere as regras e leva a equipe para a escala.</p>
-      <div class="acoes"><button class="btn small" type="button" onclick="exportarNiveisExcel()">Excel (uma aba por nível)</button><button class="btn small secondary" type="button" onclick="abrirListaNivelI()">Lista do Conferente I</button><button class="btn small secondary" type="button" onclick="limparStatusNiveis()">Nova lista (limpar marcações)</button></div>
+      <div class="acoes"><button class="btn small" type="button" onclick="editarPessoaNivel()">+ Adicionar pessoa</button><button class="btn small secondary" type="button" onclick="exportarNiveisExcel()">Excel (uma aba por nível)</button><button class="btn small secondary" type="button" onclick="abrirListaNivelI()">Lista do Conferente I</button><button class="btn small secondary" type="button" onclick="limparStatusNiveis()">Nova lista (limpar marcações)</button></div>
     </div>
     <div class="card" id="listaNiveis"></div>
   </section>
@@ -1233,7 +1233,9 @@ if(!db.rj) db.rj = [];
 let ultimaEscala = null;
 let ultimoQuartos = null;
 
-function normalizeFuncao(f){ return (f||'').toUpperCase().replace('CONFERENTE','').trim().replace(/\s+/g,''); }
+function normalizeFuncao(f){ const t = (f||'').toUpperCase(); if(/ESTAGI/.test(t)) return 'ES'; return t.replace('CONFERENTE','').trim().replace(/\s+/g,''); }
+// "CONFERENTE IV" / "ESTAGIÁRIO" a partir do nível guardado
+function rotuloNivelCad(nv){ return nv === 'ES' ? 'ESTAGIÁRIO' : nv ? 'CONFERENTE ' + nv : ''; }
 
 const CAMPOS_EXTRAS = [['endereco', /^ENDERECO/], ['bairro', /^BAIRRO/], ['cidade', /^CIDADE/], ['obs', /^OBS/]];
 function extrasCadastro(cab){
@@ -1460,11 +1462,11 @@ async function baixarCadastro(){
   const extras = x => { const c = conv[normalizarNome(x.nome)] || {}; return [x.endereco||'', x.bairro||'', x.cidade||'', c.sim||'', c.nao||'', c.ult||'', x.obs||'']; };
   const cabExtras = ['ENDEREÇO','BAIRRO','CIDADE','VIAGENS ACEITAS (90 DIAS)','VIAGENS RECUSADAS (90 DIAS)','ÚLTIMA RESPOSTA','OBS'];
   aba('CLT', ['FUNCIONÁRIO','FUNÇÃO','GENERO','AFASTADO','PREFERENCIA','WHATSAPP', ...cabExtras],
-    db.clt.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', pref(x), x.whats||'', ...extras(x)]));
+    db.clt.map(x=>[x.nome, rotuloNivelCad(x.nivel), x.genero||'', x.afastado ? 'AFASTADO' : '', pref(x), x.whats||'', ...extras(x)]));
   aba('FREELANCE', ['FREELANCE','GENERO','AFASTADO','','PRIORIDADE','WHATSAPP', ...cabExtras],
     db.fl.map(x=>[x.nome, x.genero||'', x.afastado ? 'AFASTADO' : '', '', pref(x), x.whats||'', ...extras(x)]), true);
   aba('RJ', ['NOME','FUNÇÃO','GENERO','AFASTADO','','WHATSAPP', ...cabExtras],
-    db.rj.map(x=>[x.nome, x.nivel ? 'CONFERENTE ' + x.nivel : '', x.genero||'', x.afastado ? 'AFASTADO' : '', '', x.whats||'', ...extras(x)]));
+    db.rj.map(x=>[x.nome, rotuloNivelCad(x.nivel), x.genero||'', x.afastado ? 'AFASTADO' : '', '', x.whats||'', ...extras(x)]));
   if((db.coord||[]).length) aba('COORDENADORES', ['COORDENADOR'], db.coord.map(n=>[n]));
   await salvarExcel(wb, `Cadastro da equipe - ${hojeBR().replace(/\//g,'.')}.xlsx`);
 }
@@ -1659,7 +1661,7 @@ async function exportarEscala(){
     `Pedido da loja: ${e.nTotal} pessoa(s) · regra ${e.menor14?'menos de 14':'14 ou mais'}${e.isAraujo?' · viagem ARAUJO':''}`,
     `${e.selecionados.length} conferente(s) + ${e.freelancers.length} freelancer(s)`]);
   const linhas = [
-    ...e.selecionados.map(p=>['CLT', p.nome, 'CONFERENTE ' + (p.nivel||''), (p.genero||'').slice(0,1), p.status||'']),
+    ...e.selecionados.map(p=>['CLT', p.nome, rotuloNivelCad(p.nivel), (p.genero||'').slice(0,1), p.status||'']),
     ...e.freelancers.map(p=>['Freelancer', p.nome, '—', (p.genero||'').slice(0,1), p.status||''])];
   const corStatus = {Confirmado:['FFC6EFCE','FF006100'], Recusado:['FFFFC7CE','FF9C0006']};
   tabelaExcel(ws, r, ['TIPO','NOME','NÍVEL','GÊN.','STATUS'], linhas, {
@@ -1778,7 +1780,7 @@ function painelConvites(){
     else if(c.enviadoEm){ st = '⏳ Aguardando'; cls = 'esp'; }
     else { st = 'Não convidado'; cls = 'nada'; }
     cont[cls]++;
-    const det = [x.tipo==='clt' ? 'CONFERENTE ' + (p.nivel||'') : 'Freelancer'];
+    const det = [x.tipo==='clt' ? rotuloNivelCad(p.nivel) : 'Freelancer'];
     det.push('nota ' + x.nota);
     if(x.ih) det.push(fmtN(x.ih) + ' itens/h');
     if(!p.whats) det.push('sem WhatsApp no cadastro');
@@ -4634,8 +4636,8 @@ let niveis = lsGet(NIVEIS_KEY, null) || {status:{}, nivelI:null};
 // v2: o "⏳ Aguardando" antigo era "já chamei" → vira ✉️ Convite enviado
 if(!niveis.v2){ Object.keys(niveis.status || {}).forEach(k=>{ if(niveis.status[k] === 'A') niveis.status[k] = 'E'; }); niveis.v2 = true; }
 let abaNivel = 'IV';
-const ABAS_NIVEL = [['IV','Conf. IV'],['III','Conf. III'],['II','Conf. II'],['I','Conf. I'],['FL','Freelance'],['AG','📨 Em aberto'],['OK','✅ Confirmados']];
-const ROT_NIVEL = {IV:'CONFERENTE IV', III:'CONFERENTE III', II:'CONFERENTE II', I:'CONFERENTE I', FL:'FREELANCE'};
+const ABAS_NIVEL = [['IV','Conf. IV'],['III','Conf. III'],['II','Conf. II'],['I','Conf. I'],['ES','Estagiário'],['FL','Freelance'],['AG','📨 Em aberto'],['OK','✅ Confirmados']];
+const ROT_NIVEL = {IV:'CONFERENTE IV', III:'CONFERENTE III', II:'CONFERENTE II', I:'CONFERENTE I', ES:'ESTAGIÁRIO', FL:'FREELANCE'};
 function salvarNiveis(){ lsSet(NIVEIS_KEY, niveis); marcarAlterado('escala'); }
 function cadastroDe(nome){ const k = normalizarNome(nome); return [...db.clt, ...db.fl].find(p=>normalizarNome(p.nome) === k) || null; }
 // quem está em cada nível (Conferente I vem da lista colada, se existir)
@@ -4667,9 +4669,9 @@ function marcarNivel(nome, st, nv){
   }
   if((st === 'E' || st === 'A') && !niveis.envio[k]) niveis.envio[k] = Date.now();
   if(st === 'C'){
-    const cs = confirmadosNiveis(), vagas = +niveis.vagas || 0, n = vagas || cs.length + 1, menor = n < 14;
+    const cs = contaVaga(confirmadosNiveis()), vagas = +niveis.vagas || 0, n = vagas || cs.length + 1, menor = n < 14;
     const avisos = [];
-    if(vagas && cs.length + 1 > vagas) avisos.push(`já tem ${cs.length} confirmado(s) para ${vagas} vaga(s)`);
+    if(vagas && nv !== 'ES' && cs.length + 1 > vagas) avisos.push(`já tem ${cs.length} confirmado(s) para ${vagas} vaga(s)`);
     if(nv === 'IV' && cs.filter(p=>p.nv === 'IV').length + 1 > (menor ? 2 : 3)) avisos.push(`passa do máximo de ${menor ? 2 : 3} Conferente IV`);
     if(nv === 'III' && cs.filter(p=>p.nv === 'III').length + 1 > (menor ? 2 : 3)) avisos.push(`passa do máximo de ${menor ? 2 : 3} Conferente III`);
     if(avisos.length && !confirm(`Atenção: ${avisos.join(' e ')}.\n\nConfirmar ${nome} mesmo assim?`)) return;
@@ -4677,8 +4679,10 @@ function marcarNivel(nome, st, nv){
   niveis.status[k] = st; niveis.em[k] = Date.now();
   salvarNiveis(); renderNiveis();
 }
-function confirmadosNiveis(){ return ['IV','III','II','I','FL'].flatMap(nv=>pessoasDoNivel(nv).filter(p=>p.st === 'C')); }
-function aguardandoNiveis(){ return ['IV','III','II','I','FL'].flatMap(nv=>pessoasDoNivel(nv).filter(p=>p.st === 'A' || p.st === 'E')); }
+function confirmadosNiveis(){ return ['IV','III','II','I','ES','FL'].flatMap(nv=>pessoasDoNivel(nv).filter(p=>p.st === 'C')); }
+// estagiário não conta como conferente nas vagas e nas regras (mas entra nos quartos)
+const contaVaga = cs => cs.filter(p=>p.nv !== 'ES');
+function aguardandoNiveis(){ return ['IV','III','II','I','ES','FL'].flatMap(nv=>pessoasDoNivel(nv).filter(p=>p.st === 'A' || p.st === 'E')); }
 const dataCurta = t => { if(!t) return ''; const d = new Date(t); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0'); };
 // prazo dd/mm → vencido? (considera o ano atual; prazo de janeiro visto em dezembro conta como ano seguinte)
 function prazoVencido(pz){
@@ -4698,6 +4702,7 @@ function campoVagasNivel(){
 }
 // quanto falta para fechar a viagem, respeitando os mínimos (freelance e Conferente I na Araujo)
 function faltamNiveis(cs){
+  cs = contaVaga(cs);
   const vagas = +niveis.vagas || 0; if(!vagas) return '';
   const menor = vagas < 14, q = nv => cs.filter(p=>p.nv === nv).length;
   const falta = Math.max(0, vagas - cs.length);
@@ -4708,6 +4713,7 @@ function faltamNiveis(cs){
   return `<p class="msg warn"><b>${cs.length} de ${vagas}</b> · faltam ${falta}: ${partes.join(', ')}.</p>`;
 }
 function regrasConfirmados(cs){
+  cs = contaVaga(cs);
   const n = +niveis.vagas || cs.length, menor = n < 14, q = nv => cs.filter(p=>p.nv === nv).length;
   const ok = (cond, txt) => `<div class="dev-linha">${cond ? '✅' : '⚠️'} ${txt}</div>`;
   return ok(q('FL') >= (menor ? 2 : 4), `Freelance BH: ${q('FL')} (mínimo ${menor ? 2 : 4})`)
@@ -4719,7 +4725,7 @@ function linhaNivel(p, i){
   const det = [p.gen === 'F' ? 'F' : p.gen === 'M' ? 'M' : '', p.ih ? `<b>${fmtN(p.ih)} itens/h</b>` : 'sem produtividade', p.lojas ? `${p.lojas} loja(s)` : '',
     p.erroLoja !== null ? fmtErroLoja(p.erroLoja) : '', p.faltas ? `${p.faltas} falta(s)` : ''].filter(Boolean).join(' · ');
   const nm = esc(p.nome).replace(/'/g, '&#39;');
-  return `<div class="pessoa-row nivel-${p.st === 'C' ? 'ok' : p.st === 'R' ? 'nao' : p.st === 'A' ? 'ag' : p.st === 'E' ? 'env' : ''}"><span class="pessoa-nome"><span class="conv-pos">${i + 1}º</span> <span class="nome-ficha" role="button" tabindex="0" data-nivel-ficha="${esc(p.nome)}"><b>${esc(p.nome)}</b></span>${seloDev(p.nome)}<small class="hist">${det}${p.st === 'E' || p.st === 'A' ? (textoAberto(p.nome) ? ' · ' + textoAberto(p.nome) : '') : p.st && quandoNivel(p.nome) ? ` · ${p.st === 'C' ? 'confirmou' : 'recusou'} em ${quandoNivel(p.nome)}` : ''}</small></span>
+  return `<div class="pessoa-row nivel-${p.st === 'C' ? 'ok' : p.st === 'R' ? 'nao' : p.st === 'A' ? 'ag' : p.st === 'E' ? 'env' : ''}"><span class="pessoa-nome"><span class="conv-pos">${i + 1}º</span> <span class="nome-ficha" role="button" tabindex="0" data-nivel-ficha="${esc(p.nome)}"><b>${esc(p.nome)}</b></span>${seloDev(p.nome)} <button class="pill" type="button" style="padding:2px 8px;font-size:.75rem" data-nivel-editar="${esc(p.nome)}" title="Mudar categoria ou gênero">✏️</button><small class="hist">${det}${p.st === 'E' || p.st === 'A' ? (textoAberto(p.nome) ? ' · ' + textoAberto(p.nome) : '') : p.st && quandoNivel(p.nome) ? ` · ${p.st === 'C' ? 'confirmou' : 'recusou'} em ${quandoNivel(p.nome)}` : ''}</small></span>
     <span class="pill-btns btns-nivel"><button class="pill coordpill ${p.st === 'E' ? 'on' : ''}" type="button" data-nivel-st="E" data-nome="${esc(p.nome)}" data-nv="${p.nv}">✉️ Enviado</button><button class="pill caminho ${p.st === 'A' ? 'on' : ''}" type="button" data-nivel-st="A" data-nome="${esc(p.nome)}" data-nv="${p.nv}">⏳ Aguardando</button><button class="pill presente ${p.st === 'C' ? 'on' : ''}" type="button" data-nivel-st="C" data-nome="${esc(p.nome)}" data-nv="${p.nv}">✅ Confirmado</button><button class="pill falta ${p.st === 'R' ? 'on' : ''}" type="button" data-nivel-st="R" data-nome="${esc(p.nome)}">❌ Recusado</button></span></div>`;
 }
 function renderNiveis(){
@@ -4742,11 +4748,12 @@ function renderNiveis(){
     h += ps.length ? ps.map(linhaNivel).join('') : '<p class="hint">Ninguém neste nível.</p>';
   } else {
     const f = cs.filter(p=>p.gen === 'F').length, m = cs.filter(p=>p.gen === 'M').length;
-    h += `<p style="margin:8px 2px"><b>${nOk} confirmado(s)</b> · ${f} mulher(es) · ${m} homem(ns)${cs.length - f - m ? ` · ${cs.length - f - m} sem gênero` : ''}${nRec ? ` · ${nRec} recusa(s)` : ''}</p>`;
+    const nEs = cs.filter(p=>p.nv === 'ES').length;
+    h += `<p style="margin:8px 2px"><b>${nOk} confirmado(s)</b>${nEs ? ` (${nEs} estagiário(s), fora das vagas)` : ''} · ${f} mulher(es) · ${m} homem(ns)${cs.length - f - m ? ` · ${cs.length - f - m} sem gênero` : ''}${nRec ? ` · ${nRec} recusa(s)` : ''}</p>`;
     h += campoVagasNivel() + faltamNiveis(cs);
     { const dq = dicaQuartosGenero(cs.filter(p=>p.gen === 'M').length, cs.filter(p=>p.gen === 'F').length); if(dq) h += `<p class="msg ${/certinho/.test(dq) ? 'ok' : 'warn'}">${esc(dq)}</p>`; }
     if(nOk) h += `<div class="card" style="margin:6px 0;padding:10px">${regrasConfirmados(cs)}</div>`;
-    ['IV','III','II','I','FL'].forEach(nv=>{
+    ['IV','III','II','I','ES','FL'].forEach(nv=>{
       const xs = cs.filter(p=>p.nv === nv); if(!xs.length) return;
       h += `<div class="section-title">${ROT_NIVEL[nv]} (${xs.length})</div>` + xs.map((p, i)=>`<div class="dev-linha">${i + 1}. <span class="nome-ficha" role="button" tabindex="0" data-nivel-ficha="${esc(p.nome)}">${esc(p.nome)}</span>${seloDev(p.nome)} <small class="hint">${p.gen || '-'} · ${p.ih ? fmtN(p.ih) + ' itens/h' : 'sem produtividade'}</small></div>`).join('');
     });
@@ -4758,16 +4765,63 @@ function renderNiveis(){
 document.addEventListener('click', e=>{
   const a = e.target.closest('[data-aba-nivel]'); if(a){ abaNivel = a.dataset.abaNivel; renderNiveis(); return; }
   const s = e.target.closest('[data-nivel-st]'); if(s){ marcarNivel(s.dataset.nome, s.dataset.nivelSt, s.dataset.nv); return; }
+  const ed = e.target.closest('[data-nivel-editar]'); if(ed){ editarPessoaNivel(ed.dataset.nivelEditar); return; }
   const f = e.target.closest('[data-nivel-ficha]'); if(f){ abrirFicha(f.dataset.nivelFicha); }
 });
 function textoConfirmados(){
   const cs = confirmadosNiveis();
-  return `*Equipe confirmada (${cs.length})*\n` + ['IV','III','II','I','FL'].map(nv=>{ const xs = cs.filter(p=>p.nv === nv); return xs.length ? `\n*${ROT_NIVEL[nv]}* (${xs.length})\n` + xs.map(p=>`• ${p.nome}${p.gen ? ' (' + p.gen + ')' : ''}`).join('\n') : ''; }).join('');
+  return `*Equipe confirmada (${cs.length})*\n` + ['IV','III','II','I','ES','FL'].map(nv=>{ const xs = cs.filter(p=>p.nv === nv); return xs.length ? `\n*${ROT_NIVEL[nv]}* (${xs.length})\n` + xs.map(p=>`• ${p.nome}${p.gen ? ' (' + p.gen + ')' : ''}`).join('\n') : ''; }).join('');
 }
 function whatsConfirmados(){
   const t = textoConfirmados();
   try{ navigator.clipboard.writeText(t); }catch(e){}
   window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank');
+}
+// ✏️ mudar categoria/gênero ou + adicionar pessoa nova (vale para o cadastro inteiro)
+function nivelAtualDe(nome){
+  const k = normalizarNome(nome);
+  if(Array.isArray(niveis.nivelI) && niveis.nivelI.some(n=>normalizarNome(n) === k)) return 'I';
+  const c = db.clt.find(p=>normalizarNome(p.nome) === k); if(c) return c.nivel || 'I';
+  return db.fl.some(p=>normalizarNome(p.nome) === k) ? 'FL' : '';
+}
+function editarPessoaNivel(nome){
+  const novo = !nome, k0 = normalizarNome(nome || '');
+  const cad = novo ? null : cadastroDe(nome);
+  const nv0 = novo ? (abaNivel !== 'OK' && abaNivel !== 'AG' ? abaNivel : 'I') : nivelAtualDe(nome);
+  const gen0 = cad ? String(cad.genero || '').slice(0,1).toUpperCase() : '';
+  const ops = [['IV','Conferente IV'],['III','Conferente III'],['II','Conferente II'],['I','Conferente I'],['ES','Estagiário'],['FL','Freelance']];
+  const box = abrirFolha(novo ? '+ Adicionar pessoa' : `✏️ ${esc(nome)}`, `
+    ${novo ? '<label>Nome completo</label><input type="text" id="edNome" class="full" placeholder="Ex.: INGRID MARTINS SILVA DE PAULA">' : ''}
+    <label>Categoria</label><select id="edNivel" class="full">${ops.map(([v, r])=>`<option value="${v}" ${v === nv0 ? 'selected' : ''}>${r}</option>`).join('')}</select>
+    <label>Gênero</label><select id="edGen" class="full"><option value="">—</option><option value="F" ${gen0 === 'F' ? 'selected' : ''}>Feminino</option><option value="M" ${gen0 === 'M' ? 'selected' : ''}>Masculino</option></select>
+    <p class="hint">Muda no cadastro da equipe (Viagem › Equipe) e vale para as próximas escalas.</p>`, 'Salvar', b=>{
+    const nomeF = novo ? String(b.querySelector('#edNome').value || '').replace(/\s+/g, ' ').trim().toUpperCase() : nome;
+    if(!nomeF || nomeF.length < 3) return 'Digite o nome.';
+    const k = normalizarNome(nomeF);
+    if(novo && (cadastroDe(nomeF) || db.rj.some(p=>normalizarNome(p.nome) === k))) return 'Essa pessoa já está no cadastro. Ache o nome na aba dela e toque em ✏️.';
+    const nv = b.querySelector('#edNivel').value, g = b.querySelector('#edGen').value;
+    const genero = g === 'F' ? 'FEMININO' : g === 'M' ? 'MASCULINO' : '';
+    // tira de onde estava
+    let base = null;
+    const ic = db.clt.findIndex(p=>normalizarNome(p.nome) === k); if(ic >= 0) base = db.clt.splice(ic, 1)[0];
+    const ifl = db.fl.findIndex(p=>normalizarNome(p.nome) === k); if(ifl >= 0) base = Object.assign({}, db.fl.splice(ifl, 1)[0], base || {});
+    base = base || {nome:nomeF, afastado:false, prioridade:99};
+    base.genero = genero || base.genero || '';
+    delete base.novo;
+    if(nv === 'FL'){ delete base.nivel; db.fl.push(base); } else { base.nivel = nv; db.clt.push(base); }
+    // lista colada do Conferente I acompanha a mudança
+    if(Array.isArray(niveis.nivelI) && niveis.nivelI.length){
+      niveis.nivelI = niveis.nivelI.filter(n=>normalizarNome(n) !== k);
+      if(nv === 'I') niveis.nivelI.push(nomeF);
+      salvarNiveis();
+    }
+    lsSet(LS_KEY, db); marcarAlterado('equipe'); nomesConhecidosCache = null;
+    try{ renderEquipe(); }catch(e){}
+    if(novo) abaNivel = nv;
+    renderNiveis();
+    toast(`${nomeF}: ${ops.find(o=>o[0] === nv)[1]}${genero ? ' · ' + genero.toLowerCase() : ''}.`);
+  });
+  if(novo) setTimeout(()=>{ const i = box.querySelector('#edNome'); if(i) i.focus(); }, 50);
 }
 function levarNiveisParaEscala(){
   const cs = confirmadosNiveis(); if(!cs.length) return;
@@ -4818,7 +4872,7 @@ async function exportarNiveisExcel(){
   const COLS = ['Nº','NOME','GÊNERO','ITENS/H','LOJAS','ERROS POR LOJA','PRECISÃO','NOTA','FALTAS','STATUS'];
   const larg = [5, 40, 9, 10, 8, 14, 11, 8, 8, 14];
   const fundoOk = {type:'pattern', pattern:'solid', fgColor:{argb:'FFE2F5E6'}}, fundoNao = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFDE2E2'}};
-  const ordem = ['IV','III','II','I','FL'], tam = {};
+  const ordem = ['IV','III','II','I','ES','FL'], tam = {};
   ordem.forEach(nv=>{
     const ps = pessoasDoNivel(nv); tam[nv] = ps.length;
     const ws = wb.addWorksheet(ROT_NIVEL[nv]);
@@ -6830,7 +6884,7 @@ function pessoasDasFichas(){
   return lista.map(x=>Object.assign(x, {ind: indicadoresDe(x.nome)}));
 }
 function rotuloTipo(x){
-  if(x.tipo==='clt') return 'CONFERENTE ' + (x.cad.nivel || '');
+  if(x.tipo==='clt') return rotuloNivelCad(x.cad.nivel);
   if(x.tipo==='fl') return 'Freelancer' + (x.cad.novo ? ' (novo)' : '');
   if(x.tipo==='rj') return 'RJ';
   return 'fora do cadastro';
@@ -7433,7 +7487,7 @@ function exportarRelatorioFinalPNG(){
 function exportarListaViagemPNG(){
   if(!ultimaEscala){ toast('Gere a escala primeiro.'); return; }
   const v = ultimaEscala.viagem || {};
-  const todos = [...ultimaEscala.selecionados.map(p=>({p, tipo:'CONFERENTE ' + (p.nivel||'')})), ...ultimaEscala.freelancers.map(p=>({p, tipo:'Freelancer'}))];
+  const todos = [...ultimaEscala.selecionados.map(p=>({p, tipo:rotuloNivelCad(p.nivel)})), ...ultimaEscala.freelancers.map(p=>({p, tipo:'Freelancer'}))];
   const temConfirmacao = todos.some(x=>x.p.status === 'Confirmado');
   const vao = todos.filter(x=>temConfirmacao ? x.p.status === 'Confirmado' : x.p.status !== 'Recusado');
   const aguardando = temConfirmacao ? todos.filter(x=>x.p.status !== 'Confirmado' && x.p.status !== 'Recusado') : [];
@@ -7559,7 +7613,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 20/10/2026 20:03</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 21/10/2026 16:07</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
