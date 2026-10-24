@@ -537,7 +537,7 @@ body.modo-colega .so-criador{display:none !important;}
 
   <!-- ================= VIAGEM: QUARTOS ================= -->
   <section id="niveis" class="view">
-    <div class="card"><h2 style="margin-bottom:4px">📊 Produtividade por nível</h2>
+    <div class="card"><h2 style="margin-bottom:4px;-webkit-user-select:none;user-select:none" onclick="toqueSecreto()">📊 Produtividade por nível</h2>
       <p class="hint" style="margin-top:0">A equipe separada em Conferente IV, III, II, I e Freelance, do mais produtivo para o menos. Chamou? ✉️ Convite enviado. A pessoa deu prazo? ⏳ Aguardando resposta. Respondeu? ✅ ou ❌. A aba ✅ Confirmados mostra quanto falta, confere as regras e leva a equipe para a escala.</p>
       <div class="acoes"><button class="btn small" type="button" onclick="editarPessoaNivel()">+ Adicionar pessoa</button><button class="btn small secondary" type="button" onclick="exportarNiveisExcel()">Excel (uma aba por nível)</button><button class="btn small secondary" type="button" onclick="abrirListaNivelI()">Lista do Conferente I</button><button class="btn small secondary" type="button" onclick="limparStatusNiveis()">Nova lista (limpar marcações)</button></div>
     </div>
@@ -545,6 +545,7 @@ body.modo-colega .so-criador{display:none !important;}
       <select id="ordemNivel" style="flex:1" onchange="mudarOrdemNivel(this.value)" aria-label="Ordenar por"><option value="ih">Itens/h (média)</option><option value="recente">Ritmo recente</option><option value="erros">Menos erros</option><option value="nota">Nota</option><option value="ultima">Última loja</option><option value="nome">Nome (A-Z)</option></select></div>
     <div class="card" id="listaNiveis"></div>
   </section>
+  <section id="plano" class="view"><div id="conteudoPlano"></div></section>
   <section id="quartos" class="view">
     <div class="card">
       <h2>Funções de quarto individual</h2>
@@ -1005,12 +1006,14 @@ function abrirView(id){
   document.querySelectorAll('#barra button').forEach(b=>b.classList.toggle('active', b.dataset.grupo===g));
   const sub = document.getElementById('subnav');
   if((g === 'viagem' || g === 'gestao') && typeof souCriador === 'function' && !souCriador()) return abrirView(id === 'modelos' ? 'setores' : 'inicio');
+  if(id === 'plano' && typeof planoLigado === 'function' && !planoLigado()) return abrirView('niveis');
   const subs = GRUPOS[g];
   sub.innerHTML = subs.length>1 ? subs.map(([v,rot])=>`<button data-view="${v}" class="${v===id?'active':''}">${rot}</button>`).join('') : '';
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active', s.id===id));
   ui.view = id; ui.ultimaPorGrupo[g] = id; lsSet(UI_KEY, ui);
   if(id==='quartos') renderRJQuartosOptions();
   if(id==='niveis') renderNiveis();
+  if(id==='plano') renderPlano();
   if(id==='escala' && ultimaEscala) renderEscala();
   if(['niveis','escala','equipe'].includes(id) && robo.link && Date.now() - (robo.atualizadoEm||0) > 5*60*1000 && typeof atualizarDoRobo === 'function') atualizarDoRobo(false);
   if(id==='fichas') renderFichas();
@@ -2979,6 +2982,7 @@ function importarLojaEscolhida(){
 function rerenderViagem(){
   try{ if(document.getElementById('escala').classList.contains('active') && ultimaEscala) renderEscala(); }catch(e){}
   try{ if(document.getElementById('niveis').classList.contains('active')) renderNiveis(); }catch(e){}
+  try{ if(document.getElementById('plano').classList.contains('active')) renderPlano(); }catch(e){}
   try{ if(document.getElementById('equipe').classList.contains('active')) renderEquipe(); }catch(e){}
 }
 function levarEscalaParaPresenca(){
@@ -4641,6 +4645,110 @@ function renderCoordsAgora(){
 }
 let coordsCarregando = false;
 /* =====================================================================
+   VIAGEM › PLANEJAMENTO (escondido): peças previstas de cada loja da viagem × ritmo da equipe confirmada
+   → quanto tempo leva e se a loja tende a sair cedo ou tarde. Só aparece depois de liga/desliga com código:
+   5 toques seguidos no título "Produtividade por nível". Fica só nos aparelhos do criador (vai junto da escala).
+   ===================================================================== */
+const PLANO_KEY = 'central_planoViagem_v1', PLANO_ON = 'central_ui_pv';
+let plano = lsGet(PLANO_KEY, null) || {lojas:[], saida:'04:00', padrao:600, padraoEst:200};
+const planoLigado = () => { try{ return localStorage.getItem(PLANO_ON) === '1'; }catch(e){ return false; } };
+// código guardado só como conta (não fica escrito no app)
+const codigoOk = c => { let h = 7; String(c).split('').forEach(ch=>{ h = (h * 31 + ch.charCodeAt(0)) % 1000003; }); return h === 2062; };
+function aplicarPlanoViagem(){
+  const base = GRUPOS.viagem.filter(v=>v[0] !== 'plano');
+  GRUPOS.viagem = planoLigado() && souCriador() ? [...base, ['plano', 'Planejamento']] : base;
+  if(!planoLigado() && ui.view === 'plano') abrirView('niveis');
+  else if(grupoDaView(ui.view) === 'viagem' && document.querySelector('#barra button[data-grupo="viagem"].active')) abrirView(ui.view);
+}
+let toquesPlano = 0, toquesPlanoT = 0;
+function toqueSecreto(){
+  const agora = Date.now(); toquesPlano = agora - toquesPlanoT < 700 ? toquesPlano + 1 : 1; toquesPlanoT = agora;
+  if(toquesPlano < 5) return;
+  toquesPlano = 0;
+  if(!souCriador()) return;
+  const box = abrirFolha('Código', `<input type="password" id="cdPlano" class="full" inputmode="numeric" autocomplete="off">`, 'OK', b=>{
+    if(!codigoOk(b.querySelector('#cdPlano').value)) return 'Código errado.';
+    const on = !planoLigado();
+    try{ localStorage.setItem(PLANO_ON, on ? '1' : '0'); }catch(e){}
+    aplicarPlanoViagem();
+    if(on) abrirView('plano');
+  });
+  setTimeout(()=>{ const i = box.querySelector('#cdPlano'); if(i) i.focus(); }, 50);
+}
+function salvarPlano(){ lsSet(PLANO_KEY, plano); marcarAlterado('escala'); }
+// equipe da viagem: confirmados de Por nível; se ainda não tiver, a Nova escala (sem os recusados)
+function equipePlano(){
+  let ps = confirmadosNiveis().map(p=>({nome:p.nome, estag:p.nv === 'ES'}));
+  let fonte = 'confirmados em Por nível';
+  if(!ps.length && ultimaEscala){
+    const todos = [...ultimaEscala.selecionados, ...ultimaEscala.freelancers], temConf = todos.some(p=>p.status === 'Confirmado');
+    ps = todos.filter(p=>temConf ? p.status === 'Confirmado' : p.status !== 'Recusado').map(p=>({nome:p.nome, estag:p.nivel === 'ES'}));
+    fonte = temConf ? 'confirmados da Nova escala' : 'Nova escala (sem respostas ainda)';
+  }
+  const linhas = ps.map(p=>{ const ind = indicadoresDe(p.nome); const ih = ind.ih || 0;
+    return {nome:p.nome, estag:p.estag, ih: ih || (p.estag ? +plano.padraoEst || 200 : +plano.padrao || 600), proprio: !!ih}; });
+  return {linhas, fonte, soma: linhas.reduce((t,x)=>t + x.ih, 0)};
+}
+const minHora = h => { const v = horaValida(h || ''); return v ? hhmmParaMin(v) : null; };
+const horaDeMin = m => String(Math.floor(((m % 1440) + 1440) % 1440 / 60)).padStart(2,'0') + ':' + String(Math.round(((m % 1440) + 1440) % 1440 % 60)).padStart(2,'0');
+const durTxt = m => Math.floor(m / 60) + 'h' + String(Math.round(m % 60)).padStart(2,'0');
+function calculoPlano(l, eq){
+  const n = +l.pessoas > 0 ? +l.pessoas : eq.linhas.length;
+  const soma = +l.pessoas > 0 && eq.linhas.length ? eq.soma / eq.linhas.length * n : eq.soma;
+  if(!(l.pecas > 0) || !soma) return null;
+  const min = Math.round(l.pecas / soma * 60);
+  const ini = minHora(l.inicio || '22:00'), saida = minHora(plano.saida || '04:00');
+  if(ini === null) return {min, n};
+  const fim = ini + min;
+  let limite = saida; while(limite <= ini) limite += 1440;
+  const folga = limite - fim;   // + sobrou tempo · − passou
+  const st = folga >= 30 ? {ic:'🟢', rot:'sai cedo', cls:'ok'} : folga >= 0 ? {ic:'🟡', rot:'no limite', cls:'warn'} : {ic:'🔴', rot:'sai tarde', cls:'danger'};
+  // quantas pessoas para terminar no horário de saída
+  const media = soma / n, precisa = limite > ini ? Math.ceil(l.pecas / (media * (limite - ini) / 60)) : null;
+  return {min, n, fim: horaDeMin(fim), folga, st, precisa};
+}
+function renderPlano(){
+  const div = document.getElementById('conteudoPlano'); if(!div) return;
+  if(!souCriador() || !planoLigado()){ div.innerHTML = ''; return; }
+  const eq = equipePlano();
+  const semMedia = eq.linhas.filter(x=>!x.proprio).length;
+  let h = `<div class="card"><h2 style="margin-bottom:4px">Planejamento das lojas</h2>
+    <p class="hint" style="margin-top:0">Equipe: <b>${eq.linhas.length} pessoa(s)</b> (${esc(eq.fonte)}) · ritmo somado ≈ <b>${fmtN(eq.soma)} itens/h</b>${semMedia ? ` · ${semMedia} sem média própria (usei ${fmtN(+plano.padrao || 600)} conf. / ${fmtN(+plano.padraoEst || 200)} estag.)` : ''}.</p>
+    <div class="row" style="gap:8px;align-items:end"><div><label>Saída boa até</label><input type="text" inputmode="numeric" value="${esc(plano.saida || '04:00')}" style="max-width:90px" onchange="plano.saida=horaValida(this.value)||'04:00';salvarPlano();renderPlano()"></div>
+      <div><label>Sem média: conf.</label><input type="number" value="${+plano.padrao || 600}" style="max-width:90px" onchange="plano.padrao=+this.value||600;salvarPlano();renderPlano()"></div>
+      <div><label>estag.</label><input type="number" value="${+plano.padraoEst || 200}" style="max-width:90px" onchange="plano.padraoEst=+this.value||200;salvarPlano();renderPlano()"></div></div>
+  </div>`;
+  const calc = plano.lojas.map((l, i)=>({l, i, c:calculoPlano(l, eq)}));
+  const ok = calc.filter(x=>x.c && x.c.st);
+  if(ok.length > 1){
+    h += `<div class="card"><h2 style="font-size:1rem;margin:0 0 6px">Da que sai mais cedo para a mais tarde</h2>${ok.slice().sort((a,b)=>b.c.folga - a.c.folga).map(x=>`<div class="dev-linha">${x.c.st.ic} <b>${esc(x.l.nome || 'Loja ' + (x.i + 1))}</b>${x.l.data ? ' · ' + esc(x.l.data) : ''} — termina ~${x.c.fim} (${durTxt(x.c.min)})</div>`).join('')}</div>`;
+  }
+  h += calc.map(({l, i, c})=>`<div class="card">
+    <div class="setor-row" style="gap:6px;flex-wrap:wrap"><input type="text" value="${esc(l.nome || '')}" placeholder="Loja" style="flex:2;min-width:140px" onchange="editarPlano(${i},'nome',this.value)">
+      <input type="text" value="${esc(l.data || '')}" placeholder="Data" style="max-width:80px" onchange="editarPlano(${i},'data',this.value)">
+      <button class="pill remover" type="button" onclick="removerPlano(${i})" aria-label="Apagar">×</button></div>
+    <div class="setor-row" style="gap:6px;flex-wrap:wrap;margin-top:6px"><input type="text" inputmode="numeric" value="${l.pecas ? l.pecas : ''}" placeholder="Peças previstas" style="flex:1;min-width:110px" onchange="editarPlano(${i},'pecas',this.value)">
+      <input type="text" inputmode="numeric" value="${esc(l.inicio || '22:00')}" placeholder="Início" style="max-width:80px" onchange="editarPlano(${i},'inicio',this.value)">
+      <input type="number" value="${+l.pessoas || ''}" placeholder="Pessoas (${eq.linhas.length})" style="max-width:110px" onchange="editarPlano(${i},'pessoas',this.value)"></div>
+    ${c ? `<p class="msg ${c.st ? c.st.cls === 'danger' ? 'warn' : c.st.cls : 'ok'}" style="margin-top:8px">${c.st ? c.st.ic + ' <b>' + c.st.rot + '</b> · ' : ''}≈ ${durTxt(c.min)} de contagem com ${c.n} pessoa(s)${c.fim ? ` · termina ~<b>${c.fim}</b>` : ''}${c.st ? ` (${c.folga >= 0 ? durTxt(c.folga) + ' antes' : durTxt(-c.folga) + ' depois'} das ${esc(plano.saida)})` : ''}${c.precisa && c.st && c.st.cls === 'danger' ? ` · para sair às ${esc(plano.saida)} precisaria de ~${c.precisa} pessoas` : ''}</p>` : '<p class="hint">Coloque as peças previstas para ver o tempo.</p>'}
+  </div>`).join('');
+  h += `<button class="btn secondary" type="button" onclick="adicionarPlano()">+ Loja</button>`;
+  if(eq.linhas.length) h += `<details class="card" style="margin-top:10px"><summary class="hint" style="cursor:pointer">Ritmo de cada pessoa da equipe</summary>${eq.linhas.slice().sort((a,b)=>b.ih - a.ih).map(x=>`<div class="dev-linha">${esc(x.nome)}${x.estag ? ' (estag.)' : ''} · ${fmtN(x.ih)} itens/h${x.proprio ? '' : ' <span class="hint">(sem média, valor padrão)</span>'}</div>`).join('')}</details>`;
+  else h += `<p class="hint" style="margin-top:10px">Marque os confirmados em Por nível (ou monte a Nova escala) para o app saber quem vai.</p>`;
+  div.innerHTML = h;
+}
+function adicionarPlano(){ plano.lojas.push({nome:'', data:'', pecas:0, inicio:'22:00', pessoas:0}); salvarPlano(); renderPlano(); }
+function removerPlano(i){ plano.lojas.splice(i, 1); salvarPlano(); renderPlano(); }
+function editarPlano(i, campo, v){
+  const l = plano.lojas[i]; if(!l) return;
+  if(campo === 'pecas') l.pecas = Math.round(Number(String(v).replace(/\D/g,'')) || 0);
+  else if(campo === 'pessoas') l.pessoas = Math.max(0, Math.round(+v || 0));
+  else if(campo === 'inicio') l.inicio = horaValida(v) || '22:00';
+  else l[campo] = String(v).trim().toUpperCase();
+  salvarPlano(); renderPlano();
+}
+
+/* =====================================================================
    VIAGEM › POR NÍVEL — produtividade da equipe por categoria (IV, III, II, I, Freelance),
    ✅ confirmado / ❌ recusado e a lista só com quem confirmou. Só a versão do criador (Viagem).
    Guardado junto da escala (estado/escala._niveis), que os colegas não recebem.
@@ -6015,6 +6123,7 @@ function aplicarPapel(){
   const bv = document.querySelector('#barra button[data-grupo="viagem"]'); if(bv) bv.hidden = col;
   const bg = document.querySelector('#barra button[data-grupo="gestao"]'); if(bg) bg.hidden = col || !robo.link;
   if(col && ['viagem', 'gestao'].includes(grupoDaView(ui.view))) abrirView('inicio');
+  try{ aplicarPlanoViagem(); }catch(e){}
 }
 /* ---- ⭐ Avaliação do coordenador por setor (no resumo individual de cada loja).
    Fica em robo.notasResumo[loja][pessoa].aval[setor] = {n: 4 excelente · 3 bom · 2 regular · 1 ruim, c: comentário, em}
@@ -7699,10 +7808,12 @@ function preencherQuartosNomes(v){
 registrarSinc('equipe', ()=>db,
   v=>{ const arr = x=>Array.isArray(x) ? x : []; db = {clt:arr(v&&v.clt), fl:arr(v&&v.fl), rj:arr(v&&v.rj)}; lsSet(LS_KEY, db); restaurarUltimaEscala(); renderEquipe(); renderEscala(); },
   ()=>!(db.clt.length || db.fl.length || db.rj.length));
-registrarSinc('escala', ()=>{ const e = lsGet(ESCALA_KEY, null), n = lsGet(NIVEIS_KEY, null); return n ? Object.assign({}, e || {}, {_niveis:n}) : e; },
-  v=>{ if(v && v._niveis){ niveis = v._niveis; if(!niveis.status) niveis.status = {}; lsSet(NIVEIS_KEY, niveis); v = Object.assign({}, v); delete v._niveis; if(!Object.keys(v).length) v = null; try{ renderNiveis(); }catch(e){} }
+registrarSinc('escala', ()=>{ const e = lsGet(ESCALA_KEY, null), n = lsGet(NIVEIS_KEY, null), pl = lsGet(PLANO_KEY, null);
+    return (n || pl) ? Object.assign({}, e || {}, n ? {_niveis:n} : {}, pl ? {_plano:pl} : {}) : e; },
+  v=>{ if(v && v._plano){ plano = v._plano; lsSet(PLANO_KEY, plano); v = Object.assign({}, v); delete v._plano; if(!Object.keys(v).length) v = null; try{ renderPlano(); }catch(e){} }
+       if(v && v._niveis){ niveis = v._niveis; if(!niveis.status) niveis.status = {}; lsSet(NIVEIS_KEY, niveis); v = Object.assign({}, v); delete v._niveis; if(!Object.keys(v).length) v = null; try{ renderNiveis(); }catch(e){} }
        lsSet(ESCALA_KEY, v || null); restaurarUltimaEscala(); renderEscala(); },
-  ()=>!lsGet(ESCALA_KEY, null) && !lsGet(NIVEIS_KEY, null));
+  ()=>!lsGet(ESCALA_KEY, null) && !lsGet(NIVEIS_KEY, null) && !lsGet(PLANO_KEY, null));
 registrarSinc('loja', ()=>loja,
   v=>{ loja = migrarLoja(Object.assign({nome:'', data:'', pessoas:[], setores:{}, modelo:'drogaria'}, (v && typeof v==='object') ? v : {}));
        if(!Array.isArray(loja.pessoas)) loja.pessoas = []; if(!loja.setores || typeof loja.setores!=='object') loja.setores = {};
@@ -7729,7 +7840,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 24/10/2026 08:46</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 24/10/2026 10:05</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
