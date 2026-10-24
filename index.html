@@ -541,6 +541,8 @@ body.modo-colega .so-criador{display:none !important;}
       <p class="hint" style="margin-top:0">A equipe separada em Conferente IV, III, II, I e Freelance, do mais produtivo para o menos. Chamou? ✉️ Convite enviado. A pessoa deu prazo? ⏳ Aguardando resposta. Respondeu? ✅ ou ❌. A aba ✅ Confirmados mostra quanto falta, confere as regras e leva a equipe para a escala.</p>
       <div class="acoes"><button class="btn small" type="button" onclick="editarPessoaNivel()">+ Adicionar pessoa</button><button class="btn small secondary" type="button" onclick="exportarNiveisExcel()">Excel (uma aba por nível)</button><button class="btn small secondary" type="button" onclick="abrirListaNivelI()">Lista do Conferente I</button><button class="btn small secondary" type="button" onclick="limparStatusNiveis()">Nova lista (limpar marcações)</button></div>
     </div>
+    <div class="row" style="margin:0 0 10px;gap:8px"><input type="search" id="buscaNivel" class="full" placeholder="🔍 Pesquisar nome (todas as categorias)" style="flex:2" oninput="buscaNivel=this.value;renderNiveis()">
+      <select id="ordemNivel" style="flex:1" onchange="mudarOrdemNivel(this.value)" aria-label="Ordenar por"><option value="ih">Itens/h (média)</option><option value="recente">Ritmo recente</option><option value="erros">Menos erros</option><option value="nota">Nota</option><option value="ultima">Última loja</option><option value="nome">Nome (A-Z)</option></select></div>
     <div class="card" id="listaNiveis"></div>
   </section>
   <section id="quartos" class="view">
@@ -1009,6 +1011,8 @@ function abrirView(id){
   ui.view = id; ui.ultimaPorGrupo[g] = id; lsSet(UI_KEY, ui);
   if(id==='quartos') renderRJQuartosOptions();
   if(id==='niveis') renderNiveis();
+  if(id==='escala' && ultimaEscala) renderEscala();
+  if(['niveis','escala','equipe'].includes(id) && robo.link && Date.now() - (robo.atualizadoEm||0) > 5*60*1000 && typeof atualizarDoRobo === 'function') atualizarDoRobo(false);
   if(id==='fichas') renderFichas();
   if(id==='inicio' && typeof renderPainel==='function') renderPainel();
   if(typeof atualizarBadges==='function') atualizarBadges();
@@ -2971,6 +2975,12 @@ function importarLojaEscolhida(){
   if(origemEscala === 'imagem') conferirNomesDaImagem();
 }
 
+// telas da Viagem que mostram produtividade: redesenha com os dados novos do robô
+function rerenderViagem(){
+  try{ if(document.getElementById('escala').classList.contains('active') && ultimaEscala) renderEscala(); }catch(e){}
+  try{ if(document.getElementById('niveis').classList.contains('active')) renderNiveis(); }catch(e){}
+  try{ if(document.getElementById('equipe').classList.contains('active')) renderEquipe(); }catch(e){}
+}
 function levarEscalaParaPresenca(){
   if(!ultimaEscala){ toast('Monte uma escala em Viagem › Nova escala primeiro.'); return; }
   const coord = document.getElementById('nomeCoord').value.trim();
@@ -4640,7 +4650,7 @@ let niveis = lsGet(NIVEIS_KEY, null) || {status:{}, nivelI:null};
 // v2: o "⏳ Aguardando" antigo era "já chamei" → vira ✉️ Convite enviado
 if(!niveis.v2){ Object.keys(niveis.status || {}).forEach(k=>{ if(niveis.status[k] === 'A') niveis.status[k] = 'E'; }); niveis.v2 = true; }
 let abaNivel = 'IV';
-const ABAS_NIVEL = [['IV','Conf. IV'],['III','Conf. III'],['II','Conf. II'],['I','Conf. I'],['ES','Estagiário'],['FL','Freelance'],['AG','📨 Em aberto'],['OK','✅ Confirmados']];
+const ABAS_NIVEL = [['IV','Conf. IV'],['III','Conf. III'],['II','Conf. II'],['I','Conf. I'],['ES','Estagiário'],['FL','Freelance'],['AG','📨 Em aberto'],['NV','🆕 Fora do cadastro'],['OK','✅ Confirmados']];
 const ROT_NIVEL = {IV:'CONFERENTE IV', III:'CONFERENTE III', II:'CONFERENTE II', I:'CONFERENTE I', ES:'ESTAGIÁRIO', FL:'FREELANCE'};
 function salvarNiveis(){ lsSet(NIVEIS_KEY, niveis); marcarAlterado('escala'); }
 function cadastroDe(nome){ const k = normalizarNome(nome); return [...db.clt, ...db.fl].find(p=>normalizarNome(p.nome) === k) || null; }
@@ -4656,14 +4666,37 @@ function pessoasDoNivel(nv){
     const ind = indicadoresDe(p.nome);
     return {nome:p.nome, nv, gen:String(p.genero || '').slice(0,1).toUpperCase(), ih:ind.ih || 0, lojas:ind.lojasRobo || 0,
       erroLoja: ind.lojasComRel ? (ind.erros || 0) / ind.lojasComRel : null, precisao: ind.lojasComRel ? ind.precisao : null,
-      nota:ind.nota, faltas:ind.faltas || 0, pref:p.prioridade, st:niveis.status[normalizarNome(p.nome)] || ''};
-  }).sort((a,b)=>(b.ih - a.ih) || (b.nota - a.nota) || a.nome.localeCompare(b.nome, 'pt-BR'));
+      nota:ind.nota, faltas:ind.faltas || 0, pref:p.prioridade, ultima:ind.ultima || '', recente:ind.recente || null,
+      conv:respostasConvite(p.nome, ind), st:niveis.status[normalizarNome(p.nome)] || ''};
+  }).sort(ordenarNiveis);
 }
+// ordem escolhida em "Ordenar por"
+let ordemNivel = (()=>{ try{ return localStorage.getItem('central_ordemNivel') || 'ih'; }catch(e){ return 'ih'; } })();
+function ordenarNiveis(a, b){
+  const nome = a.nome.localeCompare(b.nome, 'pt-BR');
+  if(ordemNivel === 'nome') return nome;
+  if(ordemNivel === 'recente') return ((b.recente ? b.recente.ih : b.ih) - (a.recente ? a.recente.ih : a.ih)) || nome;
+  if(ordemNivel === 'erros') return ((a.erroLoja === null ? 99 : a.erroLoja) - (b.erroLoja === null ? 99 : b.erroLoja)) || (b.ih - a.ih) || nome;
+  if(ordemNivel === 'nota') return (b.nota - a.nota) || nome;
+  if(ordemNivel === 'ultima') return (dataParaChave(b.ultima) || 0) - (dataParaChave(a.ultima) || 0) || nome;
+  return (b.ih - a.ih) || (b.nota - a.nota) || nome;
+}
+function mudarOrdemNivel(v){ ordemNivel = v; try{ localStorage.setItem('central_ordemNivel', v); }catch(e){} renderNiveis(); }
+// respostas a convites nos últimos 90 dias: marcações ✅/❌ desta tela + convites pelo link do robô
+function respostasConvite(nome, ind){
+  const k = normalizarNome(nome), lim = Date.now() - 90 * 864e5;
+  const hs = Object.values(niveis.hist || {}).filter(h=>h.k === k && h.em >= lim);
+  const sim = hs.filter(h=>h.st === 'C').length + (ind.convSim || 0), nao = hs.filter(h=>h.st === 'R').length + (ind.convNao || 0);
+  return {sim, nao};
+}
+function diasSemLoja(ultima){ const d = diaDe(ultima); if(d === null) return null; return Math.floor(Date.now() / 864e5) - d; }
 function marcarNivel(nome, st, nv){
   const k = normalizarNome(nome);
   niveis.em = niveis.em || {};
   niveis.envio = niveis.envio || {}; niveis.prazo = niveis.prazo || {};
-  if(niveis.status[k] === st){ delete niveis.status[k]; delete niveis.em[k]; if(st === 'E') delete niveis.envio[k]; if(st === 'A') delete niveis.prazo[k]; salvarNiveis(); renderNiveis(); return; }
+  niveis.hist = (niveis.hist && !Array.isArray(niveis.hist)) ? niveis.hist : {}; niveis.lista = niveis.lista || ('l' + Date.now());
+  const hk = niveis.lista + '|' + k;
+  if(niveis.status[k] === st){ if(st === 'C' || st === 'R') delete niveis.hist[hk]; delete niveis.status[k]; delete niveis.em[k]; if(st === 'E') delete niveis.envio[k]; if(st === 'A') delete niveis.prazo[k]; salvarNiveis(); renderNiveis(); return; }
   if(st === 'A'){
     const am = new Date(Date.now() + 864e5), sug = String(am.getDate()).padStart(2,'0') + '/' + String(am.getMonth()+1).padStart(2,'0');
     const r = prompt(`${nome} deu prazo para responder até quando? (dia/mês)`, niveis.prazo[k] || sug);
@@ -4681,6 +4714,9 @@ function marcarNivel(nome, st, nv){
     if(avisos.length && !confirm(`Atenção: ${avisos.join(' e ')}.\n\nConfirmar ${nome} mesmo assim?`)) return;
   }
   niveis.status[k] = st; niveis.em[k] = Date.now();
+  if(st === 'C' || st === 'R') niveis.hist[hk] = {k, st, em:Date.now()}; else delete niveis.hist[hk];
+  // guarda só 180 dias de respostas
+  const lim = Date.now() - 180 * 864e5; Object.keys(niveis.hist).forEach(x=>{ if(niveis.hist[x].em < lim) delete niveis.hist[x]; });
   salvarNiveis(); renderNiveis();
 }
 function confirmadosNiveis(){ return ['IV','III','II','I','ES','FL'].flatMap(nv=>pessoasDoNivel(nv).filter(p=>p.st === 'C')); }
@@ -4725,18 +4761,61 @@ function regrasConfirmados(cs){
     + ok(q('III') <= (menor ? 2 : 3), `Conferente III: ${q('III')} (máximo ${menor ? 2 : 3})`)
     + (niveis.araujo !== false ? ok(q('I') >= 3, `Conferente I: ${q('I')} (Araujo: 3 obrigatórios)`) : '');
 }
+let buscaNivel = '';
+// gente que apareceu nas lojas (robô e Presença) e não está no cadastro
+function foraDoCadastro(){
+  const cad = [...db.clt, ...db.fl, ...db.rj].map(p=>p.nome);
+  const kc = new Set(cad.map(normalizarNome)), ign = new Set(niveis.ignorar || []);
+  const visto = {};
+  const add = (nome, data, origem, estag) => {
+    if(!nome || /TREINAMENTO|^COLETOR/i.test(nome)) return;
+    const k = normalizarNome(nome);
+    if(!visto[k] && (kc.has(k) || ign.has(k) || ehCoordenadorCadastro(nome) || cad.some(c=>mesmoNomeFlex(c, nome) || mesmaPessoaTokens(c, nome)))) return;
+    const v = visto[k] || (visto[k] = {nome, ids:new Set(), ultima:'', d:0, origem:new Set(), estag:false});
+    v.ids.add(origem + data); v.origem.add(origem); if(estag) v.estag = true;
+    const d = dataParaChave(data); if(d > v.d){ v.d = d; v.ultima = data; }
+  };
+  robo.pessoas.forEach(p=>{ const l = robo.lojas.find(x=>x.id === p.id); if(!l) return; const pp = papelNaLoja(p.id, p.nome); if(pp === 'coord') return; add(p.nome, l.data, 'robô', pp === 'estagiario'); });
+  try{ historicoAtivo().forEach(r=>(r.pessoas || []).forEach(p=>{ if(!p.coordenador) add(p.nome, r.data, 'presença', !!p.estagiario); })); }catch(e){}
+  return Object.values(visto).map(v=>Object.assign(v, {lojas:v.ids.size, ind:indicadoresDe(v.nome)})).sort((a,b)=>b.d - a.d || a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+function linhaFora(v){
+  const det = [v.ind.ih ? `<b>${fmtN(v.ind.ih)} itens/h</b>` : '', `apareceu em ${v.lojas} loja(s)`, v.ultima ? 'última ' + String(v.ultima).slice(0, 5) : '', v.estag ? 'era estagiário(a)' : '', [...v.origem].join(' e ')].filter(Boolean).join(' · ');
+  return `<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(v.nome)}</b><small class="hist">${det}</small></span>
+    <span class="pill-btns"><button class="pill presente" type="button" data-fora-add="${esc(v.nome)}" data-fora-nv="${v.estag ? 'ES' : ''}">+ Adicionar</button><button class="pill" type="button" data-fora-ign="${esc(v.nome)}">Ignorar</button></span></div>`;
+}
 function linhaNivel(p, i){
-  const det = [p.gen === 'F' ? 'F' : p.gen === 'M' ? 'M' : '', p.ih ? `<b>${fmtN(p.ih)} itens/h</b>` : 'sem produtividade', p.lojas ? `${p.lojas} loja(s)` : '',
-    p.erroLoja !== null ? fmtErroLoja(p.erroLoja) : '', p.faltas ? `${p.faltas} falta(s)` : ''].filter(Boolean).join(' · ');
+  const det = [buscaNivel.trim() ? ROT_NIVEL[p.nv] : '', p.gen === 'F' ? 'F' : p.gen === 'M' ? 'M' : '', p.ih ? `<b>${fmtN(p.ih)} itens/h</b>` : 'sem produtividade', p.lojas ? `${p.lojas} loja(s)${p.ultima ? ' · última ' + String(p.ultima).slice(0, 5) : ''}` : '',
+    p.recente && p.ih && p.lojas >= 3 ? (()=>{ const r = p.recente.ih / p.ih; const seta = r >= 1.05 ? '<b style="color:var(--ok)">↑</b>' : r <= 0.95 ? '<b style="color:var(--danger)">↓</b>' : '→'; return `últimas ${p.recente.n}: ${fmtN(p.recente.ih)} ${seta}`; })() : '',
+    p.erroLoja !== null ? fmtErroLoja(p.erroLoja) : '', p.faltas ? `${p.faltas} falta(s)` : '',
+    p.conv && p.conv.nao ? `<span style="color:var(--warn)">recusou ${p.conv.nao} de ${p.conv.sim + p.conv.nao} convite(s) (90 dias)</span>` : p.conv && p.conv.sim ? `aceitou ${p.conv.sim} convite(s) (90 dias)` : '',
+    (()=>{ const d = diasSemLoja(p.ultima); return d !== null && d >= 45 ? `<span style="color:var(--danger)">⚠️ sem loja há ${d} dias</span>` : ''; })()].filter(Boolean).join(' · ');
   const nm = esc(p.nome).replace(/'/g, '&#39;');
   return `<div class="pessoa-row nivel-${p.st === 'C' ? 'ok' : p.st === 'R' ? 'nao' : p.st === 'A' ? 'ag' : p.st === 'E' ? 'env' : ''}"><span class="pessoa-nome"><span class="conv-pos">${i + 1}º</span> <span class="nome-ficha" role="button" tabindex="0" data-nivel-ficha="${esc(p.nome)}"><b>${esc(p.nome)}</b></span>${seloDev(p.nome)} <button class="pill" type="button" style="padding:2px 8px;font-size:.75rem" data-nivel-editar="${esc(p.nome)}" title="Mudar categoria ou gênero">✏️</button><small class="hist">${det}${p.st === 'E' || p.st === 'A' ? (textoAberto(p.nome) ? ' · ' + textoAberto(p.nome) : '') : p.st && quandoNivel(p.nome) ? ` · ${p.st === 'C' ? 'confirmou' : 'recusou'} em ${quandoNivel(p.nome)}` : ''}</small></span>
     <span class="pill-btns btns-nivel"><button class="pill coordpill ${p.st === 'E' ? 'on' : ''}" type="button" data-nivel-st="E" data-nome="${esc(p.nome)}" data-nv="${p.nv}">✉️ Enviado</button><button class="pill caminho ${p.st === 'A' ? 'on' : ''}" type="button" data-nivel-st="A" data-nome="${esc(p.nome)}" data-nv="${p.nv}">⏳ Aguardando</button><button class="pill presente ${p.st === 'C' ? 'on' : ''}" type="button" data-nivel-st="C" data-nome="${esc(p.nome)}" data-nv="${p.nv}">✅ Confirmado</button><button class="pill falta ${p.st === 'R' ? 'on' : ''}" type="button" data-nivel-st="R" data-nome="${esc(p.nome)}">❌ Recusado</button></span></div>`;
 }
 function renderNiveis(){
   const div = document.getElementById('listaNiveis'); if(!div) return;
+  { const so = document.getElementById('ordemNivel'); if(so && so.value !== ordemNivel) so.value = ordemNivel; }
   if(!souCriador()){ div.innerHTML = ''; return; }
   const cs = confirmadosNiveis(), nOk = cs.length, nRec = Object.values(niveis.status).filter(s=>s === 'R').length;
-  let h = `<div class="abas-nivel">${ABAS_NIVEL.map(([k, r])=>`<button type="button" class="${k === abaNivel ? 'on' : ''}" data-aba-nivel="${k}">${r}${k === 'OK' ? ` (${nOk})` : k === 'AG' ? ` (${aguardandoNiveis().length})` : ` <small>${pessoasDoNivel(k).length}</small>`}</button>`).join('')}</div>`;
+  let h = `<div class="abas-nivel">${ABAS_NIVEL.map(([k, r])=>`<button type="button" class="${k === abaNivel ? 'on' : ''}" data-aba-nivel="${k}">${r}${k === 'OK' ? ` (${nOk})` : k === 'AG' ? ` (${aguardandoNiveis().length})` : k === 'NV' ? ` (${foraDoCadastro().length})` : ` <small>${pessoasDoNivel(k).length}</small>`}</button>`).join('')}</div>`;
+  const busca = normalizarNome(buscaNivel);
+  if(busca){
+    const achados = ['IV','III','II','I','ES','FL'].flatMap(nv=>pessoasDoNivel(nv)).filter(p=>normalizarNome(p.nome).includes(busca));
+    const fora = foraDoCadastro().filter(v=>normalizarNome(v.nome).includes(busca));
+    h += `<p class="hint" style="margin:8px 2px">${achados.length} pessoa(s) no cadastro com "${esc(buscaNivel.trim())}"${fora.length ? ` · ${fora.length} fora do cadastro` : ''}.</p>`;
+    h += achados.map(linhaNivel).join('');
+    if(fora.length) h += `<div class="section-title">🆕 Fora do cadastro</div>` + fora.map(linhaFora).join('');
+    if(!achados.length && !fora.length) h += `<p class="hint">Ninguém com esse nome. Toque em "+ Adicionar pessoa" para cadastrar.</p>`;
+    div.innerHTML = h; return;
+  }
+  if(abaNivel === 'NV'){
+    const fora = foraDoCadastro();
+    h += `<p class="hint" style="margin:8px 2px">${fora.length} pessoa(s) que apareceram nas lojas (robô ou Presença) e não estão no cadastro. Coloque cada uma na categoria certa, ou toque em Ignorar (ex.: coordenador, gente de outra regional).</p>`;
+    h += fora.length ? fora.map(linhaFora).join('') : '<p class="hint">Todo mundo das lojas já está no cadastro. 👍</p>';
+    div.innerHTML = h; return;
+  }
   if(abaNivel === 'AG'){
     const ab = aguardandoNiveis(), env = ab.filter(p=>p.st === 'E'), ag = ab.filter(p=>p.st === 'A');
     const venc = ag.filter(p=>prazoVencido((niveis.prazo || {})[normalizarNome(p.nome)])).length;
@@ -4748,7 +4827,7 @@ function renderNiveis(){
     if(!ab.length) h += '<p class="hint">Chamou alguém? Toque em ✉️ Convite enviado na aba do nível dele. Se a pessoa der um prazo, toque em ⏳ Aguardando resposta e informe até quando. Todos ficam aqui até você marcar ✅ ou ❌.</p>';
   } else if(abaNivel !== 'OK'){
     const ps = pessoasDoNivel(abaNivel);
-    h += `<p class="hint" style="margin:8px 2px">${ROT_NIVEL[abaNivel]} · ${ps.length} pessoa(s), do mais produtivo para o menos (itens/h de drogaria do robô). Toque no nome para ver a ficha.${abaNivel === 'I' ? (niveis.nivelI && niveis.nivelI.length ? ' Lista vinda da planilha colada.' : ' Usando o cadastro; cole a lista atual em "Lista do Conferente I".') : ''}</p>`;
+    h += `<p class="hint" style="margin:8px 2px">${ROT_NIVEL[abaNivel]} · ${ps.length} pessoa(s), ${({ih:'do mais produtivo para o menos (média de itens/h de drogaria)', recente:'pelo ritmo das últimas 5 lojas', erros:'de quem erra menos para quem erra mais', nota:'pela nota da ficha', ultima:'de quem contou mais recentemente', nome:'em ordem alfabética'})[ordemNivel]}. Toque no nome para ver a ficha.${abaNivel === 'I' ? (niveis.nivelI && niveis.nivelI.length ? ' Lista vinda da planilha colada.' : ' Usando o cadastro; cole a lista atual em "Lista do Conferente I".') : ''}</p>`;
     h += ps.length ? ps.map(linhaNivel).join('') : '<p class="hint">Ninguém neste nível.</p>';
   } else {
     const f = cs.filter(p=>p.gen === 'F').length, m = cs.filter(p=>p.gen === 'M').length;
@@ -4770,6 +4849,8 @@ document.addEventListener('click', e=>{
   const a = e.target.closest('[data-aba-nivel]'); if(a){ abaNivel = a.dataset.abaNivel; renderNiveis(); return; }
   const s = e.target.closest('[data-nivel-st]'); if(s){ marcarNivel(s.dataset.nome, s.dataset.nivelSt, s.dataset.nv); return; }
   const ed = e.target.closest('[data-nivel-editar]'); if(ed){ editarPessoaNivel(ed.dataset.nivelEditar); return; }
+  const fa = e.target.closest('[data-fora-add]'); if(fa){ editarPessoaNivel(null, fa.dataset.foraAdd, fa.dataset.foraNv || ''); return; }
+  const fi = e.target.closest('[data-fora-ign]'); if(fi){ niveis.ignorar = [...new Set([...(niveis.ignorar || []), normalizarNome(fi.dataset.foraIgn)])]; salvarNiveis(); renderNiveis(); toast(fi.dataset.foraIgn + ': não aparece mais aqui.'); return; }
   const f = e.target.closest('[data-nivel-ficha]'); if(f){ abrirFicha(f.dataset.nivelFicha); }
 });
 function textoConfirmados(){
@@ -4788,14 +4869,14 @@ function nivelAtualDe(nome){
   const c = db.clt.find(p=>normalizarNome(p.nome) === k); if(c) return c.nivel || 'I';
   return db.fl.some(p=>normalizarNome(p.nome) === k) ? 'FL' : '';
 }
-function editarPessoaNivel(nome){
+function editarPessoaNivel(nome, preNome, preNivel){
   const novo = !nome, k0 = normalizarNome(nome || '');
   const cad = novo ? null : cadastroDe(nome);
-  const nv0 = novo ? (abaNivel !== 'OK' && abaNivel !== 'AG' ? abaNivel : 'I') : nivelAtualDe(nome);
+  const nv0 = novo ? (preNivel || (['OK','AG','NV'].includes(abaNivel) ? 'I' : abaNivel)) : nivelAtualDe(nome);
   const gen0 = cad ? String(cad.genero || '').slice(0,1).toUpperCase() : '';
   const ops = [['IV','Conferente IV'],['III','Conferente III'],['II','Conferente II'],['I','Conferente I'],['ES','Estagiário'],['FL','Freelance']];
   const box = abrirFolha(novo ? '+ Adicionar pessoa' : `✏️ ${esc(nome)}`, `
-    ${novo ? '<label>Nome completo</label><input type="text" id="edNome" class="full" placeholder="Ex.: INGRID MARTINS SILVA DE PAULA">' : ''}
+    ${novo ? `<label>Nome completo</label><input type="text" id="edNome" class="full" value="${esc(preNome || '')}" placeholder="Ex.: INGRID MARTINS SILVA DE PAULA">` : ''}
     <label>Categoria</label><select id="edNivel" class="full">${ops.map(([v, r])=>`<option value="${v}" ${v === nv0 ? 'selected' : ''}>${r}</option>`).join('')}</select>
     <label>Gênero</label><select id="edGen" class="full"><option value="">—</option><option value="F" ${gen0 === 'F' ? 'selected' : ''}>Feminino</option><option value="M" ${gen0 === 'M' ? 'selected' : ''}>Masculino</option></select>
     <p class="hint">Muda no cadastro da equipe (Viagem › Equipe) e vale para as próximas escalas.</p>`, 'Salvar', b=>{
@@ -4821,7 +4902,7 @@ function editarPessoaNivel(nome){
     }
     lsSet(LS_KEY, db); marcarAlterado('equipe'); nomesConhecidosCache = null;
     try{ renderEquipe(); }catch(e){}
-    if(novo) abaNivel = nv;
+    if(novo && !preNome) abaNivel = nv;
     renderNiveis();
     toast(`${nomeF}: ${ops.find(o=>o[0] === nv)[1]}${genero ? ' · ' + genero.toLowerCase() : ''}.`);
   });
@@ -4858,7 +4939,7 @@ function levarNiveisParaEscala(){
 function limparStatusNiveis(){
   if(!Object.keys(niveis.status).length) return;
   if(!confirm('Apagar todas as marcações (✉️, ⏳, ✅ e ❌) para começar uma lista nova?')) return;
-  niveis.status = {}; niveis.em = {}; niveis.envio = {}; niveis.prazo = {}; salvarNiveis(); renderNiveis();
+  niveis.status = {}; niveis.em = {}; niveis.envio = {}; niveis.prazo = {}; niveis.lista = 'l' + Date.now(); salvarNiveis(); renderNiveis();
 }
 function abrirListaNivelI(){
   const atual = (niveis.nivelI || []).join('\n');
@@ -5225,7 +5306,26 @@ function nomeCompletoCadastro(nome){
   const k = normalizarNome(n), todos = nomesConhecidos();
   if(todos.some(x=>normalizarNome(x) === k)) return n;
   const achados = todos.filter(x=>normalizarNome(x).startsWith(k + ' ') || (n.length >= 25 && normalizarNome(x).startsWith(k)));
-  return achados.length === 1 ? achados[0] : n;
+  if(achados.length === 1) return achados[0];
+  // mesmo primeiro nome e todos os sobrenomes do nome mais curto aparecem no outro (na ordem; o último pode vir cortado)
+  const cad = [...(db.clt||[]), ...(db.fl||[]), ...(db.rj||[])].map(x=>x.nome);
+  const fortes = cad.filter(x=>mesmaPessoaTokens(x, n));
+  return fortes.length === 1 ? fortes[0] : n;
+}
+const LIGA_NOME = new Set(['DE','DA','DO','DOS','DAS','E']);
+const tokensNome = n => normalizarNome(n).split(' ').filter(w=>w && !LIGA_NOME.has(w));
+function mesmaPessoaTokens(a, b){
+  let ta = tokensNome(a), tb = tokensNome(b);
+  if(ta.length > tb.length) [ta, tb] = [tb, ta];
+  if(ta.length < 2 || ta[0] !== tb[0]) return false;
+  let j = 1;
+  for(let i = 1; i < ta.length; i++){
+    const ultimo = i === ta.length - 1;
+    while(j < tb.length && !(tb[j] === ta[i] || (ultimo && ta[i].length >= 3 && tb[j].startsWith(ta[i])))) j++;
+    if(j >= tb.length) return false;
+    j++;
+  }
+  return true;
 }
 function normPessoaRobo(o){
   return {id:String(o['ID']||''), pos:Number(o['POSIÇÃO'])||0, nome:nomeCompletoCadastro(o['NOME']), pecas:Number(o['PEÇAS'])||0,
@@ -5305,6 +5405,7 @@ async function atualizarDoRobo(manual, soConvites){
     roboBuscando = false;
     renderRobo();
     if(soConvites && typeof renderEscala === 'function') renderEscala();
+    else rerenderViagem();
   }
 }
 // Atrasos marcados na Presença ajustam a produtividade do robô: quem chegou atrasado conta a partir da chegada
@@ -6804,6 +6905,10 @@ function mapaIndicadores(){
     db.clt.length + db.fl.length, (robo.convites||[]).length, (robo.convites||[]).filter(c=>c.resposta).length,
     loja.pessoas.length, loja.pessoas.filter(p=>p.atraso).length, loja.codigo||'', robo.lojas.length, JSON.stringify(robo.segmentos||{})].join('|');
   if(cacheInd && chave === cacheIndChave) return cacheInd;
+  nomesConhecidosCache = null;
+  const canon = {};
+  robo.pessoas.forEach(p=>{ const k = p.nome; if(!(k in canon)) canon[k] = nomeCompletoCadastro(k); p.nome = canon[k]; });
+  (robo.erros || []).forEach(e=>{ const k = e.nome; if(!k) return; if(!(k in canon)) canon[k] = nomeCompletoCadastro(k); e.nome = canon[k]; });
   ajustarAtrasosRobo();
   // nota e itens/hora das fichas: só drogarias (supermercado tem outra meta e não se mistura)
   const conf = porConferenteRobo(idsDoSeg('DROGARIA'));
@@ -6816,7 +6921,13 @@ function mapaIndicadores(){
   const pct = v => ihs.length > 1 ? Math.round(100 * ihs.filter(x=>x < v).length / (ihs.length - 1)) : 50;
   const mapa = {};
   const pegar = nome => { const k = normalizarNome(nome); return mapa[k] || (mapa[k] = {nome, chave:k}); };
-  conf.forEach(c=>Object.assign(pegar(c.nome), {ih:c.ih, media:c.media, lojasRobo:c.lojas, pecas:c.pecas, horas:c.horas, melhor:c.melhor, ihPct:pct(c.ih),
+  const ultimaDe = {}, serie = {};
+  const idsDrog = idsDoSeg('DROGARIA');
+  robo.pessoas.forEach(p=>{ if(!p.ih || !idsDrog.has(p.id) || papelNaLoja(p.id, p.nome)) return; const l = robo.lojas.find(x=>x.id === p.id); if(!l) return;
+    (serie[normalizarNome(p.nome)] = serie[normalizarNome(p.nome)] || []).push({d:dataParaChave(l.data), ih:p.ih}); });
+  const recenteDe = kk => { const xs = (serie[kk] || []).sort((a,b)=>a.d - b.d).slice(-5); return xs.length ? {ih:Math.round(xs.reduce((t,x)=>t + x.ih, 0) / xs.length), n:xs.length} : null; };
+  robo.pessoas.forEach(p=>{ const l = robo.lojas.find(x=>x.id === p.id); if(!l) return; const kk = normalizarNome(p.nome), d = dataParaChave(l.data); if(!ultimaDe[kk] || d > ultimaDe[kk].d) ultimaDe[kk] = {d, data:l.data}; });
+  conf.forEach(c=>Object.assign(pegar(c.nome), {recente:recenteDe(normalizarNome(c.nome)), ultima:(ultimaDe[normalizarNome(c.nome)] || {}).data || '', ih:c.ih, media:c.media, lojasRobo:c.lojas, pecas:c.pecas, horas:c.horas, melhor:c.melhor, ihPct:pct(c.ih),
     erros:c.erros, pecasErro:c.pecasErro, lojasComRel:c.lojasComRel, precisao:c.precisao}));
   confSuper.forEach(c=>{ pegar(c.nome).sup = {ih:c.ih, lojas:c.lojas, pecas:c.pecas, media:c.media}; });
   Object.values(est).forEach(e=>{
@@ -6834,7 +6945,8 @@ function indicadoresDe(nome){
   const mapa = mapaIndicadores();
   const k = normalizarNome(nome);
   let x = mapa[k];
-  if(!x){ const alt = Object.values(mapa).find(v=>mesmoNomeFlex(v.nome, nome)); x = alt || {nome, chave:k}; }
+  if(!x){ const alt = Object.values(mapa).find(v=>mesmoNomeFlex(v.nome, nome)); x = alt || null; }
+  if(!x){ const alts = Object.values(mapa).filter(v=>(v.ih || v.lojasHist) && mesmaPessoaTokens(v.nome, nome)); x = alts.length === 1 ? alts[0] : {nome, chave:k}; }
   const cad = [...db.clt, ...db.fl, ...db.rj].find(p=>normalizarNome(p.nome)===k);
   const pref = cad ? cad.prioridade : 99;
   // presença: % de lojas em que esteve presente, menos 5 pontos por atraso (até 20); com menos de 2 lojas no histórico não pesa
@@ -7617,7 +7729,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 22/10/2026 14:52</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 24/10/2026 08:46</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
