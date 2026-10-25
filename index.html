@@ -200,7 +200,7 @@ nav#subnav button.active{color:var(--accent);border-color:var(--accent);}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;}
 .card h2{font-size:1rem;margin:0 0 8px;}
 label{display:block;font-size:.8rem;color:var(--muted);margin:8px 0 3px;}
-input[type=text],input[type=number],input[type=file],select.full{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 9px;color:var(--text);font-size:.9rem;font-family:inherit;}
+input[type=text],input[type=search],input[type=password],input[type=number],input[type=file],select.full{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 9px;color:var(--text);font-size:.9rem;font-family:inherit;}
 .row{display:flex;gap:10px;flex-wrap:wrap;}
 .row > div{flex:1;min-width:140px;}
 button.btn{background:var(--accent-fill);color:var(--accent-ink);border:none;border-radius:7px;padding:9px 14px;font-size:.88rem;font-weight:600;cursor:pointer;margin-top:10px;margin-right:6px;font-family:inherit;}
@@ -301,6 +301,7 @@ body.modo-colega .so-criador{display:none !important;}
 .selo-dev{cursor:pointer;margin-left:4px;font-size:.95em;}
 .dev-nome{cursor:pointer;font-weight:600;text-decoration:underline;}
 .dev-linha{font-size:.86rem;margin:3px 0;}
+.cat-nivel{font-size:.74rem;opacity:.85;}
 .abas-nivel{display:flex;flex-wrap:wrap;gap:6px;}
 .abas-nivel button{flex:1 1 30%;border:1px solid var(--border);background:var(--bg);color:var(--text);border-radius:8px;padding:8px 4px;font-size:.82rem;font-weight:600;cursor:pointer;}
 .abas-nivel button.on{background:var(--accent-fill);color:var(--accent-ink);border-color:var(--accent-fill);}
@@ -361,7 +362,7 @@ body.modo-colega .so-criador{display:none !important;}
 .pill.transf-on{background:var(--transf-bg);color:var(--transf);border-color:var(--transf);}
 .pill.transferir{color:var(--accent);border-color:var(--accent);}
 .folha label{margin-top:10px;}
-.folha select,.folha input[type=text]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 9px;color:var(--text);font-size:.9rem;font-family:inherit;}
+.folha select,.folha input[type=text],.folha input[type=password]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 9px;color:var(--text);font-size:.9rem;font-family:inherit;}
 .resumo .item small{display:block;font-size:.66rem;margin-top:2px;line-height:1.25;}
 .pill.coordpill.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
 .pill.remover{color:var(--danger);border-color:var(--danger);}
@@ -487,7 +488,7 @@ body.modo-colega .so-criador{display:none !important;}
         <input type="text" inputmode="search" id="buscaFicha" placeholder="Pesquisar nome" autocomplete="off" oninput="renderFichas()"></div>
       <div class="row">
         <div><label>Mostrar</label><select id="filtroFicha" class="full" onchange="renderFichas()">
-          <option value="todos">Todos</option><option value="clt">Só CLT</option><option value="fl">Só freelancers</option><option value="dev">🌱 Em desenvolvimento</option></select></div>
+          <option value="todos">Todos</option><option value="clt">Só CLT</option><option value="fl">Só freelancers</option><option value="dev">🌱 Em desenvolvimento</option><option value="deslig">Desligados</option></select></div>
         <div><label>Ordenar por</label><select id="ordemFicha" class="full" onchange="renderFichas()">
           <option value="nota">Nota</option><option value="ih">Itens/hora</option><option value="erros">Mais erros</option><option value="faltas">Mais faltas</option><option value="atrasos">Mais atrasos</option><option value="nome">Nome (A-Z)</option></select></div>
       </div>
@@ -544,6 +545,15 @@ body.modo-colega .so-criador{display:none !important;}
     <div class="row" style="margin:0 0 10px;gap:8px"><input type="search" id="buscaNivel" class="full" placeholder="🔍 Pesquisar nome (todas as categorias)" style="flex:2" oninput="buscaNivel=this.value;renderNiveis()">
       <select id="ordemNivel" style="flex:1" onchange="mudarOrdemNivel(this.value)" aria-label="Ordenar por"><option value="ih">Itens/h (média)</option><option value="recente">Ritmo recente</option><option value="erros">Menos erros</option><option value="nota">Nota</option><option value="ultima">Última loja</option><option value="nome">Nome (A-Z)</option></select></div>
     <div class="card" id="listaNiveis"></div>
+  </section>
+  <section id="quadro" class="view">
+    <div class="card"><h2 style="margin-bottom:4px">🗂️ Quadro da equipe</h2>
+      <p class="hint" style="margin-top:0">Todo mundo do cadastro, CLT e freelance. Aqui você muda a categoria e o gênero e marca quem foi <b>desligado da empresa</b>. Quem é desligado sai da escala, do Por nível, das Fichas e do Por conferente (o histórico das lojas que a pessoa contou continua). Vale para os outros coordenadores também.</p>
+      <div class="acoes"><button class="btn small" type="button" onclick="editarPessoaNivel()">+ Adicionar pessoa</button></div>
+      <div class="row" style="gap:8px;margin-top:8px"><input type="search" id="buscaQuadro" class="full" placeholder="🔍 Pesquisar nome" style="flex:2" oninput="renderQuadro()">
+        <select id="filtroQuadro" style="flex:1" onchange="renderQuadro()"><option value="ativos">Ativos</option><option value="deslig">Desligados</option><option value="todos">Todos</option></select></div>
+    </div>
+    <div class="card" id="listaQuadro"></div>
   </section>
   <section id="plano" class="view"><div id="conteudoPlano"></div></section>
   <section id="quartos" class="view">
@@ -992,7 +1002,7 @@ const GRUPOS = {
   inicio: [['inicio','Início']],
   viagem: [['equipe','Equipe'],['escala','Nova escala'],['niveis','Por nível'],['quartos','Quartos']],
   loja:   [['presenca','Presença'],['setores','Setores'],['historico','Histórico']],
-  gestao: [['gestao','Gestão'],['modelos','Listas de setores']],
+  gestao: [['gestao','Gestão'],['quadro','Quadro da equipe'],['modelos','Listas de setores']],
   prod:   [['produtividade','Produtividade']],
   fichas: [['fichas','Fichas']]
 };
@@ -1014,6 +1024,7 @@ function abrirView(id){
   if(id==='quartos') renderRJQuartosOptions();
   if(id==='niveis') renderNiveis();
   if(id==='plano') renderPlano();
+  if(id==='quadro') renderQuadro();
   if(id==='escala' && ultimaEscala) renderEscala();
   if(['niveis','escala','equipe'].includes(id) && robo.link && Date.now() - (robo.atualizadoEm||0) > 5*60*1000 && typeof atualizarDoRobo === 'function') atualizarDoRobo(false);
   if(id==='fichas') renderFichas();
@@ -1093,7 +1104,11 @@ function mostrarPainelArquivo(arquivo, blob, filename, texto){
         box.remove();
       }catch(err){
         if(err && err.name==='AbortError') return; // a pessoa só fechou a janela de compartilhar
-        box.querySelector('[data-msg]').innerHTML = '<div class="msg warn">O compartilhamento foi bloqueado nesta tela. Use "Salvar no aparelho" e envie pelo WhatsApp a partir da pasta Downloads.</div>';
+        // o Chrome do Android não deixa compartilhar alguns tipos de arquivo (planilha Excel, por ex.): já salva no aparelho
+        const ehPlanilha = /\.xlsx?$/i.test(filename);
+        baixarArquivo(filename, blob, texto);
+        box.querySelector('[data-acao="share"]').remove();
+        box.querySelector('[data-msg]').innerHTML = `<div class="msg ok">✅ ${ehPlanilha ? 'O Android não deixa compartilhar planilha direto do app, então' : 'Não deu para compartilhar direto, então'} <b>já salvei o arquivo no aparelho</b> (pasta Downloads).<br><br>Para mandar: abra a conversa no <b>WhatsApp › 📎 › Documento</b> e escolha <b>${esc(filename)}</b>.</div><small class="hint">(${esc((err && err.name) || 'erro')})</small>`;
       }
     }
   });
@@ -1238,7 +1253,47 @@ function dataHojeArquivo(){ return hojeBR().replace(/\//g,'.'); }
    ===================================================================== */
 const LS_KEY = 'escalaApp_v2';
 function loadDB(){ const d = lsGet(LS_KEY, null); return d || {clt:[],fl:[],rj:[]}; }
-function saveDB(db){ lsSet(LS_KEY, db); marcarAlterado('equipe'); }
+function saveDB(db){ lsSet(LS_KEY, db); marcarAlterado('equipe'); cadIdx = null; }
+// ativo = não afastado e não desligado da empresa
+const ativoCad = p => !!p && !p.afastado && !p.desligado;
+// acha a pessoa no cadastro (nome igual; senão nome cortado/sem sobrenome sem dúvida). Prefere quem está ativo.
+let cadIdx = null, cadIdxChave = '';
+function cadastroPessoa(nome){
+  if(!nome) return null;
+  const chave = [db.clt.length, db.fl.length, (db.rj||[]).length, db.clt.filter(p=>p.desligado).length + db.fl.filter(p=>p.desligado).length, ((typeof niveis !== 'undefined' && niveis.nivelI) || []).length].join('|');
+  if(!cadIdx || cadIdxChave !== chave){ cadIdx = new Map(); cadIdxChave = chave; }
+  const k = normalizarNome(nome);
+  if(cadIdx.has(k)) return cadIdx.get(k);
+  const todos = [...db.clt.map(p=>({p, tipo:'clt'})), ...db.fl.map(p=>({p, tipo:'fl'})), ...(db.rj||[]).map(p=>({p, tipo:'rj'}))];
+  const ord = xs => xs.sort((a,b)=>(!!a.p.desligado - !!b.p.desligado));
+  let achado = ord(todos.filter(x=>normalizarNome(x.p.nome) === k))[0] || null;
+  if(!achado){
+    const fortes = todos.filter(x=>mesmoNomeFlex(x.p.nome, nome) || mesmaPessoaTokens(x.p.nome, nome));
+    const nomes = new Set(fortes.map(x=>normalizarNome(x.p.nome)));
+    if(nomes.size === 1) achado = ord(fortes)[0];
+  }
+  cadIdx.set(k, achado);
+  return achado;
+}
+// "Conferente IV", "Estagiário", "Freelance", "RJ" (lista colada do Conferente I vale primeiro)
+function categoriaDe(nome){
+  const c = cadastroPessoa(nome); if(!c) return {rot:'', deslig:false, tipo:''};
+  let rot;
+  const kI = (typeof niveis !== 'undefined' && Array.isArray(niveis.nivelI)) ? niveis.nivelI.map(normalizarNome) : [];
+  if(c.tipo === 'fl') rot = 'Freelance';
+  else if(c.tipo === 'rj') rot = 'RJ';
+  else if(kI.includes(normalizarNome(c.p.nome))) rot = 'Conferente I';
+  else rot = c.p.nivel === 'ES' ? 'Estagiário' : c.p.nivel ? 'Conferente ' + c.p.nivel : 'CLT';
+  return {rot, deslig: !!c.p.desligado, afastado: !!c.p.afastado, tipo:c.tipo};
+}
+const desligadoNome = nome => { const c = categoriaDe(nome); return c.deslig; };
+// texto pequeno embaixo do nome (só na tela; imagens não usam)
+function htmlCategoria(nome){
+  const c = categoriaDe(nome);
+  if(!c.rot) return '<br><small class="hint cat-nivel">fora do cadastro</small>';
+  return `<br><small class="hint cat-nivel">${esc(c.rot)}${c.deslig ? ' · <b style="color:var(--danger)">desligado(a)</b>' : c.afastado ? ' · afastado(a)' : ''}</small>`;
+}
+const textoCategoria = nome => { const c = categoriaDe(nome); return c.rot ? c.rot + (c.deslig ? ' (desligado)' : '') : 'Fora do cadastro'; };
 let db = loadDB();
 if(!db.rj) db.rj = [];
 let ultimaEscala = null;
@@ -1309,6 +1364,7 @@ function importarPlanilha(){
         if(key==='CLT') novo.clt = parsePessoas(aoa, 'clt');
         else if(key==='FREELANCE') novo.fl = parsePessoas(aoa, 'fl');
         else if(key==='RJ') novo.rj = parsePessoas(aoa, 'rj');
+        else if(key==='DESLIGADOS') novo._desl = aoa.slice(1).filter(l=>l && l[0]).map(l=>({nome:String(l[0]).replace(/\s+/g,' ').trim().toUpperCase(), era:String(l[1]||'').toUpperCase(), data:String(l[2]||'')}));
         else if(/^COORDENADOR/.test(normalizarNome(key))) novo.coord = aoa.slice(1).map(l=>String((l||[])[0]||'').replace(/\s+/g,' ').trim().toUpperCase()).filter(Boolean);
       });
       if(!novo.coord) novo.coord = db.coord || [];
@@ -1319,6 +1375,16 @@ function importarPlanilha(){
       const whatsAntigo = {};
       [...(db.clt||[]), ...(db.fl||[]), ...(db.rj||[])].forEach(x=>{ if(x.whats) whatsAntigo[normalizarNome(x.nome)] = x.whats; });
       [...novo.clt, ...novo.fl, ...novo.rj].forEach(x=>{ if(!x.whats && whatsAntigo[normalizarNome(x.nome)]) x.whats = whatsAntigo[normalizarNome(x.nome)]; });
+      // desligados: os que já estavam desligados no app + a aba DESLIGADOS da planilha
+      const desl = {};
+      [...(db.clt||[]).map(p=>['clt', p]), ...(db.fl||[]).map(p=>['fl', p])].forEach(([t, p])=>{ if(p.desligado) desl[t + '|' + normalizarNome(p.nome)] = {t, p}; });
+      (novo._desl || []).forEach(d=>{ const t = /FREELA/.test(d.era) ? 'fl' : 'clt'; const kk = t + '|' + normalizarNome(d.nome);
+        if(!desl[kk]) desl[kk] = {t, p:Object.assign({nome:d.nome, genero:'', prioridade:99}, t === 'clt' ? {nivel:normalizeFuncao(d.era) || 'I'} : {}, {desligado:true, desligadoEm:d.data})}; });
+      delete novo._desl;
+      Object.values(desl).forEach(({t, p})=>{
+        const ja = novo[t].find(x=>normalizarNome(x.nome) === normalizarNome(p.nome));
+        if(ja){ ja.desligado = true; ja.desligadoEm = p.desligadoEm || ''; } else novo[t].push(Object.assign({}, p, {desligado:true}));
+      });
       db = novo;
       saveDB(db);
       ultimaEscala = null; salvarUltimaEscala(); renderEscala();
@@ -1336,12 +1402,12 @@ function renderEquipe(){
   const bodyFL = document.querySelector('#tabFL tbody');
   const bodyRJ = document.querySelector('#tabRJ tbody');
   let hC='', hF='', hR='';
-  [...db.clt].sort((a,b)=>a.prioridade-b.prioridade).forEach(p=>{
+  [...db.clt].filter(p=>!p.desligado).sort((a,b)=>a.prioridade-b.prioridade).forEach(p=>{
     const idx = db.clt.indexOf(p);
     hC += `<tr><td><span class="nome-ficha" data-nome="${esc(p.nome)}">${esc(p.nome)}</span></td><td>${esc(p.nivel)}</td><td>${esc((p.genero||'').slice(0,1))}</td><td>${p.prioridade===99?'—':p.prioridade}</td>
     <td><input type="checkbox" ${p.afastado?'checked':''} onchange="toggleAfastado('clt',${idx},this.checked)"></td>${celulaWhats('clt', idx, p)}</tr>`;
   });
-  [...db.fl].sort((a,b)=>a.prioridade-b.prioridade).forEach(p=>{
+  [...db.fl].filter(p=>!p.desligado).sort((a,b)=>a.prioridade-b.prioridade).forEach(p=>{
     const idx = db.fl.indexOf(p);
     const gen = p.genero ? esc(p.genero.slice(0,1))
       : `<select onchange="definirGeneroFL(${idx}, this.value)" aria-label="Gênero"><option value="">?</option><option value="MASCULINO">M</option><option value="FEMININO">F</option></select>`;
@@ -1353,9 +1419,9 @@ function renderEquipe(){
     <td><input type="checkbox" ${p.afastado?'checked':''} onchange="toggleAfastado('rj',${idx},this.checked)"></td>${celulaWhats('rj', idx, p)}</tr>`;
   });
   bodyCLT.innerHTML = hC; bodyFL.innerHTML = hF; bodyRJ.innerHTML = hR;
-  document.getElementById('qtdCLT').textContent = db.clt.filter(p=>!p.afastado).length;
-  document.getElementById('qtdFL').textContent = db.fl.filter(p=>!p.afastado).length;
-  document.getElementById('qtdRJ').textContent = db.rj.filter(p=>!p.afastado).length;
+  document.getElementById('qtdCLT').textContent = db.clt.filter(p=>ativoCad(p)).length;
+  document.getElementById('qtdFL').textContent = db.fl.filter(p=>ativoCad(p)).length;
+  document.getElementById('qtdRJ').textContent = db.rj.filter(p=>ativoCad(p)).length;
   document.getElementById('qtdWhats').textContent = [...db.clt, ...db.fl, ...db.rj].filter(p=>p.whats).length;
   renderRJQuartosOptions();
 }
@@ -1473,12 +1539,14 @@ async function baixarCadastro(){
   const extras = x => { const c = conv[normalizarNome(x.nome)] || {}; return [x.endereco||'', x.bairro||'', x.cidade||'', c.sim||'', c.nao||'', c.ult||'', x.obs||'']; };
   const cabExtras = ['ENDEREÇO','BAIRRO','CIDADE','VIAGENS ACEITAS (90 DIAS)','VIAGENS RECUSADAS (90 DIAS)','ÚLTIMA RESPOSTA','OBS'];
   aba('CLT', ['FUNCIONÁRIO','FUNÇÃO','GENERO','AFASTADO','PREFERENCIA','WHATSAPP', ...cabExtras],
-    db.clt.map(x=>[x.nome, rotuloNivelCad(x.nivel), x.genero||'', x.afastado ? 'AFASTADO' : '', pref(x), x.whats||'', ...extras(x)]));
+    db.clt.filter(x=>!x.desligado).map(x=>[x.nome, rotuloNivelCad(x.nivel), x.genero||'', x.afastado ? 'AFASTADO' : '', pref(x), x.whats||'', ...extras(x)]));
   aba('FREELANCE', ['FREELANCE','GENERO','AFASTADO','','PRIORIDADE','WHATSAPP', ...cabExtras],
-    db.fl.map(x=>[x.nome, x.genero||'', x.afastado ? 'AFASTADO' : '', '', pref(x), x.whats||'', ...extras(x)]), true);
+    db.fl.filter(x=>!x.desligado).map(x=>[x.nome, x.genero||'', x.afastado ? 'AFASTADO' : '', '', pref(x), x.whats||'', ...extras(x)]), true);
   aba('RJ', ['NOME','FUNÇÃO','GENERO','AFASTADO','','WHATSAPP', ...cabExtras],
     db.rj.map(x=>[x.nome, rotuloNivelCad(x.nivel), x.genero||'', x.afastado ? 'AFASTADO' : '', '', x.whats||'', ...extras(x)]));
   if((db.coord||[]).length) aba('COORDENADORES', ['COORDENADOR'], db.coord.map(n=>[n]));
+  const desl = [...db.clt.filter(x=>x.desligado).map(x=>[x.nome, rotuloNivelCad(x.nivel), x.desligadoEm || '']), ...db.fl.filter(x=>x.desligado).map(x=>[x.nome, 'FREELANCE', x.desligadoEm || ''])];
+  if(desl.length) aba('DESLIGADOS', ['NOME','ERA','DATA DO DESLIGAMENTO'], desl);
   await salvarExcel(wb, `Cadastro da equipe - ${hojeBR().replace(/\//g,'.')}.xlsx`);
 }
 
@@ -1490,7 +1558,7 @@ function toggleAfastado(tipo, idx, val){
 
 function renderRJQuartosOptions(){
   const div = document.getElementById('rjQuartosList');
-  const ativos = db.rj.filter(p=>!p.afastado);
+  const ativos = db.rj.filter(p=>ativoCad(p));
   if(!ativos.length){ div.innerHTML = 'Nenhum cadastrado no momento.'; return; }
   div.innerHTML = ativos.map(p=>{
     const idx = db.rj.indexOf(p);
@@ -1536,8 +1604,8 @@ function gerarEscala(){
 
   const avisos = [];
   const ordem = ordenadorEscala('clt'), ordemFL = ordenadorEscala('fl');
-  const cltAtivos = db.clt.filter(p=>!p.afastado).sort(ordem);
-  const flAtivos = db.fl.filter(p=>!p.afastado).sort(ordemFL);
+  const cltAtivos = db.clt.filter(p=>ativoCad(p)).sort(ordem);
+  const flAtivos = db.fl.filter(p=>ativoCad(p)).sort(ordemFL);
   db.clt.forEach(p=>{ delete p.status; delete p.convite; }); db.fl.forEach(p=>{ delete p.status; delete p.convite; });
 
   let selecionados = [];
@@ -1607,7 +1675,7 @@ function renderEscala(){
 function poolDisponivel(tipo, nivel){
   const usados = tipo==='clt' ? ultimaEscala.selecionados : ultimaEscala.freelancers;
   const base = tipo==='clt' ? db.clt : db.fl;
-  return base.filter(p=>!p.afastado && !usados.includes(p) && (tipo==='fl' || p.nivel===nivel))
+  return base.filter(p=>ativoCad(p) && !usados.includes(p) && (tipo==='fl' || p.nivel===nivel))
     .sort(ordenadorEscala(tipo));
 }
 
@@ -1630,8 +1698,8 @@ function linhaEscala(p, i, tipo){
 function addRow(tipo){
   const nivelOrdem = {IV:0, III:1, II:2, I:3};
   const pool = tipo==='clt'
-    ? db.clt.filter(p=>!p.afastado && !ultimaEscala.selecionados.includes(p)).sort((a,b)=>((nivelOrdem[a.nivel]??9)-(nivelOrdem[b.nivel]??9)) || ordenadorEscala('clt')(a,b))
-    : db.fl.filter(p=>!p.afastado && !ultimaEscala.freelancers.includes(p)).sort(ordenadorEscala('fl'));
+    ? db.clt.filter(p=>ativoCad(p) && !ultimaEscala.selecionados.includes(p)).sort((a,b)=>((nivelOrdem[a.nivel]??9)-(nivelOrdem[b.nivel]??9)) || ordenadorEscala('clt')(a,b))
+    : db.fl.filter(p=>ativoCad(p) && !ultimaEscala.freelancers.includes(p)).sort(ordenadorEscala('fl'));
   if(!pool.length) return '';
   const opts = pool.map(c=>`<option value="${esc(c.nome)}">${esc(c.nome)}${tipo==='clt'?' ('+esc(c.nivel)+')':''}${rotuloNota(c)}</option>`).join('');
   return `<div style="margin:6px 0"><select id="add-${tipo}"><option value="">Adicionar pessoa...</option>${opts}</select>
@@ -4261,8 +4329,10 @@ function exportarResumoPNG(){
   const dd = datas.map(d=>d.replace(/\//g,'.'));
   gerarImagem(h, dd.length ? `Resumo da viagem ${dd[0]}${dd.length>1?' a '+dd[dd.length-1]:''}.png` : 'Resumo da viagem.png');
 }
+// Por conferente: quem foi desligado só aparece se marcar "Mostrar desligados"
+function confVisiveis(ids){ return porConferenteRobo(ids).filter(c=>roboUi.deslig || !desligadoNome(c.nome)); }
 function exportarConferentesRoboPNG(){
-  const conf = porConferenteRobo(idsDoSeg(segAtivo)); if(!conf.length) return;
+  const conf = confVisiveis(idsDoSeg(segAtivo)); if(!conf.length) return;
   const lojas = lojasRoboOrdenadas().filter(l=>segDaLoja(l) === segAtivo);
   let h = cabecalhoImagem('Produtividade por conferente · ' + ROTULO_SEG[segAtivo], `${lojas.length} loja(s) de ${esc(lojas[lojas.length-1].data)} a ${esc(lojas[0].data)}`);
   h += tabelaImagem(['#','Nome','Lojas','Peças','Itens/h','Erros','Precisão'], conf.map((c,i)=>[i+1, esc(c.nome), c.lojas, fmtN(c.pecas), fmtIH(c.ih), c.lojasComRel ? c.erros : '—', fmtPct(c.precisao)]), ['', '', 'center', 'right', 'right', 'center', 'right'], 4);
@@ -4770,7 +4840,7 @@ function pessoasDoNivel(nv){
   if(nv === 'I' && listaI) base = listaI.map(n=>cadastroDe(n) || {nome:n, nivel:'I', genero:''});
   else if(nv === 'FL') base = db.fl.filter(p=>!kI.has(normalizarNome(p.nome)));
   else base = db.clt.filter(p=>p.nivel === nv && !kI.has(normalizarNome(p.nome)) && (nv !== 'I' || !listaI));
-  return base.filter(p=>!p.afastado).map(p=>{
+  return base.filter(p=>ativoCad(p)).map(p=>{
     const ind = indicadoresDe(p.nome);
     return {nome:p.nome, nv, gen:String(p.genero || '').slice(0,1).toUpperCase(), ih:ind.ih || 0, lojas:ind.lojasRobo || 0,
       erroLoja: ind.lojasComRel ? (ind.erros || 0) / ind.lojasComRel : null, precisao: ind.lojasComRel ? ind.precisao : null,
@@ -5009,12 +5079,57 @@ function editarPessoaNivel(nome, preNome, preNivel){
       salvarNiveis();
     }
     lsSet(LS_KEY, db); marcarAlterado('equipe'); nomesConhecidosCache = null;
-    try{ renderEquipe(); }catch(e){}
+    cadIdx = null; try{ renderEquipe(); renderQuadro(); }catch(e){}
     if(novo && !preNome) abaNivel = nv;
     renderNiveis();
     toast(`${nomeF}: ${ops.find(o=>o[0] === nv)[1]}${genero ? ' · ' + genero.toLowerCase() : ''}.`);
   });
   if(novo) setTimeout(()=>{ const i = box.querySelector('#edNome'); if(i) i.focus(); }, 50);
+}
+/* ---- 🗂️ Quadro da equipe (Gestão, só o criador): categoria, gênero, desligar / reativar ---- */
+function renderQuadro(){
+  const div = document.getElementById('listaQuadro'); if(!div) return;
+  if(!souCriador()){ div.innerHTML = ''; return; }
+  const busca = normalizarNome((document.getElementById('buscaQuadro') || {}).value || ''), filtro = (document.getElementById('filtroQuadro') || {}).value || 'ativos';
+  const todos = [...db.clt.map(p=>({p, tipo:'clt'})), ...db.fl.map(p=>({p, tipo:'fl'})), ...(db.rj||[]).map(p=>({p, tipo:'rj'}))]
+    .filter(x=>filtro === 'todos' || (filtro === 'deslig' ? x.p.desligado : !x.p.desligado))
+    .filter(x=>!busca || normalizarNome(x.p.nome).includes(busca))
+    .sort((a,b)=>a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
+  const nDesl = db.clt.filter(p=>p.desligado).length + db.fl.filter(p=>p.desligado).length;
+  const lim = 150, mostra = todos.slice(0, lim);
+  div.innerHTML = `<p class="hint" style="margin:0 2px 8px">${todos.length} pessoa(s)${filtro !== 'deslig' && nDesl ? ` · ${nDesl} desligada(s) (filtro "Desligados")` : ''}${todos.length > lim ? ` · mostrando ${lim}, use a pesquisa` : ''}</p>` +
+    (mostra.length ? mostra.map(({p, tipo})=>{
+      const cat = tipo === 'fl' ? 'Freelance' : tipo === 'rj' ? 'RJ' : textoCategoria(p.nome).replace(' (desligado)', '');
+      const ind = indicadoresDe(p.nome);
+      const det = [cat, (p.genero || '').slice(0,1) || 'sem gênero', ind.ih ? fmtN(ind.ih) + ' itens/h' : '', ind.ultima ? 'última loja ' + String(ind.ultima).slice(0,5) : '', p.afastado ? 'afastado(a)' : '',
+        p.desligado ? `<b style="color:var(--danger)">desligado(a)${p.desligadoEm ? ' em ' + esc(p.desligadoEm) : ''}</b>` : ''].filter(Boolean).join(' · ');
+      return `<div class="pessoa-row"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" data-quadro-ficha="${esc(p.nome)}"><b>${esc(p.nome)}</b></span><small class="hist">${det}</small></span>
+        <span class="pill-btns">${p.desligado ? '' : `<button class="pill" type="button" data-nivel-editar="${esc(p.nome)}">✏️ Categoria</button>`}
+          <button class="pill ${p.desligado ? 'presente' : 'falta'}" type="button" data-desligar="${esc(p.nome)}" data-tipo="${tipo}">${p.desligado ? 'Reativar' : 'Desligar'}</button></span></div>`;
+    }).join('') : '<p class="hint">Ninguém encontrado.</p>');
+}
+document.addEventListener('click', e=>{
+  const d = e.target.closest('[data-desligar]'); if(d){ alternarDesligado(d.dataset.desligar, d.dataset.tipo); return; }
+  const f = e.target.closest('[data-quadro-ficha]'); if(f) abrirFicha(f.dataset.quadroFicha);
+});
+function alternarDesligado(nome, tipo){
+  if(!souCriador()) return;
+  const p = (db[tipo] || []).find(x=>x.nome === nome); if(!p) return;
+  if(!p.desligado){
+    if(!confirm(`${nome} foi desligado(a) da empresa?\n\nSai da escala de viagem, do Por nível, das Fichas e do Por conferente. As lojas que contou continuam no histórico. Dá para reativar depois.`)) return;
+    p.desligado = true; p.desligadoEm = hojeBR();
+    // se estava na escala ou marcado em Por nível, sai
+    const k = normalizarNome(nome);
+    if(niveis.status && niveis.status[k]){ delete niveis.status[k]; salvarNiveis(); }
+    if(ultimaEscala){ const antes = ultimaEscala.selecionados.length + ultimaEscala.freelancers.length;
+      ultimaEscala.selecionados = ultimaEscala.selecionados.filter(x=>x !== p); ultimaEscala.freelancers = ultimaEscala.freelancers.filter(x=>x !== p);
+      if(ultimaEscala.selecionados.length + ultimaEscala.freelancers.length !== antes) salvarUltimaEscala(); }
+    toast(`${nome}: desligado(a).`);
+  } else {
+    delete p.desligado; delete p.desligadoEm; toast(`${nome}: reativado(a).`);
+  }
+  saveDB(db); nomesConhecidosCache = null;
+  renderQuadro(); try{ renderEquipe(); rerenderViagem(); renderRobo(); }catch(e){}
 }
 function levarNiveisParaEscala(){
   const cs = confirmadosNiveis(); if(!cs.length) return;
@@ -5262,7 +5377,7 @@ function renderDesenv(){
       ${lista.length ? `<p style="margin:4px 0 8px">🟢 ${cont('meta')} na meta · 🟡 ${cont('evol')} evoluindo · 🔴 ${cont('atencao')} atenção · ⏳ ${cont('espera')} aguardando · ⚪ ${cont('sem')} sem lojas</p>
       <div class="acoes" style="margin-bottom:8px"><button class="btn small" type="button" onclick="abrirResumoDesenv()">📄 Resumo para a empresa</button></div>
       ${pls.map((pl, i)=>`<div class="pessoa-row"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" data-dev="${esc(pl.item.nome)}"><b>${pl.st.ic} ${esc(pl.item.nome)}</b></span>
-          <small class="hist">${pl.st.rot}${(pl.agora || pl.antes) ? ` · ${fmtN((pl.agora || pl.antes).ih)} itens/h (${pctDev((pl.agora || pl.antes).pm)} da meta)` : ''}${pl.item.fora ? ' · fora do cadastro' : ''}</small></span>
+          <small class="hist">${pl.st.rot}${(pl.agora || pl.antes) ? ` · ${fmtN((pl.agora || pl.antes).ih)} itens/h (${pctDev((pl.agora || pl.antes).pm)} da meta)` : ''}${pl.item.fora ? ' · fora do cadastro' : ''}${desligadoNome(pl.item.nome) ? ' · <b style="color:var(--danger)">desligado(a)</b>' : ''}</small></span>
         <span class="pill-btns"><button class="pill" type="button" onclick="tirarDesenv(${i})">Tirar</button></span></div>`).join('')}` : '<p class="hint">Ninguém na lista ainda.</p>'}
       <label style="margin-top:10px">Colocar no plano (cole os nomes, um por linha ou separados por vírgula)</label>
       <textarea id="novosDesenv" class="full" rows="3" placeholder="Ex.: Daniela Benevides, Glauciley, Letizia"></textarea>
@@ -5842,15 +5957,17 @@ function renderRobo(){
       <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças${l.errosItens !== null && l.errosItens !== undefined ? ` · ${l.errosItens} erro(s)` : ''} · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small>${seloMeta(equipeLojaRobo(l))}${avisosDaLoja(l).length ? ` <span class="selo-meta nao">⚠️ ${avisosDaLoja(l).length} aviso(s) do arquivo</span>` : ''}</span>
       <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('')}</div>`;
   renderDetalheRobo();
-  const confTodos = porConferenteRobo(idsDoSeg(segAtivo)).map((c,i)=>Object.assign({pos:i+1}, c));
+  const confBrutos = porConferenteRobo(idsDoSeg(segAtivo)), nDesl = confBrutos.filter(c=>desligadoNome(c.nome)).length;
+  const confTodos = confVisiveis(idsDoSeg(segAtivo)).map((c,i)=>Object.assign({pos:i+1}, c));
   const conf = busca ? confTodos.filter(c=>normalizarNome(c.nome).includes(busca)) : confTodos;
   const abrirConf = roboUi.conf || !!busca;
   const contConf = busca ? `${conf.length} de ${confTodos.length}` : `${confTodos.length}`;
   document.getElementById('conferentesRobo').innerHTML = confTodos.length ? `<div class="card"><button class="secao-toggle ${abrirConf?'aberta':''}" onclick="alternarSecaoRobo('conf')"><span class="seta">▶</span> Por conferente <small>(${contConf})</small></button>
     ${!abrirConf ? '' : `<p class="hint" style="margin-top:6px">Relatório de todas as lojas de ${rotSeg} do robô: peças, itens/hora (peças somadas ÷ horas somadas), erros e precisão (peças sem ajuste ÷ peças contadas, só nas lojas com relatório de itens ajustados). Toque num nome para ver as lojas e os erros dele(a).</p>
     ${!conf.length ? '<p class="hint">Nenhum conferente encontrado.</p>' : `<div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Lojas</th><th>Peças</th><th>Itens/h</th><th>Erros</th><th>Precisão</th></tr></thead><tbody>${
-      conf.map(c=>`<tr class="linha-clicavel" data-conf="${esc(normalizarNome(c.nome))}"><td>${c.pos}</td><td>${esc(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtIH(c.ih)}</td><td>${c.lojasComRel ? (c.erros ? `<b style="color:var(--danger)">${c.erros}</b>` : '0') : '—'}</td><td>${fmtPct(c.precisao)}</td></tr>`).join('')
+      conf.map(c=>`<tr class="linha-clicavel" data-conf="${esc(normalizarNome(c.nome))}"><td>${c.pos}</td><td>${esc(c.nome)}${htmlCategoria(c.nome)}</td><td>${c.lojas}</td><td>${fmtN(c.pecas)}</td><td>${fmtIH(c.ih)}</td><td>${c.lojasComRel ? (c.erros ? `<b style="color:var(--danger)">${c.erros}</b>` : '0') : '—'}</td><td>${fmtPct(c.precisao)}</td></tr>`).join('')
     }</tbody></table></div>`}
+    ${nDesl ? `<p class="hint" style="margin-top:6px"><label class="checklist" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" ${roboUi.deslig ? 'checked' : ''} onchange="roboUi.deslig=this.checked;lsSet(ROBO_UI_KEY, roboUi);renderRobo()"> Mostrar ${nDesl} desligado(s) da empresa</label></p>` : ''}
     ${detalheConferenteRobo()}`}
     ${abrirConf ? `<div class="acoes"><button class="btn secondary" onclick="exportarConferentesRoboPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="exportarConferentesRobo()">Excel</button></div>` : ''}</div>` : '';
   try{ renderTempoRobo(); }catch(e){ /* perfis ainda carregando na abertura do app */ }
@@ -5952,7 +6069,7 @@ function renderDetalheRobo(){
     ${previstoXReal(l)}
     <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th>${l.errosItens !== null && l.errosItens !== undefined ? '<th>Erros</th>' : ''}</tr></thead><tbody>${
       (()=>{ const conf = ps.filter(p=>!papelNaLoja(l.id, p.nome)), fora = ps.filter(p=>papelNaLoja(l.id, p.nome)), cols = l.errosItens !== null && l.errosItens !== undefined ? 5 : 4;
-        const linha = (p, pos)=>`<tr class="linha-clicavel" data-erros-nome="${esc(p.nome)}"><td>${pos}</td><td>${esc(p.nome)}${papelNaLoja(l.id, p.nome) ? ` <span class="hint">(${({estagiario:'estagiário', coord:'coord.', instrutor:'instrutor'})[papelNaLoja(l.id, p.nome)]})</span>` : ''}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${p.ih ? fmtIH(p.ih) : '-'}</td>${cols === 5 ? celulaErros(p) : ''}</tr>`;
+        const linha = (p, pos)=>`<tr class="linha-clicavel" data-erros-nome="${esc(p.nome)}"><td>${pos}</td><td>${esc(p.nome)}${htmlCategoria(p.nome)}${papelNaLoja(l.id, p.nome) ? ` <span class="hint">(${({estagiario:'estagiário', coord:'coord.', instrutor:'instrutor'})[papelNaLoja(l.id, p.nome)]})</span>` : ''}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${p.ih ? fmtIH(p.ih) : '-'}</td>${cols === 5 ? celulaErros(p) : ''}</tr>`;
         return conf.map((p,i)=>linha(p, i+1)).join('') + (fora.length && conf.length ? `<tr><td colspan="${cols}" class="hint" style="font-weight:700">Fora da conta da equipe</td></tr>` + fora.map(p=>linha(p, '—')).join('') : ''); })()
     }</tbody></table></div>
     ${ps.some(p=>p.tempo === 'COLETOR') ? '<p class="hint">⏱ Itens/hora pelo tempo de cada pessoa no coletor (da 1ª seção aberta à última fechada).</p>' : ''}
@@ -6945,11 +7062,11 @@ async function exportarRankingRoboExcel(){
   const r = blocoInfo(ws, 1, [['Loja', [l.num, l.loja].filter(Boolean).join(' - ')], ['Data', l.data], ['Horas líquidas', l.horas, '0.00'], ['Peças fora das faixas', l.fora],
     ...linhasExcelEquipe(equipeLojaRobo(l))]);
   const comErros = l.errosItens !== null && l.errosItens !== undefined;
-  const linhas = pessoasDaLojaRobo(l.id).map((p,i)=>[i+1, p.nome + (p.atraso ? ` (CHEGOU ${p.chegada})` : ''), p.pecas, p.ih,
+  const linhas = pessoasDaLojaRobo(l.id).map((p,i)=>[i+1, p.nome + (p.atraso ? ` (CHEGOU ${p.chegada})` : ''), textoCategoria(p.nome), p.pecas, p.ih,
     ...(comErros ? [p.erros||0, p.pecasErro||0, p.secoesErro||''] : [])]);
-  tabelaExcel(ws, r, ['Posição','Nome','Peças','Itens/hora', ...(comErros ? ['Erros','Peças ajustadas','Seções com erro'] : [])], linhas, {
-    larguras:[20, larguraPara(linhas.map(x=>x[1]), 30, 50), 10, 11, 9, 15, 24], alinhar:['center', null, 'right', 'right', 'center', 'right', null],
-    formatos:[null, null, '#,##0', '#,##0'], estilo:(i,j,ln)=> (j===4 && ln[4]) ? {fundo:'FFFFC7CE', fonte:{bold:true, color:{argb:'FF9C0006'}}} : null, congelar:true });
+  tabelaExcel(ws, r, ['Posição','Nome','Categoria','Peças','Itens/hora', ...(comErros ? ['Erros','Peças ajustadas','Seções com erro'] : [])], linhas, {
+    larguras:[20, larguraPara(linhas.map(x=>x[1]), 30, 50), 17, 10, 11, 9, 15, 24], alinhar:['center', null, null, 'right', 'right', 'center', 'right', null],
+    formatos:[null, null, null, '#,##0', '#,##0'], estilo:(i,j,ln)=> (j===5 && ln[5]) ? {fundo:'FFFFC7CE', fonte:{bold:true, color:{argb:'FF9C0006'}}} : null, congelar:true });
   if(comErros){
     const ws2 = wb.addWorksheet('Erros');
     const r2 = cabecalhoPlanilha(ws2, 'Erros da equipe', [textoErrosLoja(l)]);
@@ -6976,17 +7093,17 @@ function exportarRankingRoboPNG(){
 }
 async function exportarConferentesRobo(){
   const ids = idsDoSeg(segAtivo);
-  const conf = porConferenteRobo(ids); if(!conf.length || !excelDisponivel()) return;
+  const conf = confVisiveis(ids); if(!conf.length || !excelDisponivel()) return;
   const lojas = lojasRoboOrdenadas().filter(l=>ids.has(l.id));
   const erros = errosConferente().filter(e=>ids.has(e.id));
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Por conferente');
   const r = cabecalhoPlanilha(ws, 'Produtividade por conferente · ' + ROTULO_SEG[segAtivo], [`${lojas.length} loja(s) de ${lojas[lojas.length-1].data} a ${lojas[0].data}`]);
-  const linhas = conf.map((c,i)=>[i+1, c.nome, c.lojas, c.pecas, Math.round(c.horas*100)/100, c.ih, c.media, c.melhor,
+  const linhas = conf.map((c,i)=>[i+1, c.nome, textoCategoria(c.nome), c.lojas, c.pecas, Math.round(c.horas*100)/100, c.ih, c.media, c.melhor,
     c.lojasComRel ? c.erros : '—', c.lojasComRel ? c.pecasErro : '—', c.precisao === null ? '—' : Math.round(c.precisao*10)/1000]);
-  tabelaExcel(ws, r, ['#','NOME','LOJAS','PEÇAS','HORAS','ITENS/HORA (AGRUPADO)','MÉDIA ITENS/HORA','MELHOR LOJA','ERROS','PEÇAS AJUSTADAS','PRECISÃO'], linhas, {
-    larguras:[5, larguraPara(linhas.map(x=>x[1]), 30, 50), 8, 11, 9, 20, 17, 13, 9, 16, 11],
-    alinhar:['center', null, 'center', 'right', 'right', 'right', 'right', 'right', 'center', 'right', 'right'], formatos:[null, null, null, '#,##0', '0.00', '#,##0', '#,##0', '#,##0', null, '#,##0', '0.0%'], congelar:true });
+  tabelaExcel(ws, r, ['#','NOME','CATEGORIA','LOJAS','PEÇAS','HORAS','ITENS/HORA (AGRUPADO)','MÉDIA ITENS/HORA','MELHOR LOJA','ERROS','PEÇAS AJUSTADAS','PRECISÃO'], linhas, {
+    larguras:[5, larguraPara(linhas.map(x=>x[1]), 30, 50), 17, 8, 11, 9, 20, 17, 13, 9, 16, 11],
+    alinhar:['center', null, null, 'center', 'right', 'right', 'right', 'right', 'right', 'center', 'right', 'right'], formatos:[null, null, null, null, '#,##0', '0.00', '#,##0', '#,##0', '#,##0', null, '#,##0', '0.0%'], congelar:true });
   if(erros.length){
     const ws3 = wb.addWorksheet('Erros');
     const r3 = cabecalhoPlanilha(ws3, 'Erros da equipe · ' + ROTULO_SEG[segAtivo], []);
@@ -7089,7 +7206,7 @@ function ordenadorEscala(tipo){
 function dicaModoEscala(){
   const el = document.getElementById('dicaModoEscala'); if(!el) return;
   if(modoEscala() !== 'desempenho'){ el.textContent = 'Usa só a coluna PREFERÊNCIA (1 = melhor).'; return; }
-  const comDados = [...db.clt, ...db.fl].filter(p=>!p.afastado && indicadoresDe(p.nome).ih).length;
+  const comDados = [...db.clt, ...db.fl].filter(p=>ativoCad(p) && indicadoresDe(p.nome).ih).length;
   el.textContent = `Nota = itens/hora do robô (60%) + presença do histórico (25%) + erros (15%). ${comDados} pessoa(s) já têm produtividade no robô; quem ainda não tem usa a preferência. Freelancer com preferência 4 fica por último.`;
 }
 (function(){
@@ -7104,8 +7221,12 @@ function pessoasDasFichas(){
   const lista = [];
   const visto = new Set();
   const add = (nome, tipo, cad)=>{ const k = normalizarNome(nome); if(!k || visto.has(k)) return; visto.add(k); lista.push({nome, tipo, cad}); };
-  db.clt.forEach(p=>add(p.nome, 'clt', p)); db.fl.forEach(p=>add(p.nome, 'fl', p)); db.rj.forEach(p=>add(p.nome, 'rj', p));
-  Object.values(mapaIndicadores()).forEach(x=>{ if(x.ih || x.lojasHist || x.sup) add(x.nome, 'fora', null); });
+  const verDesl = (document.getElementById('filtroFicha') || {}).value === 'deslig';
+  [...db.clt.map(p=>[p, 'clt']), ...db.fl.map(p=>[p, 'fl']), ...db.rj.map(p=>[p, 'rj'])].sort((a,b)=>(!!a[0].desligado - !!b[0].desligado)).forEach(([p, t])=>{
+    if(!!p.desligado !== verDesl) return;
+    add(p.nome, t, p); });
+  // quem aparece no robô com nome de alguém desligado não vira "fora do cadastro"
+  Object.values(mapaIndicadores()).forEach(x=>{ if(!(x.ih || x.lojasHist || x.sup)) return; const c = cadastroPessoa(x.nome); if(c && (c.p.desligado || visto.has(normalizarNome(c.p.nome)))) return; if(!verDesl) add(x.nome, 'fora', null); });
   return lista.map(x=>Object.assign(x, {ind: indicadoresDe(x.nome)}));
 }
 function rotuloTipo(x){
@@ -7121,12 +7242,12 @@ function renderFichas(){
   const ordem = document.getElementById('ordemFicha').value;
   const todas = pessoasDasFichas();
   const rankNota = todas.filter(x=>x.tipo!=='fora').slice().sort((a,b)=>b.ind.nota-a.ind.nota);
-  let lista = todas.filter(x=>(!busca || normalizarNome(x.nome).includes(busca)) && (filtro==='todos' || (filtro==='dev' ? !!emDesenv(x.nome) : x.tipo===filtro)));
+  let lista = todas.filter(x=>(!busca || normalizarNome(x.nome).includes(busca)) && (filtro==='todos' || filtro==='deslig' || (filtro==='dev' ? !!emDesenv(x.nome) : x.tipo===filtro)));
   const cmp = {nota:(a,b)=>b.ind.nota-a.ind.nota, ih:(a,b)=>(b.ind.ih||0)-(a.ind.ih||0), erros:(a,b)=>(b.ind.erros||0)-(a.ind.erros||0), faltas:(a,b)=>(b.ind.faltas||0)-(a.ind.faltas||0),
     atrasos:(a,b)=>(b.ind.atrasos||0)-(a.ind.atrasos||0), nome:(a,b)=>a.nome.localeCompare(b.nome,'pt-BR')}[ordem];
   lista.sort((a,b)=>cmp(a,b) || a.nome.localeCompare(b.nome,'pt-BR'));
   div.innerHTML = lista.length ? `<table><thead><tr><th>Nome</th><th>Nota</th><th>Itens/h</th><th>Erros</th><th>Pres.</th><th>Faltas</th><th>Atrasos</th></tr></thead><tbody>${
-    lista.map(x=>`<tr class="linha-clicavel" data-ficha="${esc(normalizarNome(x.nome))}"><td>${esc(x.nome)}${seloDev(x.nome)}${x.cad && x.cad.afastado ? ' <span class="hint">(afastado)</span>' : ''}<small class="hint" style="display:block">${esc(rotuloTipo(x))}</small></td>
+    lista.map(x=>`<tr class="linha-clicavel" data-ficha="${esc(normalizarNome(x.nome))}"><td>${esc(x.nome)}${seloDev(x.nome)}${x.cad && x.cad.desligado ? ' <span class="hint" style="color:var(--danger)">(desligado)</span>' : x.cad && x.cad.afastado ? ' <span class="hint">(afastado)</span>' : ''}<small class="hint" style="display:block">${esc(rotuloTipo(x))}</small></td>
       <td><b>${x.ind.nota}</b></td><td>${x.ind.ih ? fmtN(x.ind.ih) : '—'}</td><td>${x.ind.lojasComRel ? (x.ind.erros||0) : '—'}</td><td>${x.ind.presPct!=null && x.ind.lojasHist ? x.ind.presPct + '%' : '—'}</td><td>${x.ind.faltas||0}</td><td>${x.ind.atrasos||0}</td></tr>`).join('')
   }</tbody></table>` : '<p class="hint">Ninguém encontrado.</p>';
   renderFichaAberta(todas, rankNota);
@@ -7806,7 +7927,7 @@ function preencherQuartosNomes(v){
   [['nomeCoord','coord'],['nomeLider','lider'],['nomeMotorista','motorista'],['qtdDuplos','duplos'],['qtdTriplos','triplos']].forEach(([id,k])=>{ document.getElementById(id).value = (v||{})[k] || ''; });
 }
 registrarSinc('equipe', ()=>db,
-  v=>{ const arr = x=>Array.isArray(x) ? x : []; db = {clt:arr(v&&v.clt), fl:arr(v&&v.fl), rj:arr(v&&v.rj)}; lsSet(LS_KEY, db); restaurarUltimaEscala(); renderEquipe(); renderEscala(); },
+  v=>{ const arr = x=>Array.isArray(x) ? x : []; db = {clt:arr(v&&v.clt), fl:arr(v&&v.fl), rj:arr(v&&v.rj), coord:arr(v&&v.coord)}; lsSet(LS_KEY, db); cadIdx = null; nomesConhecidosCache = null; try{ renderQuadro(); rerenderViagem(); renderRobo(); }catch(e){} restaurarUltimaEscala(); renderEquipe(); renderEscala(); },
   ()=>!(db.clt.length || db.fl.length || db.rj.length));
 registrarSinc('escala', ()=>{ const e = lsGet(ESCALA_KEY, null), n = lsGet(NIVEIS_KEY, null), pl = lsGet(PLANO_KEY, null);
     return (n || pl) ? Object.assign({}, e || {}, n ? {_niveis:n} : {}, pl ? {_plano:pl} : {}) : e; },
@@ -7840,7 +7961,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 24/10/2026 10:05</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 25/10/2026 02:30</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
