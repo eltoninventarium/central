@@ -1593,7 +1593,16 @@ function restaurarUltimaEscala(){
 }
 
 function gerarEscala(){
-  if(ultimaEscala && [...ultimaEscala.selecionados, ...ultimaEscala.freelancers].some(p=>p.convite && p.convite.enviadoEm)
+  const k = n => normalizarNome(n);
+  // quem já confirmou fica; quem recusou não volta (escala atual, Por nível e recusas pelo link)
+  const confirmados = new Map(), recusados = new Set();
+  if(ultimaEscala){
+    [...ultimaEscala.selecionados, ...ultimaEscala.freelancers].forEach(p=>{ if(p.status === 'Confirmado') confirmados.set(k(p.nome), {convite:p.convite}); if(p.status === 'Recusado') recusados.add(k(p.nome)); });
+    ((ultimaEscala.viagem && ultimaEscala.viagem.recusas) || []).forEach(n=>recusados.add(k(n)));
+  }
+  try{ Object.entries(niveis.status || {}).forEach(([kk, st])=>{ if(st === 'C' && !confirmados.has(kk)) confirmados.set(kk, {}); if(st === 'R') recusados.add(kk); }); }catch(e){}
+  const temConvites = ultimaEscala && [...ultimaEscala.selecionados, ...ultimaEscala.freelancers].some(p=>p.convite && p.convite.enviadoEm);
+  if(temConvites && !confirmados.size
      && !confirm('Já tem convites enviados nesta escala. Gerar uma nova sugestão começa outra viagem (os convites enviados continuam valendo para quem já recebeu). Continuar?')) return;
   const nTotal = parseInt(document.getElementById('qtdNecessaria').value,10) || 0;
   const isAraujo = document.getElementById('isAraujo').checked;
@@ -1604,19 +1613,26 @@ function gerarEscala(){
 
   const avisos = [];
   const ordem = ordenadorEscala('clt'), ordemFL = ordenadorEscala('fl');
-  const cltAtivos = db.clt.filter(p=>ativoCad(p)).sort(ordem);
-  const flAtivos = db.fl.filter(p=>ativoCad(p)).sort(ordemFL);
+  const livre = p => ativoCad(p) && !recusados.has(k(p.nome));
+  const cltAtivos = db.clt.filter(livre).sort(ordem);
+  const flAtivos = db.fl.filter(livre).sort(ordemFL);
   db.clt.forEach(p=>{ delete p.status; delete p.convite; }); db.fl.forEach(p=>{ delete p.status; delete p.convite; });
 
-  let selecionados = [];
+  // 1º os confirmados (contam nas cotas)
+  let selecionados = db.clt.filter(p=>!p.desligado && confirmados.has(k(p.nome)));
+  const freelancers = db.fl.filter(p=>!p.desligado && confirmados.has(k(p.nome)));
+  [...selecionados, ...freelancers].forEach(p=>{ p.status = 'Confirmado'; const c = confirmados.get(k(p.nome)); if(c && c.convite) p.convite = c.convite; });
+  const nConf = selecionados.length + freelancers.length;
+  if(nConf) avisos.push(`${nConf} confirmado(s) mantido(s); a sugestão completa só as vagas que faltam${recusados.size ? ` e deixa de fora ${recusados.size} que recusaram` : ''}.`);
   if(isAraujo){
-    const escolhidos = cltAtivos.filter(p=>p.nivel==='I').slice(0,3);
+    const jaI = selecionados.filter(p=>p.nivel==='I').length;
+    const escolhidos = cltAtivos.filter(p=>p.nivel==='I' && !selecionados.includes(p)).slice(0, Math.max(0, 3 - jaI));
     selecionados.push(...escolhidos);
-    if(escolhidos.length < 3) avisos.push(`Só há ${escolhidos.length} CONFERENTE I disponível(is) — viagem ARAUJO exige 3.`);
+    if(jaI + escolhidos.length < 3) avisos.push(`Só há ${jaI + escolhidos.length} CONFERENTE I disponível(is) — viagem ARAUJO exige 3.`);
   }
   function preencherCLT(nivel, max){
     const jaTem = selecionados.filter(p=>p.nivel===nivel).length;
-    const vagas = max - jaTem;
+    const vagas = Math.min(max - jaTem, nTotal - selecionados.length - freelancers.length);
     if(vagas<=0) return;
     selecionados.push(...cltAtivos.filter(p=>p.nivel===nivel && !selecionados.includes(p)).slice(0,vagas));
   }
@@ -1624,9 +1640,9 @@ function gerarEscala(){
   preencherCLT('III', maxIII);
 
   // Restante: freelancer > CONFERENTE II > CONFERENTE I extra.
-  let restante = nTotal - selecionados.length;
-  const freelancers = flAtivos.slice(0, Math.max(0, restante));
-  restante -= freelancers.length;
+  let restante = nTotal - selecionados.length - freelancers.length;
+  const novosFL = flAtivos.filter(p=>!freelancers.includes(p)).slice(0, Math.max(0, restante));
+  freelancers.push(...novosFL); restante -= novosFL.length;
   if(freelancers.length < freelanceMin) avisos.push(`Só há ${freelancers.length} freelancer(s) na escala — mínimo exigido pela regra é ${freelanceMin}.`);
   if(restante>0){
     const extraII = cltAtivos.filter(p=>p.nivel==='II' && !selecionados.includes(p)).slice(0, restante);
@@ -1638,11 +1654,14 @@ function gerarEscala(){
     if(extraI.length) avisos.push(`Completei com ${extraI.length} CONFERENTE I extra (fora do mínimo da ARAUJO) por falta de freelancer e de CONFERENTE II disponíveis.`);
   }
   if(restante>0) avisos.push(`Ainda faltam ${restante} pessoa(s) pra fechar o total de ${nTotal} pedido pela loja.`);
+  if(restante<0) avisos.push(`Já tem ${-restante} confirmado(s) a mais que o total de ${nTotal}.`);
 
-  selecionados.forEach(p=>{ p.status='Convocado'; });
-  freelancers.forEach(p=>{ p.status='Convocado'; });
+  selecionados.forEach(p=>{ if(!p.status) p.status='Convocado'; });
+  freelancers.forEach(p=>{ if(!p.status) p.status='Convocado'; });
+  // com confirmados, continua a MESMA viagem (os links de convite continuam valendo)
+  const viagemAnt = nConf && ultimaEscala && ultimaEscala.viagem ? ultimaEscala.viagem : null;
   ultimaEscala = {nTotal, isAraujo, menor14, selecionados, freelancers, avisos,
-    viagem: Object.assign(lerCamposViagem(), {id: 'v' + Date.now(), recusas: []})};
+    viagem: viagemAnt ? Object.assign(viagemAnt, lerCamposViagem()) : Object.assign(lerCamposViagem(), {id: 'v' + Date.now(), recusas: []})};
   salvarUltimaEscala();
   renderEscala();
 }
@@ -4844,7 +4863,7 @@ function pessoasDoNivel(nv){
     const ind = indicadoresDe(p.nome);
     return {nome:p.nome, nv, gen:String(p.genero || '').slice(0,1).toUpperCase(), ih:ind.ih || 0, lojas:ind.lojasRobo || 0,
       erroLoja: ind.lojasComRel ? (ind.erros || 0) / ind.lojasComRel : null, precisao: ind.lojasComRel ? ind.precisao : null,
-      nota:ind.nota, faltas:ind.faltas || 0, pref:p.prioridade, ultima:ind.ultima || '', recente:ind.recente || null,
+      nota:ind.nota, faltas:(ind.faltas || 0) + (ind.atestados || 0), escaladas:ind.lojasHist || 0, pref:p.prioridade, ultima:ind.ultima || '', recente:ind.recente || null,
       conv:respostasConvite(p.nome, ind), st:niveis.status[normalizarNome(p.nome)] || ''};
   }).sort(ordenarNiveis);
 }
@@ -4962,10 +4981,44 @@ function linhaFora(v){
   return `<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(v.nome)}</b><small class="hist">${det}</small></span>
     <span class="pill-btns"><button class="pill presente" type="button" data-fora-add="${esc(v.nome)}" data-fora-nv="${v.estag ? 'ES' : ''}">+ Adicionar</button><button class="pill" type="button" data-fora-ign="${esc(v.nome)}">Ignorar</button></span></div>`;
 }
+// 🔎 Quem chamar agora: quem ainda não foi chamado, da categoria e do gênero que faltam, pela produtividade
+let chamarNv = null, chamarGen = null;
+function recusouEstaViagem(nome){
+  const k = normalizarNome(nome);
+  if(niveis.status && niveis.status[k] === 'R') return true;
+  if(!ultimaEscala) return false;
+  if(((ultimaEscala.viagem && ultimaEscala.viagem.recusas) || []).some(n=>normalizarNome(n) === k)) return true;
+  return [...ultimaEscala.selecionados, ...ultimaEscala.freelancers].some(p=>p.status === 'Recusado' && normalizarNome(p.nome) === k);
+}
+function faltaAuto(cs){
+  const ccs = contaVaga(cs), vagas = +niveis.vagas || 0, menor = (vagas || ccs.length) < 14, q = nv => ccs.filter(p=>p.nv === nv).length;
+  let nv = 'FL';
+  if(niveis.araujo !== false && q('I') < 3) nv = 'I';
+  else if(q('FL') < (menor ? 2 : 4)) nv = 'FL';
+  else if(q('IV') < (menor ? 2 : 3)) nv = 'IV';
+  else if(q('III') < (menor ? 2 : 3)) nv = 'III';
+  // gênero que fecha os quartos (só triplos: múltiplos de 3; só duplos: pares)
+  const {D, T} = pedidoQuartos(), m = cs.filter(p=>p.gen === 'M').length, f = cs.filter(p=>p.gen === 'F').length;
+  let gen = '';
+  const passo = T && !D ? 3 : D && !T ? 2 : 0;
+  if(passo){ const rf = f % passo, rm = m % passo; if(rf && !rm) gen = 'F'; else if(rm && !rf) gen = 'M'; else if(rf && rm) gen = (passo - rf) <= (passo - rm) ? 'F' : 'M'; }
+  return {nv, gen};
+}
+function htmlQuemChamar(cs){
+  const auto = faltaAuto(cs), nv = chamarNv || auto.nv, gen = chamarGen !== null ? chamarGen : auto.gen;
+  const lista = pessoasDoNivel(nv).filter(p=>!p.st && !recusouEstaViagem(p.nome) && (!gen || p.gen === gen))
+    .sort((a,b)=>(b.ih - a.ih) || (b.nota - a.nota)).slice(0, 5);
+  const opNv = [['IV','Conferente IV'],['III','Conferente III'],['II','Conferente II'],['I','Conferente I'],['ES','Estagiário'],['FL','Freelance']];
+  return `<div class="card" style="margin:8px 0;padding:10px"><h2 style="font-size:1rem;margin:0 0 6px">🔎 Quem chamar agora</h2>
+    <div class="row" style="gap:8px"><select onchange="chamarNv=this.value;renderNiveis()" style="flex:1">${opNv.map(([v, r])=>`<option value="${v}" ${v === nv ? 'selected' : ''}>${r}${v === auto.nv && !chamarNv ? ' (falta)' : ''}</option>`).join('')}</select>
+      <select onchange="chamarGen=this.value;renderNiveis()" style="flex:1"><option value="" ${!gen ? 'selected' : ''}>Homem ou mulher</option><option value="F" ${gen === 'F' ? 'selected' : ''}>Mulher${auto.gen === 'F' && chamarGen === null ? ' (quartos)' : ''}</option><option value="M" ${gen === 'M' ? 'selected' : ''}>Homem${auto.gen === 'M' && chamarGen === null ? ' (quartos)' : ''}</option></select></div>
+    <p class="hint" style="margin:6px 2px">Mais produtivos primeiro (média de itens/h). Fora: quem já foi chamado, confirmou, recusou esta viagem, está afastado ou desligado.</p>
+    ${lista.length ? lista.map(linhaNivel).join('') : '<p class="hint">Ninguém disponível com esse filtro.</p>'}</div>`;
+}
 function linhaNivel(p, i){
   const det = [buscaNivel.trim() ? ROT_NIVEL[p.nv] : '', p.gen === 'F' ? 'F' : p.gen === 'M' ? 'M' : '', p.ih ? `<b>${fmtN(p.ih)} itens/h</b>` : 'sem produtividade', p.lojas ? `${p.lojas} loja(s)${p.ultima ? ' · última ' + String(p.ultima).slice(0, 5) : ''}` : '',
     p.recente && p.ih && p.lojas >= 3 ? (()=>{ const r = p.recente.ih / p.ih; const seta = r >= 1.05 ? '<b style="color:var(--ok)">↑</b>' : r <= 0.95 ? '<b style="color:var(--danger)">↓</b>' : '→'; return `últimas ${p.recente.n}: ${fmtN(p.recente.ih)} ${seta}`; })() : '',
-    p.erroLoja !== null ? fmtErroLoja(p.erroLoja) : '', p.faltas ? `${p.faltas} falta(s)` : '',
+    p.erroLoja !== null ? fmtErroLoja(p.erroLoja) : '', p.faltas ? `<span style="color:var(--danger)">faltou ${p.faltas} de ${p.escaladas || p.faltas} loja(s)</span>` : '',
     p.conv && p.conv.nao ? `<span style="color:var(--warn)">recusou ${p.conv.nao} de ${p.conv.sim + p.conv.nao} convite(s) (90 dias)</span>` : p.conv && p.conv.sim ? `aceitou ${p.conv.sim} convite(s) (90 dias)` : '',
     (()=>{ const d = diasSemLoja(p.ultima); return d !== null && d >= 45 ? `<span style="color:var(--danger)">⚠️ sem loja há ${d} dias</span>` : ''; })()].filter(Boolean).join(' · ');
   const nm = esc(p.nome).replace(/'/g, '&#39;');
@@ -5013,6 +5066,7 @@ function renderNiveis(){
     h += `<p style="margin:8px 2px"><b>${nOk} confirmado(s)</b>${nEs ? ` (${nEs} estagiário(s), fora das vagas)` : ''} · ${f} mulher(es) · ${m} homem(ns)${cs.length - f - m ? ` · ${cs.length - f - m} sem gênero` : ''}${nRec ? ` · ${nRec} recusa(s)` : ''}</p>`;
     h += campoVagasNivel() + faltamNiveis(cs);
     { const dq = dicaQuartosGenero(cs.filter(p=>p.gen === 'M').length, cs.filter(p=>p.gen === 'F').length); if(dq) h += `<p class="msg ${/certinho/.test(dq) ? 'ok' : 'warn'}">${esc(dq)}</p>`; }
+    h += htmlQuemChamar(cs);
     if(nOk) h += `<div class="card" style="margin:6px 0;padding:10px">${regrasConfirmados(cs)}</div>`;
     ['IV','III','II','I','ES','FL'].forEach(nv=>{
       const xs = cs.filter(p=>p.nv === nv); if(!xs.length) return;
@@ -5101,7 +5155,8 @@ function renderQuadro(){
     (mostra.length ? mostra.map(({p, tipo})=>{
       const cat = tipo === 'fl' ? 'Freelance' : tipo === 'rj' ? 'RJ' : textoCategoria(p.nome).replace(' (desligado)', '');
       const ind = indicadoresDe(p.nome);
-      const det = [cat, (p.genero || '').slice(0,1) || 'sem gênero', ind.ih ? fmtN(ind.ih) + ' itens/h' : '', ind.ultima ? 'última loja ' + String(ind.ultima).slice(0,5) : '', p.afastado ? 'afastado(a)' : '',
+      const nf = (ind.faltas || 0) + (ind.atestados || 0);
+      const det = [cat, (p.genero || '').slice(0,1) || 'sem gênero', ind.ih ? fmtN(ind.ih) + ' itens/h' : '', nf ? `faltou ${nf} de ${ind.lojasHist || nf} loja(s)` : '', ind.ultima ? 'última loja ' + String(ind.ultima).slice(0,5) : '', p.afastado ? 'afastado(a)' : '',
         p.desligado ? `<b style="color:var(--danger)">desligado(a)${p.desligadoEm ? ' em ' + esc(p.desligadoEm) : ''}</b>` : ''].filter(Boolean).join(' · ');
       return `<div class="pessoa-row"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" data-quadro-ficha="${esc(p.nome)}"><b>${esc(p.nome)}</b></span><small class="hist">${det}</small></span>
         <span class="pill-btns">${p.desligado ? '' : `<button class="pill" type="button" data-nivel-editar="${esc(p.nome)}">✏️ Categoria</button>`}
@@ -5506,7 +5561,11 @@ function normLojaRobo(o){
     // resumo dos conferentes: PRONTO / AGUARDANDO CONTROLE / vazio (loja sem a pasta CONTROLE)
     resumo:String(o['RESUMO']||''),
     // avisos de arquivo mal enviado + coordenador (do Relatório de Gestão)
-    coordenador:String(o['COORDENADOR']||'').trim(), avisos:String(o['AVISOS DO ARQUIVO']||'').split(' · ').map(x=>x.trim()).filter(Boolean)};
+    coordenador:String(o['COORDENADOR']||'').trim(), avisos:String(o['AVISOS DO ARQUIVO']||'').split(' · ').map(x=>x.trim()).filter(Boolean),
+    // faltas e transferidos do Relatório de Gestão (vazio = loja antiga ou sem relatório)
+    faltas:String(o['FALTAS']||'').split(';').map(x=>x.trim()).filter(Boolean).map(x=>{ const m = x.match(/^(.*?)\s*\((ATESTADO)\)$/); return m ? {nome:nomeCompletoCadastro(m[1]), atestado:true} : {nome:nomeCompletoCadastro(x), atestado:false}; }),
+    transferidos:String(o['TRANSFERIDOS']||'').split(';').map(x=>x.trim()).filter(Boolean).map(nomeCompletoCadastro),
+    temGestao: o['FALTAS'] !== undefined};
 }
 function numOuNulo(v){ return (v === '' || v === null || v === undefined) ? null : (Number(v) || 0); }
 function normErroRobo(o){
@@ -5930,7 +5989,7 @@ function renderRobo(){
   st.textContent = !robo.link ? 'Ainda não ligado ao robô. Cole o link do robô abaixo.'
     : roboBuscando ? (roboPedidoManual ? 'Pedindo ao robô para olhar o Gmail agora… (pode levar até 1 minuto)' : 'Buscando lojas no robô…')
     : `Ligado ao robô · ${robo.lojas.length} loja(s)${quando ? ' · atualizado em ' + quando : ''}`;
-  document.getElementById('avisoRobo').innerHTML = robo.ultimoErro ? `<div class="msg warn">${esc(robo.ultimoErro)}</div>` : '';
+  document.getElementById('avisoRobo').innerHTML = robo.ultimoErro ? `<div class="msg warn">${esc(robo.ultimoErro)}${robo.link && souCriador() ? `<br><a href="${esc(robo.link)}" target="_blank" rel="noopener" style="font-weight:700;color:inherit">🔎 Abrir o robô no navegador</a> <small>(mostra a mensagem de erro do Google, se houver)</small>` : ''}</div>` : '';
   if(!SEGMENTOS[segAtivo]) segAtivo = 'DROGARIA';
   const secao = document.getElementById('produtividade'); if(secao) secao.classList.toggle('seg-super', segAtivo !== 'DROGARIA');
   const rotSeg = ROTULO_SEG[segAtivo].toLowerCase();
@@ -6063,6 +6122,7 @@ function renderDetalheRobo(){
     <p class="hint">${fmtN(l.pecas)} peças · ${l.horas ? String(l.horas).replace('.', ',') : '-'} h líquidas · ${fmtN(l.fora)} peça(s) fora das faixas</p>
     ${caixaEquipe(equipeLojaRobo(l), l)}
     ${htmlAvisosLoja(l)}
+    ${(l.faltas || []).length || (l.transferidos || []).length ? `<p class="hint" style="margin:6px 2px">${(l.faltas || []).length ? `❌ <b>Faltaram (${l.faltas.length}):</b> ${l.faltas.map(f=>esc(nomeProprio(f.nome)) + (f.atestado ? ' (atestado)' : '')).join(', ')}` : ''}${(l.transferidos || []).length ? `${(l.faltas || []).length ? '<br>' : ''}↪️ Transferidos para outra loja: ${l.transferidos.map(n=>esc(nomeProprio(n))).join(', ')}` : ''}</p>` : ''}
     <p class="hint">${esc(textoErrosLoja(l))} Toque num nome para ver o resumo dele(a)${l.errosItens !== null && l.errosItens !== undefined ? ' e os itens ajustados' : ''}.</p>
     ${l.resumo === 'PRONTO' ? `<div class="acoes" style="margin-top:0"><button class="btn small" onclick="abrirResumoEquipe(roboLojaAberta)">📝 Resumo da equipe</button><button class="btn small secondary" onclick="abrirMapaLoja(roboLojaAberta)">🗺️ Mapa da loja</button>${(()=>{ const rg = registroPresencaDaLojaRobo(l); return rg && (rg.atual || Object.keys(rg.setores || {}).length) ? `<button class="btn small secondary" onclick="abrirPlanejadoReal(roboLojaAberta)">🧭 Planejado × real</button>` : ''; })()}</div>`
       : l.resumo === 'AGUARDANDO CONTROLE' ? '<p class="hint">📝 O resumo de cada conferente aparece quando chegar o e-mail do CONTROLE desta loja.</p>' : ''}
@@ -7160,11 +7220,38 @@ function mapaIndicadores(){
     const x = pegar(e.nome);
     const base = e.lojas - e.transferido;
     Object.assign(x, {lojasHist:e.lojas, presente:e.presente, faltas:e.falta, atestados:e.atestado, atrasos:e.atrasos||0, minAtraso:e.minAtraso||0,
-      presPct: base > 0 ? Math.round(100 * e.presente / base) : null, setores:setoresMaisFrequentes(e, 3), registros:e.registros});
+      presPct: base > 0 ? Math.round(100 * e.presente / base) : null, transfHist:e.transferido, setores:setoresMaisFrequentes(e, 3), registros:e.registros.slice()});
   });
+  presencaDoRelatorio(pegar);
+  Object.values(mapa).forEach(x=>{ if(!x.faltasRg && !x.lojasHist) return;
+    const base = (x.lojasHist || 0) - (x.transfHist || 0);
+    x.presPct = base > 0 ? Math.round(100 * (x.presente || 0) / base) : null;
+    if(x.registros) x.registros.sort((a,b)=>dataParaChave(a.data) - dataParaChave(b.data)); });
   Object.entries(convites).forEach(([k,v])=>{ const x = mapa[k] || (mapa[k] = {nome:k, chave:k}); x.convSim = v.sim; x.convNao = v.nao; });
   cacheInd = mapa; cacheIndChave = chave;
   return mapa;
+}
+// Lojas do robô com Relatório de Gestão: quem contou = presente, quem está em FALTAS = faltou.
+// A loja que já foi salva no histórico da Presença não entra de novo (lá a presença é mais completa).
+function presencaDoRelatorio(pegar){
+  robo.lojas.forEach(l=>{
+    if(!l.temGestao) return;
+    let reg = null; try{ reg = registroPresencaDaLojaRobo(l); }catch(e){}
+    if(reg && !reg.atual) return;
+    const vistos = new Set();
+    const marca = (nome, st) => {
+      const c = cadastroPessoa(nome), nm = c ? c.p.nome : nome, k = normalizarNome(nm);
+      if(vistos.has(k)) return; vistos.add(k);
+      const x = pegar(nm);
+      x.lojasHist = (x.lojasHist || 0) + 1;
+      if(st === 'presente') x.presente = (x.presente || 0) + 1;
+      else if(st === 'atestado') x.atestados = (x.atestados || 0) + 1;
+      else x.faltas = (x.faltas || 0) + 1;
+      if(st !== 'presente'){ x.faltasRg = (x.faltasRg || 0) + 1; (x.registros = x.registros || []).push({id:l.id, data:l.data, loja:(l.num ? l.num + ' - ' : '') + l.loja, presenca:st, atraso:0, chegada:'', setores:[], origem:'relatório de gestão'}); }
+    };
+    (l.faltas || []).forEach(f=>marca(f.nome, f.atestado ? 'atestado' : 'falta'));
+    robo.pessoas.filter(p=>p.id === l.id && papelNaLoja(l.id, p.nome) !== 'coord').forEach(p=>marca(p.nome, 'presente'));
+  });
 }
 const NOTA_PREF = {1:60, 2:45, 3:30, 4:15};
 function indicadoresDe(nome){
@@ -7276,7 +7363,7 @@ function renderFichaAberta(todas, rankNota){
     ${htmlEvolucao(x.nome, (x.cad && /ESTAG/i.test(String(x.cad.nivel || x.cad.tipo || ''))) || (x.ind && x.ind.lojasRobo <= 10))}
     ${htmlAvalFicha(x.nome)}
     ${ind.registros && ind.registros.length ? `<div class="section-title">Presença (histórico das lojas)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Status</th><th>Setor</th></tr></thead><tbody>${
-      ind.registros.slice().reverse().map(r=>`<tr><td>${esc(r.data)}</td><td>${esc(r.loja)}</td><td>${rotuloHist(r)}</td><td>${(r.setores||[]).map(esc).join(', ') || '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      ind.registros.slice().reverse().map(r=>`<tr><td>${esc(r.data)}</td><td>${esc(r.loja)}</td><td>${rotuloHist(r)}${r.origem ? ' <small class="hint">(relatório de gestão)</small>' : ''}</td><td>${(r.setores||[]).map(esc).join(', ') || '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
     ${!lojasRobo.length && !(ind.registros||[]).length ? '<p class="hint">Ainda não há lojas do robô nem do histórico com esse nome.</p>' : ''}
     <div class="acoes"><button class="btn secondary" onclick="exportarFichaPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="fichaAberta=null;renderFichas()">Fechar</button></div>
   </div>`;
@@ -7961,7 +8048,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 25/10/2026 02:30</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 28/10/2026 08:39</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
