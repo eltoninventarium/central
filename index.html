@@ -3340,7 +3340,8 @@ function contagemPresenca(){
   const presFree = equipe.filter(p=>p.presenca==='presente' && ehFree(p)).length;
   const atrasos = loja.pessoas.filter(p=>!p.coordenador && p.presenca==='presente' && p.atraso).length;
   // "Vai direto": ainda não chegou — vira Presente quando chegar na loja
-  return {coordenadores: loja.pessoas.filter(p=>p.coordenador).length, escalados: equipe.length,
+  // coordenador transferido para outra loja não conta mais aqui (passa a contar na loja que recebeu)
+  return {coordenadores: loja.pessoas.filter(p=>p.coordenador && p.presenca !== 'transferido').length, escalados: equipe.length,
     instrutores, estagiarios: estagiarios.length, estagPresentes, estagFaltas,
     presentes, presFree, presCLT: presentes - presFree, faltas, faltaSimples, atestados, caminho, direto, pegar, transferidos, recebidos, atrasos,
     pendentes: equipe.length - presentes - faltas - caminho - direto - pegar - transferidos};
@@ -3352,7 +3353,7 @@ function pessoasDaCaixa(rotulo){
   const todos = loja.pessoas.map((p,i)=>({p,i})), conf = todos.filter(x=>ehConferente(x.p));
   const com = st => conf.filter(x=>x.p.presenca === st);
   switch(rotulo){
-    case 'Coordenadores': return todos.filter(x=>x.p.coordenador);
+    case 'Coordenadores': return todos.filter(x=>x.p.coordenador && x.p.presenca !== 'transferido');
     case 'Instrutor': return todos.filter(x=>!x.p.coordenador && x.p.instrutor);
     case 'Estagiários': return todos.filter(x=>!x.p.coordenador && !x.p.instrutor && x.p.estagiario);
     case 'Escalados': return conf;
@@ -7756,7 +7757,7 @@ function coordenadorDaLoja(l){
   if(l.coordenador) return l.coordenador;
   const reg = registroPresencaDaLojaRobo(l);
   const ps = reg ? (reg.atual ? loja.pessoas : (reg.pessoas || [])) : [];
-  return ps.filter(p=>p.coordenador).map(p=>p.nome).join(', ');
+  return ps.filter(p=>p.coordenador && p.presenca !== 'transferido').map(p=>p.nome).join(', ');
 }
 function textoAvisoCoordenador(l){
   const c = coordenadorDaLoja(l);
@@ -8048,7 +8049,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 28/10/2026 08:39</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 29/10/2026 19:38</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
