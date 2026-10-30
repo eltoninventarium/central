@@ -5629,7 +5629,10 @@ function salvarLinkRobo(){
   document.getElementById('boxLinkRobo').open = !v;
   if(v){ toast('Link salvo. Buscando as lojas do robô…'); atualizarDoRobo(true); if(!nuvemLigada) iniciarNuvem(); } else renderRobo();
 }
-async function atualizarDoRobo(manual, soConvites){
+let roboPendentes = 0, roboRecebidasAgora = 0;
+async function atualizarDoRobo(manual, soConvites, rodada){
+  rodada = rodada || 0;
+  if(manual && !rodada) roboRecebidasAgora = 0;
   if(!robo.link){ if(manual) toast('Cole o link do robô primeiro (toque em "Link do robô").'); renderRobo(); return; }
   if(roboBuscando) return;
   roboBuscando = true; roboPedidoManual = !!manual; renderRobo();
@@ -5646,9 +5649,11 @@ async function atualizarDoRobo(manual, soConvites){
     try{ j = await resp.json(); }catch(e){ throw new Error('O robô respondeu algo inesperado. Confira se ele foi publicado como App da Web com acesso "Qualquer pessoa".'); }
     if(j.erro) throw new Error(j.erro === 'chave inválida' ? 'A chave do link não confere com a do robô. Copie de novo a linha do "mostrarLinkDoApp".' : String(j.erro));
     if(j.voce){ robo.voce = j.voce; aplicarPapel(); }
+    roboPendentes = manual ? (+j.pendentes || 0) : 0;
+    if(manual && /^[1-9]\d* loja/.test(String(j.processamento || ''))) roboRecebidasAgora += parseInt(j.processamento, 10) || 0;
     if(j.semMudanca){
       robo.atualizadoEm = Date.now(); robo.ultimoErro = ''; salvarRobo();
-      if(manual) toast('Tudo em dia: nenhuma loja nova no Gmail.');
+      if(manual && !roboPendentes && !roboRecebidasAgora) toast('Tudo em dia: nenhuma loja nova no Gmail.');
       else if(soConvites) toast('Nenhuma resposta nova.');
       if(manual && j.processamento && /erro|consegui/i.test(j.processamento)) toast(j.processamento, 6000);
       return;
@@ -5668,7 +5673,7 @@ async function atualizarDoRobo(manual, soConvites){
     if(respostas.length) toast('Convites: ' + respostas.join(' · '), 6000);
     else if(soConvites) toast(Array.isArray(j.convites) ? 'Nenhuma resposta nova.' : 'O robô ainda está com a versão antiga (sem convites).');
     const novas = robo.lojas.filter(l=>!antes.has(l.id)).length;
-    if(!soConvites && (manual || (novas && antes.size))) toast(novas ? `${novas} loja(s) nova(s) do robô.` : 'Tudo em dia: nenhuma loja nova no Gmail.');
+    if(!soConvites && (manual || (novas && antes.size))) toast(manual && roboPendentes ? `Loja recebida! Buscando a próxima (faltam ${roboPendentes})…` : novas ? `${roboRecebidasAgora || novas} loja(s) nova(s) do robô.` : 'Tudo em dia: nenhuma loja nova no Gmail.');
     // aviso: loja nova que ficou abaixo da meta da equipe
     if(antes.size){
       ajustarAtrasosRobo();
@@ -5688,6 +5693,8 @@ async function atualizarDoRobo(manual, soConvites){
     roboBuscando = false;
     renderRobo();
     if(soConvites && typeof renderEscala === 'function') renderEscala();
+    // o robô faz uma loja por vez no "Atualizar agora": se ainda tem e-mail na fila, pede a próxima
+    if(manual && roboPendentes > 0 && rodada < 15 && !robo.ultimoErro) setTimeout(()=>atualizarDoRobo(true, false, rodada + 1), 200);
     else rerenderViagem();
   }
 }
@@ -5988,7 +5995,7 @@ function renderRobo(){
   const box = document.getElementById('boxLinkRobo'); if(box && !robo.link) box.open = true;
   const quando = robo.atualizadoEm ? new Date(robo.atualizadoEm).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
   st.textContent = !robo.link ? 'Ainda não ligado ao robô. Cole o link do robô abaixo.'
-    : roboBuscando ? (roboPedidoManual ? 'Pedindo ao robô para olhar o Gmail agora… (pode levar até 1 minuto)' : 'Buscando lojas no robô…')
+    : roboBuscando ? (roboPedidoManual ? (roboPendentes ? `Recebendo as lojas do Gmail, uma por vez… (${roboRecebidasAgora} recebida(s), faltam ${roboPendentes})` : 'Pedindo ao robô para olhar o Gmail agora…') : 'Buscando lojas no robô…')
     : `Ligado ao robô · ${robo.lojas.length} loja(s)${quando ? ' · atualizado em ' + quando : ''}`;
   document.getElementById('avisoRobo').innerHTML = robo.ultimoErro ? `<div class="msg warn">${esc(robo.ultimoErro)}${robo.link && souCriador() ? `<br><a href="${esc(robo.link)}" target="_blank" rel="noopener" style="font-weight:700;color:inherit">🔎 Abrir o robô no navegador</a> <small>(mostra a mensagem de erro do Google, se houver)</small>` : ''}</div>` : '';
   if(!SEGMENTOS[segAtivo]) segAtivo = 'DROGARIA';
@@ -6130,7 +6137,7 @@ function renderDetalheRobo(){
     ${previstoXReal(l)}
     <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th>${l.errosItens !== null && l.errosItens !== undefined ? '<th>Erros</th>' : ''}</tr></thead><tbody>${
       (()=>{ const conf = ps.filter(p=>!papelNaLoja(l.id, p.nome)), fora = ps.filter(p=>papelNaLoja(l.id, p.nome)), cols = l.errosItens !== null && l.errosItens !== undefined ? 5 : 4;
-        const linha = (p, pos)=>`<tr class="linha-clicavel" data-erros-nome="${esc(p.nome)}"><td>${pos}</td><td>${esc(p.nome)}${htmlCategoria(p.nome)}${papelNaLoja(l.id, p.nome) ? ` <span class="hint">(${({estagiario:'estagiário', coord:'coord.', instrutor:'instrutor'})[papelNaLoja(l.id, p.nome)]})</span>` : ''}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${p.ih ? fmtIH(p.ih) : '-'}</td>${cols === 5 ? celulaErros(p) : ''}</tr>`;
+        const linha = (p, pos)=>`<tr class="linha-clicavel" data-erros-nome="${esc(p.nome)}"><td>${pos}</td><td>${esc(p.nome)}${htmlCategoria(p.nome)}${foraDaEscalaLoja(l, p.nome) ? ' <small style="color:var(--danger)">⚠ não está na escala desta loja</small>' : ''}${papelNaLoja(l.id, p.nome) ? ` <span class="hint">(${({estagiario:'estagiário', coord:'coord.', instrutor:'instrutor'})[papelNaLoja(l.id, p.nome)]})</span>` : ''}${marcaAtrasoRobo(p)}</td><td>${fmtN(p.pecas)}</td><td>${p.ih ? fmtIH(p.ih) : '-'}</td>${cols === 5 ? celulaErros(p) : ''}</tr>`;
         return conf.map((p,i)=>linha(p, i+1)).join('') + (fora.length && conf.length ? `<tr><td colspan="${cols}" class="hint" style="font-weight:700">Fora da conta da equipe</td></tr>` + fora.map(p=>linha(p, '—')).join('') : ''); })()
     }</tbody></table></div>
     ${ps.some(p=>p.tempo === 'COLETOR') ? '<p class="hint">⏱ Itens/hora pelo tempo de cada pessoa no coletor (da 1ª seção aberta à última fechada).</p>' : ''}
@@ -7753,6 +7760,14 @@ function avisosDaLoja(l){
   if(!l.resumo && l.inicio !== undefined && robo.versao) a.push('Sem a pasta CONTROLE (o resumo dos conferentes fica de fora)');
   return a;
 }
+// a Presença salva desta loja diz quem estava escalado: nome do robô fora dela = provável matrícula de outra pessoa no coletor
+function foraDaEscalaLoja(l, nome){
+  if(/^COLETOR /.test(nome)) return false;
+  let reg = null; try{ reg = registroPresencaDaLojaRobo(l); }catch(e){}
+  const ps = reg ? (reg.atual ? loja.pessoas : (reg.pessoas || [])) : [];
+  if(ps.length < 3) return false;
+  return !ps.some(p=>normalizarNome(p.nome) === normalizarNome(nome) || mesmoNomeFlex(p.nome, nome) || mesmaPessoaTokens(p.nome, nome));
+}
 function coordenadorDaLoja(l){
   if(l.coordenador) return l.coordenador;
   const reg = registroPresencaDaLojaRobo(l);
@@ -8049,7 +8064,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 29/10/2026 19:38</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 30/10/2026 10:54</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
