@@ -425,7 +425,9 @@ body.modo-colega .so-criador{display:none !important;}
 .chips-cli{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px;}
 .chip-cli{border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:16px;padding:6px 12px;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;}
 .chip-cli.on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-ink);}
-.cod-busca input{padding-right:104px;font-size:1rem;}
+.cod-busca input{padding-right:142px;font-size:1rem;}
+.cod-limpar{position:absolute;right:98px;top:50%;transform:translateY(-50%);border:none;background:var(--border);color:var(--text);border-radius:50%;width:30px;height:30px;font-size:.95rem;font-weight:800;line-height:30px;padding:0;cursor:pointer;}
+.cod-limpar[hidden]{display:none;}
 .cod-mic{position:absolute;right:54px;top:50%;transform:translateY(-50%);border:1px solid var(--border);background:var(--panel);border-radius:50%;width:38px;height:38px;font-size:1.05rem;cursor:pointer;padding:0;}
 .cod-mic.ouvindo{background:var(--danger);border-color:var(--danger);animation:pulsoMic 1s infinite;}
 @keyframes pulsoMic{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.5);}50%{box-shadow:0 0 0 8px rgba(229,72,77,0);}}
@@ -8741,6 +8743,7 @@ function renderConsulta(){
       <div id="codChips"></div>
       <div class="busca-robo cod-busca"><span class="lupa" aria-hidden="true">🔍</span>
         <input type="text" id="buscaCod" placeholder="EAN, código interno ou descrição" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <button type="button" class="cod-limpar" id="codLimpar" title="Limpar" aria-label="Limpar a pesquisa" hidden>✕</button>
         <button type="button" class="cod-mic" id="codMic" title="Pesquisar falando" aria-label="Pesquisar falando">🎤</button>
         <button type="button" class="cod-teclado" id="codTeclado" title="Trocar teclado">123</button></div>
       <div class="cod-voz-linha">
@@ -8762,7 +8765,8 @@ function renderConsulta(){
       <input type="file" id="arqCod" accept=".txt,.TXT,.csv,.CSV,text/plain,text/csv" multiple hidden>
     </div>`;
     const b = document.getElementById('buscaCod');
-    b.addEventListener('input', ()=>{ clearTimeout(b._t); b._t = setTimeout(renderResultadosCod, 180); });
+    b.addEventListener('input', ()=>{ mostrarLimparCod(); clearTimeout(b._t); b._t = setTimeout(renderResultadosCod, 180); });
+    document.getElementById('codLimpar').onclick = ()=>limparBuscaCod(true);
     b.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); renderResultadosCod(); b.blur(); } });
     document.getElementById('codTeclado').onclick = ()=>{ codUi.numerico = !codUi.numerico; salvarCodUi(); aplicarTecladoCod(); b.focus(); };
     document.getElementById('arqCod').onchange = e=>{ codImportar(e.target.files); e.target.value = ''; };
@@ -8779,6 +8783,13 @@ function renderConsulta(){
   }).join('');
   document.getElementById('codVersoes').innerHTML = vs || '';
   renderResultadosCod();
+}
+// ✕ do campo: apaga a pesquisa e deixa pronto para o próximo código (teclado aberto)
+function mostrarLimparCod(){ const b = document.getElementById('buscaCod'), x = document.getElementById('codLimpar'); if(b && x) x.hidden = !b.value; }
+function limparBuscaCod(focar){
+  const b = document.getElementById('buscaCod'); if(!b) return;
+  b.value = ''; mostrarLimparCod(); renderResultadosCod();
+  if(focar && !vozMaosLivres) b.focus();
 }
 function aplicarTecladoCod(){
   const b = document.getElementById('buscaCod'), t = document.getElementById('codTeclado'); if(!b) return;
@@ -8857,7 +8868,7 @@ function ouvir(){
   rec.onresult = ev=>{
     const r = ev.results[ev.results.length - 1];
     const b = document.getElementById('buscaCod');
-    if(!r.isFinal){ if(b) b.value = r[0].transcript; return; }
+    if(!r.isFinal){ if(b){ b.value = r[0].transcript; mostrarLimparCod(); } return; }
     final = [...r].map(a=>a.transcript);
   };
   rec.onerror = ev=>{
@@ -8883,14 +8894,14 @@ function tratarFala(alternativas){
   const continuar = ()=>{ if(vozMaosLivres){ clearTimeout(vozReinicio); vozReinicio = setTimeout(ouvir, 250); } };
   if(vozMaosLivres && /^(PARAR|PARA|SAIR|ENCERRAR|DESLIGAR)$/.test(cmd)){ pararVoz(); falarCod('Mãos livres desligado.'); return; }
   if(/^(REPETIR|REPETE|DE NOVO)$/.test(cmd)){ falarCod(vozUltimaResposta || 'Nada para repetir.', continuar); return; }
-  if(/^(LIMPAR|APAGAR)$/.test(cmd)){ const b = document.getElementById('buscaCod'); if(b) b.value = ''; renderResultadosCod(); continuar(); return; }
+  if(/^(LIMPAR|APAGAR)$/.test(cmd)){ limparBuscaCod(false); continuar(); return; }
   // usa a primeira forma ouvida que acha alguma coisa (o reconhecedor manda até 3)
   const cli = codUi.cli, base = codBases[cli] || codItensDasListas(cli);
   const soCodigo = !!(base.soCod && base.soCod.length > base.itens.length);
   let texto = textoDaFala(alternativas[0], soCodigo);
   for(const a of alternativas){ const t = textoDaFala(a, soCodigo); if(codBuscar(base, t, cli).lista.length){ texto = t; break; } }
   const b = document.getElementById('buscaCod'); if(b) b.value = texto;
-  renderResultadosCod();
+  mostrarLimparCod(); renderResultadosCod();
   const r = codUltimoResultado || {lista:[]};
   if(!r.lista.length){ falarCod('Não encontrei ' + texto.toLowerCase() + '.', continuar); return; }
   const it = r.lista[0], roupa = it.f.includes('B');
@@ -9155,7 +9166,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 07:18</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 07:36</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
