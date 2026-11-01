@@ -165,6 +165,8 @@ nav#barra .ic{display:flex;padding:4px 16px;border-radius:14px;transition:backgr
 nav#barra svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 nav#barra button.active{color:var(--accent);}
 nav#barra button.active .ic{background:var(--accent-soft);}
+nav#barra .rot-curto{display:none;}
+@media (max-width:440px){ nav#barra .rot-longo{display:none;} nav#barra .rot-curto{display:inline;} nav#barra .ic{padding:4px 9px;} nav#barra button{font-size:min(.64rem, 2.55vw);} }
 nav#barra .badge{position:absolute;top:0;left:calc(50% + 8px);min-width:17px;height:17px;border-radius:9px;background:var(--danger);color:#fff;font-size:10px;line-height:17px;padding:0 4px;text-align:center;}
 /* painel do dia */
 .hero{background:var(--header-bg);color:#fff;border-radius:18px;padding:16px 16px 14px;margin:14px 0 12px;cursor:pointer;position:relative;overflow:hidden;}
@@ -418,6 +420,47 @@ body.modo-colega .so-criador{display:none !important;}
 .regras-editor .pill.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
 .regras-editor input{flex:1 1 100%;margin-top:4px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:.82rem;font-family:inherit;}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--text);color:var(--bg);border-radius:9px;padding:10px 12px;font-size:.82rem;max-width:520px;margin:0 auto;}
+
+/* consulta de códigos (01/11/2026) */
+.chips-cli{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px;}
+.chip-cli{border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:16px;padding:6px 12px;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;}
+.chip-cli.on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-ink);}
+.cod-busca input{padding-right:60px;font-size:1rem;}
+.cod-teclado{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:1px solid var(--border);background:var(--panel);color:var(--muted);border-radius:10px;padding:5px 9px;font:inherit;font-size:.72rem;font-weight:800;cursor:pointer;}
+.cod-info{font-size:.82rem;color:var(--muted);margin:8px 0;}
+.cod-row{border:1px solid var(--border);border-radius:12px;padding:9px 11px;margin-top:8px;cursor:pointer;}
+.cod-desc{font-weight:700;font-size:.92rem;}
+.cod-sub{font-size:.8rem;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.cod-sub .x-item{margin-left:auto;border:none;background:none;color:var(--danger);font-size:1rem;cursor:pointer;padding:0 4px;}
+.tag-cod{display:inline-block;font-size:.68rem;font-weight:700;border-radius:8px;padding:1px 6px;margin:4px 4px 0 0;border:1px solid var(--border);color:var(--muted);}
+.tag-cod.ctrl{color:var(--danger);border-color:var(--danger);}
+.tag-cod.gel{color:var(--atest);border-color:var(--atest);}
+.tag-cod.lista{color:var(--accent);border-color:var(--accent);}
+.cod-barra{background:#fff;border:1px solid #ddd;border-radius:10px;padding:10px 4px 8px;text-align:center;margin:6px 0 12px;cursor:pointer;overflow:hidden;}
+.cod-barra svg{display:block;margin:0 auto;}
+.cod-num{color:#000;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.12em;font-size:1rem;margin-top:4px;}
+.cod-tipo{color:#555;font-size:.68rem;margin-top:2px;}
+#codCheia{position:fixed;inset:0;z-index:400;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.cod-cheia-in{display:flex;flex-direction:column;align-items:center;flex:none;}
+.cod-cheia-in.girado{transform:rotate(90deg);}
+.cod-num.grande{font-size:1.6rem;}
+.cod-cheia-acoes{position:absolute;left:0;right:0;bottom:calc(22px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;justify-content:center;}
+.cod-cheia-dica{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:16px;right:16px;text-align:center;color:#666;font-size:.8rem;}
+#folhaImpressao{display:none;}
+@media print{
+  body.imprimindo > *:not(#folhaImpressao){display:none!important;}
+  body.imprimindo{background:#fff!important;}
+  body.imprimindo #folhaImpressao{display:block;color:#000;font-family:Arial,Helvetica,sans-serif;}
+  #folhaImpressao .fi-tit{font-size:14pt;font-weight:700;}
+  #folhaImpressao .fi-sub2{font-size:8pt;color:#444;margin-bottom:4mm;}
+  #folhaImpressao .fi-grade{display:grid;grid-template-columns:1fr 1fr;gap:3mm;}
+  #folhaImpressao .fi-cel{border:.3mm solid #999;padding:2mm;text-align:center;break-inside:avoid;page-break-inside:avoid;}
+  #folhaImpressao svg{display:block;margin:0 auto;}
+  #folhaImpressao .fi-num{font-family:monospace;font-size:10pt;font-weight:700;letter-spacing:1px;}
+  #folhaImpressao .fi-desc{font-size:8.5pt;font-weight:700;}
+  #folhaImpressao .fi-sub{font-size:7.5pt;color:#333;}
+  @page{margin:10mm;}
+}
 </style>
 </head>
 <body>
@@ -745,12 +788,15 @@ body.modo-colega .so-criador{display:none !important;}
     <div class="card"><h2 style="font-size:1rem;margin:0 0 6px">🗂️ Listas de setores</h2><p class="hint" style="margin-top:0">Prioridades, pessoas por setor e regras (Araujo, Verdemar…). Os coordenadores só usam.</p>
       <button class="btn small secondary" type="button" onclick="abrirView('modelos')">Abrir listas de setores</button></div>
   </section>
+  <section id="consulta" class="view"><div id="conteudoConsulta"></div></section>
+  <section id="listascod" class="view"><div id="conteudoListasCod"></div></section>
 </main>
 <nav id="barra" aria-label="Menu principal"><div class="itens">
       <button data-grupo="inicio"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></span>Início<span class="badge" id="badge-inicio" hidden></span></button>
       <button data-grupo="viagem"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2.5"/><path d="M3 11h18"/><circle cx="7.5" cy="19" r="1.6"/><circle cx="16.5" cy="19" r="1.6"/></svg></span>Viagem<span class="badge" id="badge-viagem" hidden></span></button>
       <button data-grupo="loja"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 9l1.6-5h13.8l1.6 5"/><path d="M4.5 9v11h15V9"/><path d="M9.5 20v-5.5h5V20"/><path d="M3.5 9h17"/></svg></span>Loja<span class="badge" id="badge-loja" hidden></span></button>
-      <button data-grupo="prod"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V11"/><path d="M10 20V5"/><path d="M16 20v-7"/><path d="M21 20H3"/></svg></span>Produtividade<span class="badge" id="badge-prod" hidden></span></button>
+      <button data-grupo="consulta"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M10 6v9M13 6v9M16 6v12M20 6v12"/><path d="M9 19h5"/></svg></span>Consulta</button>
+      <button data-grupo="prod"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V11"/><path d="M10 20V5"/><path d="M16 20v-7"/><path d="M21 20H3"/></svg></span><span class="rot-longo">Produtividade</span><span class="rot-curto">Produtiv.</span><span class="badge" id="badge-prod" hidden></span></button>
       <button data-grupo="gestao" hidden><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span>Gestão</button>
       <button data-grupo="fichas"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="11" r="2.4"/><path d="M5.6 16.5c.8-1.5 2-2.2 3.4-2.2s2.6.7 3.4 2.2"/><path d="M14.5 10h4M14.5 13.5h4"/></svg></span>Fichas<span class="badge" id="badge-fichas" hidden></span></button>
 </div></nav>
@@ -1003,6 +1049,7 @@ const GRUPOS = {
   viagem: [['equipe','Equipe'],['escala','Nova escala'],['niveis','Por nível'],['quartos','Quartos']],
   loja:   [['presenca','Presença'],['setores','Setores'],['historico','Histórico']],
   gestao: [['gestao','Gestão'],['quadro','Quadro da equipe'],['modelos','Listas de setores']],
+  consulta: [['consulta','Pesquisar'],['listascod','Listas']],
   prod:   [['produtividade','Produtividade']],
   fichas: [['fichas','Fichas']]
 };
@@ -1021,6 +1068,9 @@ function abrirView(id){
   sub.innerHTML = subs.length>1 ? subs.map(([v,rot])=>`<button data-view="${v}" class="${v===id?'active':''}">${rot}</button>`).join('') : '';
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active', s.id===id));
   ui.view = id; ui.ultimaPorGrupo[g] = id; lsSet(UI_KEY, ui);
+  if(typeof fecharFolhaCod === 'function') fecharFolhaCod();
+  if(id==='consulta') codAoAbrir();
+  if(id==='listascod'){ renderListasCod(); codCarregar(codUi.cli).then(renderListasCod); }
   if(id==='quartos') renderRJQuartosOptions();
   if(id==='niveis') renderNiveis();
   if(id==='plano') renderPlano();
@@ -8023,6 +8073,557 @@ document.getElementById('inicioLoja').value = loja.inicio || '';
 renderPresenca();
 renderSetores();
 // a partir desta versão o app abre no painel do dia (uma vez; depois lembra a última tela)
+/* =====================================================================
+   CONSULTA DE CÓDIGOS (01/11/2026) — drogarias
+   Pesquisa por EAN, código interno ou descrição no arquivo de produtos do cliente e mostra o código de barras
+   (1D, fundo branco) para bipar. O arquivo vem sozinho pelo robô (zip da loja) e fica guardado no aparelho
+   (funciona sem internet). Listas (avulso, protetor solar, ração…) ficam junto do robô: todos veem, só o criador muda.
+   Não tem ligação com o cartelado do robô (pesquisar aqui não marca ninguém como dono do setor).
+   ===================================================================== */
+const COD_UI_KEY = 'central_cod_ui_v1', COD_LOCAL_KEY = 'central_cod_local_v1', COD_INFO_KEY = 'central_cod_info_v1';
+let codUi = lsGet(COD_UI_KEY, {cli:'ARAUJO', checado:0, lojaVista:'', numerico:false, folha:'ean'});
+let codLocal = lsGet(COD_LOCAL_KEY, {}) || {};      // cliente → info do arquivo guardado neste aparelho
+let codInfoRobo = lsGet(COD_INFO_KEY, {}) || {};    // cliente → info do arquivo que o robô tem
+const codBases = {};                                // cliente → base carregada na memória
+const codMem = {};                                  // sem IndexedDB: guarda só na memória
+let codBaixando = '', codAviso = '', codListaAberta = '';
+const CLIENTES_COD = {ARAUJO:'Araujo', RD:'RD (Raia/Drogasil)', PACHECO:'Pacheco', CLARA:'Droga Clara'};
+const LISTAS_COD_PADRAO = {"ARAUJO":[{"id":"avulso","nome":"Avulso / cartelado","itens":[["468843","ACIDO ACETIL EMS 100MG"],["1180","APRACUR"],["100544","ASPIRINA C ENVELOPE C/2"],["412821","BIOFLAC"],["232882","CX ISOPOR 3L"],["271187","CX ISOPOR 5L"],["213063","CX ISOPOR 500G"],["579890","DECONGEX C/4"],["984876","DIPIRONA EMS"],["437360","DIPIRONA MEDLEY"],["825107","DIPIRONA PRATI"],["699373","DORALGINA C/4"],["290351","DUODERM CURATIVO 10X10"],["290360","DUODERM TUBO GEL 30G"],["426644","ENGOV"],["23337","ENTEROFIGON"],["71293","EPAREMA HORTELA"],["703826","EPAREMA GUARANA"],["703834","EPAREMA LARANJA"],["25372","EPOCLER"],["286710","FIGATIL"],["756520","GASTROGEL"],["592897","HEPATILON"],["878227","LUFTAGASTROPRO SACHE VERDE"],["527157","MELOCOX CAIXA AZUL"],["715891","MELOXICAN CAIXA VERDE"],["29114","MINILAX ADULTO"],["825204","PARACETAMOL PRATI"],["26433","PROFENID"],["903183","SALICETIL C/10"],["579777","SORO FISIOL EQUIPLEX AMARELO"],["850012","SORO FISIOL SOLUSAM PEQUENO"],["31380","VOLTAREN"],["902268","XANTINON C/10"],["977888","XANTINON FLACONETE"],["45837","VALDA PRATA"],["195456","VALDA XILITOL DIET AZUL"],["841161","TINTURA COLOR 5/0"],["993948","GARRAFAO GALAO INGA"],["765953","SERINGA ASSEPTO 21"],["765961","SERINGA ASSEPTO 23"],["765970","SERINGA ASSEPTO 25"],["762245","SERINGA ASSEPTO 27"],["611131","ANGIOCATH 16"],["611115","ANGIOCATH 18"],["563587","ANGIOCATH 20"],["563609","ANGIOCATH 22"],["563595","ANGIOCATH 24"],["608882","SONDA NASOGASTRICA EMBRAMED 18"],["985040","AGULHA AZUL 0,60X30"],["609951","SONDA URETRAL EMBRAMED 14"],["1012258","PERIFERICO 16 CINZA"],["1012266","PERIFERICO 18 VERDE"],["1012274","PERIFERICO 20 ROSA"],["1012290","PERIFERICO 22 AZUL"],["1012282","PERIFERICO 24 AMARELO"]]},{"id":"protetor","nome":"Protetor solar (Sundown/Neutrogena)","itens":[["125660","PROT SOL SUNDOWN N30 120ML"],["360260","PROT SOL SUNDOWN N30 200ML"],["133140","PROT SOL SUNDOWN N50 120ML"],["417041","PROT SOL SUNDOWN N50 200ML"],["714569","PROT SOL SUNDOWN N50 350ML"],["879240","PROT SOL SUNDOWN N70 200ML"],["460290","PROT SOL SUNDOWN KIDS N60 120ML"],["118605","GEL POS SOL SUNDOWN 140G"],["710954","PROT SOL NEUTROGENA N30 120ML"],["710970","PROT SOL NEUTROGENA N30 200ML"],["710920","PROT SOL NEUTROGENA N50 120ML"],["775690","PROT SOL NEUTROGENA N50 200ML"],["775649","PROT SOL NEUTROGENA N70 120ML"],["775681","PROT SOL NEUTROGENA N70 200ML"],["235016","PROT SOL NEUTROGENA N90 120ML"],["234702","PROT SOL NEUTROGENA N90 200ML"]]},{"id":"racao","nome":"Ração (seção veterinária)","itens":[["399370","RAC PEDIGREE RAÇA PEQUENA 10,1KG","7896029069134"],["77208","RAC PEDIGREE NUTRIÇÃO ESSENCIAL 10,1KG","7896029010099"],["657808","RAC PEDIGREE CARNE AO LEITE 10,1KG","7896029009055"],["226149","RAC PEDIGREE CARNE/VEG NUGGETS CROC 10,1KG","7896029068328"],["813834","RAC QUATREE FILHOTE 15KG (VERDE)","7898256300363"],["104795","RAC QUATREE GOURMET 10,1KG (BORDÔ)","7898256300837"],["1018825","RAC QUATREE CÃO AD SELECT FGO/ARZ 10,1KG(LARANJA)","7898256302060"],["90123","RAC QUATREE LIVRE DE CORANTE 15KG (MARROM)","7898256301254"],["967106","RAC QUATREE LIVRE DE CORANTE 20KG (MARROM/NOVA)","7898256302992"],["1018833","RAC QUATREE CÃO AD SELECT FGO/ARZ 15KG(ROSA)","7898256302053"],["190632","RAC QUATREE CARNE 15KG (VERMELHA)","7898256301988"],["453528","RAC DOG CHOW AD MED/GDE 10,1KG (VERDE/VERMELHO)","7891000350621"],["79960","RAC DOG CHOW AD MINI/PEQ 10,1KG (VERDE/BEGE)","7891000350560"],["77518","RAC PAPA DOG 15KG","7896049002234"],["213551","RAC PAPA DOG 10,1KG (NOVA)","7896049002012"],["956759","RAC PAPA CATS 10,1KG (NOVA)","7896049002395"],["304689","RAC HOTDOG SEM CORANTE 15KG","7898256301346"],["891240","RAC KYNUS CARNE ADULTO 15KG","7898914000550"],["109053","RAC MAGNUS TODO DIA AD CARNE 15KG","7898363312815"],["974650","RAC MAGNUS TODO DIA RAÇAS PEQUENAS FGO 10,1KG","7898363318169"],["76554","RAC TUFÃO 15KG","7896049001343"],["959170","RAC TUFÃO FILHOTE 10,1KG (NOVA)","7896049003262"],["89940","RAC BROTHER RAÇA PEQUENA 10,1KG (BRANCA)","7896049001862"],["213535","RAC BROTHER SEM CORANTE ADULTO 15KG (VERDE)","7896049002340"],["936510","RAC PITTY ADULTO 15KG","7897807202729"],["1014366","RAC ORIGENS 15KG","7898363316615"],["1026704","RAC TORO 15KG","7896049002296"],["837172","AREIA HIG. PIPCAT FLORAL 4KG (AZUL/ROSA)","7896273805182"],["370622","AREIA HIG. PIPCAT CLASSIC 4KG (AZUL/VERDE)","7896273800033"],["529150","AREIA HIG. COLOSSO ABSORCAT 4KG","7897846301872"],["762237","AREIA HIG. COLOSSO ABSORCAT 12KG","7897846303746"]]}],"RD":[{"id":"avulso","nome":"Avulso / cartelado","itens":[["49416","APRACUR 1X6S"],["10935","FLOGORAL PAST 1X4S LAR"],["74493","ASPIRINA 500MG 1X10"],["110117","IBUFLEX 400MG 4S"],["24026","ASPIRINA C EF 1X2S"],["8444","LUFTAGASTROPRO 10ML"],["20472","BENALET MEL LIMAO 4PAS"],["33312","MELHORAL AD 1X8S"],["20481","BENALET FRAMBOESA 4PAS"],["32368","MELHORAL INF 1X8S"],["20468","BENALET MENTA 4 PASTIL"],["76386","PARACET 750 EMG 1X4"],["45391","CAFIASPIRINA 1X4S"],["65985","PARACT 500MG PRG 10S"],["67308","DECONGEX PLUS 1X4S"],["65986","PARACET 750MG PRG 12S"],["92680","DIPIRONA 500 MEG 1X10S"],["79641","PARACETAMOL 750MG 10S CIMED"],["66715","DIPIRONA 500 PRG 10S"],["86702","SIMETICON 125 MEG 1X3S"],["59568","DIPIRONA EMG 500 1X10S"],["20501","TYLENOL POWER 2S"],["37372","ENGOV 1X6S"],["17270","VALDA TABL DIET C/1"],["43381","EPOCLER 1FLAC"],["42388","VALDA TAB CLASSIC 4G"],["38608","EQUIPLEX"],["50060","XANTINON 1X10S"],["26383","FLOGORAL MENTA 1X4S"]]}],"CLARA":[{"id":"avulso","nome":"Avulso / cartelado","itens":[["32017","APRACUR"],["591412","MÁSCARA DESCARTEVÁVEL DUPLA C/100"],["33293","AS-MED 100MG"],["50361","MELHORAL ADULTO C/8"],["28720","AS-MED 500 MG"],["7193","MELHORAL INFANTIL C/8"],["8017","ASPIRINA C/10"],["76230","METOPROLOL SUCCINATO 25MG C 30"],["51199","BIOPANTOVIT 10ML"],["613157","MINOXIDIL P/SOMBRACELHAS - MANIPULADO"],["18368","CHICLETE VALDA CLASSIC TABLETE"],["605333","NALDECON MULTI COM 4CPR"],["27428","CHICLETE VALDA TABLETE DIET"],["9451","NAVRALGEX C/10"],["36237","DIPIRONA PRATI C/10"],["68343","NEOSALDINA C 10 DRAG"],["9655","DORALGINA C/10"],["36151","NEOSALDINA C 4 DRAG"],["55286","DORMEC"],["604898","NEOSALDINA DIP 1G 10 CP"],["587023","DRAMIN 50MG C/10"],["63180","PANTOCLER ABACAXI UN 10 ML"],["32015","ENGOV"],["614634","PANTOCLER BOLDO UN 10 ML"],["56940","ENOXALOW 20 MG 02ML INJ C 01 S"],["51809","PANTOVIT 10ML"],["54174","ENOXALOW 40MG 04ML INJ C 01 SE"],["45213","PARACETAMOL PRATI 500MG C/10"],["57000","ENOXALOW 60MG 06ML INJ C 01 S"],["35416","PARACETAMOL UNIÃO QUIMÍCA 750MG C/10"],["60926","ENOXALOW 80MG 08ML INJ C 01 SE"],["49340","PILHA ENERGIZER AA 2 UN PAR (PAR)"],["61616","EPAREMA GUARANA FLACONETE 10M"],["45731","PILHA PANASONIC AA 2UN (PAR)"],["61617","EPAREMA LARANJA FLACONETES 10"],["48979","PILHA PANASONIC AAA 2UN (PAR)"],["62639","EPOCLER FLACONETE 10 ML"],["605579","REIDRATANTE CATARINENSE"],["613130","ESMALTE ANTI MICOTICO - MANIPULACAO"],["605640","RESFRIV LARANJA E ACEROLA 1 ENVELOPE"],["602980","FACE MASK"],["69471","RESFRIV MEL E LIMÃO 1 ENVELOPE"],["63811","FLANAX 550MG C/2"],["44408","SAL DE FRUTA ENO ABACAXI C 2"],["62098","HEPAMED ABACAXI C/1 FLACONETE"],["53745","SEDAMED C/10"],["587682","IMEGOV"],["602704","SERUM VIT C COM ÁCIDO HIALURONICO MAN"],["605306","INA COMPRESSA"],["53031","SIRINGA SR DESC DESCARTAVEL AGULHA 3ML"],["48735","KAOSEC"],["54258","TORSILAX C/10"],["26742","LAMINA BARBEAR WILKINSON INOX"],["26193","TORSILAX C/4"],["587189","LISADOR DIP 1G C/10"],["594287","TRICHOXIDIL TURBINADO MANIPULADO"],["47743","LIXA UNHA MOSTARDA"],["613125","LUVA DE SILICONE - MANIPULACAO"],["588152","XANTINON COMPLEX FLACONETE"],["602697","MASCARA BELAMASK KN95 UNI"]]}]};
+const salvarCodUi = ()=>lsSet(COD_UI_KEY, codUi);
+const rotuloCli = c => CLIENTES_COD[c] || (c || '').replace(/_/g, ' ');
+const fmtMil = n => Number(n || 0).toLocaleString('pt-BR');
+
+function clienteCodDe(nome){
+  const t = ' ' + normalizarNome(nome) + ' ';
+  if(/ARAUJO/.test(t)) return 'ARAUJO';
+  if(/RAIA|DROGASIL| RD /.test(t)) return 'RD';
+  if(/PACHECO|DPSP/.test(t)) return 'PACHECO';
+  if(/CLARA/.test(t)) return 'CLARA';
+  return '';
+}
+
+/* ---------- listas (avulso, protetor solar, ração…) ---------- */
+function listasCod(){
+  const v = robo.listasCod;
+  return (v && v.porCliente && typeof v.porCliente === 'object') ? v.porCliente : LISTAS_COD_PADRAO;
+}
+function listasDoCli(cli){ return listasCod()[cli] || []; }
+function salvarListasCod(porCliente){
+  if(!souCriador()) return;
+  robo.listasCod = {porCliente, em: Date.now()};
+  salvarRobo(); marcarAlterado('robo');
+}
+const copiaListas = ()=>JSON.parse(JSON.stringify(listasCod()));
+function listasDoItem(cli, cod){ return listasDoCli(cli).filter(l=>l.itens.some(x=>String(x[0]) === String(cod))).map(l=>l.nome); }
+
+/* ---------- guardar no aparelho (IndexedDB) ---------- */
+function codIdb(){
+  return new Promise((ok, erro)=>{
+    if(!window.indexedDB) return erro(new Error('sem IndexedDB'));
+    const r = indexedDB.open('central_codigos', 1);
+    r.onupgradeneeded = ()=>r.result.createObjectStore('bases');
+    r.onsuccess = ()=>ok(r.result); r.onerror = ()=>erro(r.error);
+  });
+}
+async function codIdbGet(k){
+  try{ const db = await codIdb(); return await new Promise((ok, erro)=>{ const q = db.transaction('bases').objectStore('bases').get(k); q.onsuccess = ()=>ok(q.result || null); q.onerror = ()=>erro(q.error); }); }
+  catch(e){ return codMem[k] || null; }
+}
+async function codIdbSet(k, v){
+  codMem[k] = v;
+  try{ const db = await codIdb(); await new Promise((ok, erro)=>{ const t = db.transaction('bases', 'readwrite'); t.objectStore('bases').put(v, k); t.oncomplete = ()=>ok(); t.onerror = ()=>erro(t.error); }); return true; }
+  catch(e){ return false; }
+}
+const prefEan = e => ({13:0, 8:1, 12:2}[e.length] ?? (e.length === 14 ? 4 : 3));
+function codMontarBase(txt, info){
+  const itens = [], porEan = new Map(), porCod = new Map();
+  String(txt || '').split('\n').forEach(l=>{
+    if(!l) return;
+    const p = l.split('\t'); if(!p[0]) return;
+    const it = {c:p[0], d:p[1] || '', e:p[2] ? p[2].split(',').filter(Boolean) : [], f:p[3] || ''};
+    if(it.e.length > 1) it.e.sort((a, b)=>prefEan(a) - prefEan(b));   // EAN da unidade (13) antes do da caixa (14)
+    it.n = normalizarNome(it.d);
+    porCod.set(it.c, it); it.e.forEach(e=>{ if(!porEan.has(e)) porEan.set(e, it); }); itens.push(it);
+  });
+  return {info: info || {}, itens, porEan, porCod};
+}
+async function codGuardarBase(cli, txt, info){
+  const base = codMontarBase(txt, info);
+  if(base.itens.length < 10) throw new Error('arquivo sem produtos');
+  info = Object.assign({}, info, {n: base.itens.length, guardadoEm: Date.now()});
+  base.info = info; codBases[cli] = base;
+  const ok = await codIdbSet(cli, {txt, info});
+  codLocal[cli] = Object.assign({}, info, {soMemoria: !ok}); lsSet(COD_LOCAL_KEY, codLocal);
+  return base;
+}
+async function codCarregar(cli){
+  if(codBases[cli]) return codBases[cli];
+  const rec = await codIdbGet(cli);
+  if(rec && rec.txt){ codBases[cli] = codMontarBase(rec.txt, rec.info); return codBases[cli]; }
+  if(codLocal[cli]){ delete codLocal[cli]; lsSet(COD_LOCAL_KEY, codLocal); }
+  return null;
+}
+
+/* ---------- robô: versões e download (compactado, só quando muda) ---------- */
+const urlRobo = extra => robo.link + (robo.link.includes('?') ? '&' : '?') + extra;
+async function codDescompactar(b64){
+  const bin = atob(b64), u8 = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+}
+async function codCompactar(txt){
+  if(typeof CompressionStream === 'undefined') return null;
+  const buf = new Uint8Array(await new Response(new Blob([txt]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  let s = ''; for(let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+async function codVerificar(forcar){
+  if(!robo.link) return false;
+  if(!forcar && Date.now() - (codUi.checado || 0) < 6 * 3600e3) return false;
+  const j = await (await fetch(urlRobo('acao=produtos'))).json();
+  if(j.erro) throw new Error(j.erro);
+  if(!j.clientes || typeof j.clientes !== 'object') throw new Error('O robô ainda está na versão antiga: cole o robô novo e faça a "Nova versão".');
+  codInfoRobo = j.clientes; lsSet(COD_INFO_KEY, codInfoRobo);
+  codUi.checado = Date.now(); salvarCodUi();
+  return true;
+}
+const codTemNovo = cli => { const r = codInfoRobo[cli], l = codLocal[cli]; return !!r && (!l || (l.v !== r.v && (r.dia || 0) >= (l.dia || 0))); };
+async function codBaixar(cli){
+  if(codBaixando) return;
+  codBaixando = cli; codAviso = ''; renderConsulta();
+  try{
+    const plano = typeof DecompressionStream === 'undefined';
+    const j = await (await fetch(urlRobo('acao=produtos&cliente=' + encodeURIComponent(cli) + (plano ? '&plano=1' : '')))).json();
+    if(j.erro) throw new Error(j.erro);
+    const txt = j.txt != null ? j.txt : await codDescompactar(j.gz);
+    await codGuardarBase(cli, txt, Object.assign({}, j.info, {origem:'robô'}));
+    toast(`Arquivo de produtos ${rotuloCli(cli)} guardado no aparelho.`);
+  }catch(e){ codAviso = 'Não consegui baixar agora: ' + (e.message || e); }
+  finally{ codBaixando = ''; renderConsulta(); }
+}
+// ao abrir a aba: confere (no máximo a cada 6 h) e baixa sozinho o cliente escolhido se mudou
+async function codAoAbrir(){
+  const cli = clienteCodDe(loja && loja.nome);
+  if(cli && loja.nome !== codUi.lojaVista){ codUi.cli = cli; codUi.lojaVista = loja.nome; salvarCodUi(); }
+  await codCarregar(codUi.cli); renderConsulta(); renderListasCod();
+  try{ await codVerificar(false); }catch(e){ codAviso = e.message || String(e); }
+  if(codTemNovo(codUi.cli) && navigator.onLine !== false) await codBaixar(codUi.cli); else renderConsulta();
+}
+async function codTrocarCli(cli){
+  codUi.cli = cli; salvarCodUi(); codAviso = '';
+  await codCarregar(cli); renderConsulta(); renderListasCod();
+  if(codTemNovo(cli) && !codLocal[cli] && navigator.onLine !== false) codBaixar(cli);
+}
+async function codAtualizarAgora(){
+  codAviso = '';
+  try{ await codVerificar(true); }catch(e){ codAviso = e.message || String(e); renderConsulta(); return; }
+  if(codTemNovo(codUi.cli)) await codBaixar(codUi.cli);
+  else { renderConsulta(); toast(codInfoRobo[codUi.cli] ? 'Você já tem o arquivo mais novo deste cliente.' : 'O robô ainda não tem o arquivo deste cliente.'); }
+}
+
+/* ---------- importar o arquivo no aparelho (TXT do cliente) ---------- */
+function codLerArquivos(arqs){
+  const mapa = new Map(); let cli = '';
+  const por = (cod, ean, desc, marca)=>{
+    cod = String(cod || '').trim().replace(/^0+/, ''); ean = String(ean || '').replace(/\D/g, '').replace(/^0+/, '');
+    if(!/^\d{1,9}$/.test(cod)) return;
+    let p = mapa.get(cod); if(!p){ p = {d:'', e:[], m:''}; mapa.set(cod, p); }
+    desc = String(desc || '').replace(/[\t\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if(desc && !p.d) p.d = desc;
+    if(ean && ean !== cod && !p.e.includes(ean)) p.e.push(ean);
+    if(marca && !p.m.includes(marca)) p.m += marca;
+  };
+  arqs.forEach(a=>{
+    const linhas = String(a.texto || '').split(/\r?\n/);
+    const cab = (linhas[0] || '').replace(/^﻿/, '');
+    if(cab.includes(';') && /DESCRI/i.test(cab)){
+      const h = cab.split(';').map(x=>normalizarNome(x).replace(/ /g, '_'));
+      const acha = re => h.findIndex(x=>re.test(x));
+      const iC = acha(/^PRME_CD_PRODUTO$|^COD(IGO)?(_INTERNO)?$|^COD_PRODUTO$|^PRODUTO$/), iE = acha(/COD_BARRA|EAN|BARRAS/), iD = acha(/DESCRI/), iG = acha(/GELADEIRA_CONTROLADO/);
+      if(h.includes('PRME_CD_PRODUTO')) cli = cli || 'ARAUJO';
+      if(iC < 0 || iD < 0) return;
+      linhas.slice(1).forEach(l=>{ const p = l.split(';'); if(p.length > iD) por(p[iC], iE >= 0 ? p[iE] : '', p[iD], iG >= 0 && /^S/i.test((p[iG] || '').trim()) ? 'G' : ''); });
+      return;
+    }
+    const ctrl = /CONTROLADO/i.test(a.nome);
+    linhas.forEach(l=>{
+      let m = l.match(/^(\d{9}) {4}(\d{13})\s*(\*?)(.*?)\s*$/);
+      if(m){ cli = cli || 'RD'; por(m[1], m[2], m[4], (m[3] || ctrl) ? 'C' : ''); return; }
+      m = l.match(/^\s*(\d{3,14})\s+(\d{1,9})\s+(\S.*?)\s*$/);
+      if(m){ if(/CODBAR/i.test(a.nome)) cli = cli || 'ARAUJO'; por(m[2], m[1], m[3], ''); }
+    });
+  });
+  const linhas = []; mapa.forEach((p, c)=>linhas.push(c + '\t' + p.d + '\t' + p.e.join(',') + '\t' + p.m));
+  return {texto: linhas.join('\n'), n: mapa.size, cli};
+}
+function lerTextoArquivo(file){
+  return file.arrayBuffer().then(buf=>{
+    try{ return new TextDecoder('utf-8', {fatal:true}).decode(buf); }
+    catch(e){ return new TextDecoder('iso-8859-1').decode(buf); }
+  });
+}
+async function codImportar(files){
+  files = [...(files || [])]; if(!files.length) return;
+  let arqs;
+  try{ arqs = await Promise.all(files.map(async f=>({nome:f.name, texto: await lerTextoArquivo(f)}))); }
+  catch(e){ toast('Não consegui ler o arquivo.'); return; }
+  const res = codLerArquivos(arqs);
+  if(res.n < 10){ alert('Não reconheci produtos neste arquivo. Mande o arquivo para o Claude adaptar a leitura.'); return; }
+  const soControlado = arqs.every(a=>/CONTROLADO/i.test(a.nome));
+  const admin = souCriador() && !!robo.link;
+  const opcoes = Object.keys(Object.assign({}, CLIENTES_COD, codLocal, codInfoRobo)).map(c=>`<option value="${esc(c)}" ${c === (res.cli || codUi.cli) ? 'selected' : ''}>${esc(rotuloCli(c))}</option>`).join('');
+  const box = abrirFolha('📂 Importar arquivo de produtos',
+    `<p class="hint" style="margin-top:0">${esc(files.map(f=>f.name).join(', '))}<br><b>${fmtMil(res.n)} produtos</b> reconhecidos${soControlado ? ' (lista de controlados: junto com o arquivo que já está no aparelho)' : ''}.</p>
+     <label>De qual cliente?</label><select id="codImpCli" class="full">${opcoes}</select>
+     ${admin ? `<label class="check" style="margin-top:10px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="codImpTodos" checked> Mandar para todos os coordenadores (pelo robô)</label>` : '<p class="hint">Fica só neste aparelho.</p>'}`,
+    'Guardar', b=>{ b.dataset.ok = '1'; return ''; });
+  const okBtn = box.querySelector('[data-ok]');
+  okBtn.onclick = async ()=>{
+    const cli = box.querySelector('#codImpCli').value, todos = admin && box.querySelector('#codImpTodos').checked;
+    okBtn.disabled = true; okBtn.textContent = 'Guardando…';
+    try{
+      let texto = res.texto;
+      if(soControlado){
+        const base = await codCarregar(cli);
+        if(base){
+          const marcas = codMontarBase(res.texto).porCod;
+          const linhas = base.itens.map(it=>{ const c = marcas.get(it.c); return it.c + '\t' + it.d + '\t' + it.e.join(',') + '\t' + (c && !it.f.includes('C') ? it.f + 'C' : it.f); });
+          marcas.forEach((it, c)=>{ if(!base.porCod.has(c)) linhas.push(c + '\t' + it.d + '\t' + it.e.join(',') + '\tC'); });
+          texto = linhas.join('\n');
+        }
+      }
+      const hoje = hojeBR(), m = hoje.match(/(\d+)\/(\d+)\/(\d+)/);
+      const info = {data: hoje, dia: Date.UTC(+m[3], +m[2] - 1, +m[1]) / 864e5, arquivos: files.map(f=>f.name).join(', '), fonte: 'importado no app', origem: 'importado', v: 'i' + Date.now().toString(36)};
+      await codGuardarBase(cli, texto, info);
+      if(todos){
+        const gz = await codCompactar(texto);
+        const r = await fetch(urlRobo('x=1'), {method:'POST', body: JSON.stringify(Object.assign({acao:'produtosEnviar', cliente:cli, meta:{n: codBases[cli].itens.length, arquivos: info.arquivos}}, gz ? {gz} : {txt: texto}))});
+        const j = await r.json();
+        if(j.erro) throw new Error(j.erro);
+        if(j.info){ codInfoRobo[cli] = j.info; lsSet(COD_INFO_KEY, codInfoRobo); codLocal[cli] = Object.assign({}, codLocal[cli], {v: j.info.v, dia: j.info.dia}); lsSet(COD_LOCAL_KEY, codLocal); }
+      }
+      box.remove(); codUi.cli = cli; salvarCodUi(); renderConsulta(); renderListasCod();
+      toast(todos ? 'Guardado e mandado para todos.' : 'Guardado neste aparelho.');
+    }catch(e){
+      okBtn.disabled = false; okBtn.textContent = 'Guardar';
+      box.querySelector('[data-msg]').innerHTML = `<div class="msg warn">${esc(codBases[cli] ? 'Guardado neste aparelho, mas não consegui mandar para todos: ' : 'Não consegui: ')}${esc(e.message || e)}</div>`;
+      renderConsulta();
+    }
+  };
+}
+
+/* ---------- códigos de barras 1D (SVG, fundo branco) ---------- */
+const EAN_L = ['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+const EAN_PAR = ['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+const eanR = d => EAN_L[d].replace(/./g, c=>c === '0' ? '1' : '0');
+const eanG = d => eanR(d).split('').reverse().join('');
+function eanOk(v){ let s = 0; for(let i = 0; i < v.length - 1; i++) s += (+v[v.length - 2 - i]) * (i % 2 === 0 ? 3 : 1); return (10 - s % 10) % 10 === +v[v.length - 1]; }
+function ean13Bits(v){ const p = EAN_PAR[+v[0]]; let b = '101'; for(let i = 1; i < 7; i++) b += p[i - 1] === 'L' ? EAN_L[+v[i]] : eanG(+v[i]); b += '01010'; for(let i = 7; i < 13; i++) b += eanR(+v[i]); return b + '101'; }
+function ean8Bits(v){ let b = '101'; for(let i = 0; i < 4; i++) b += EAN_L[+v[i]]; b += '01010'; for(let i = 4; i < 8; i++) b += eanR(+v[i]); return b + '101'; }
+const C128 = '11011001100110011011001100110011010010011000100100011001000100110010011001000100110001001000110010011001001000110010001001100010010010110011100100110111001001100111010111001100100111011001001110011011001110010110010111001100100111011011100100110011101001110110111011101001100111001011001110010011011101100100111001101001110011001011011011000110110001101100011011010100011000100010110001000100011010110001000100011010001000110001011010001000110001010001100010001010110111000101100011101000110111010111011000101110001101000111011011101110110110100011101100010111011011101000110111000101101110111011101011000111010001101110001011011101101000111011000101110001101011101111010110010000101111000101010100110000101000011001001011000010010000110100001011001000010011010110010000101100001001001101000010011000010100001101001000011001011000010010110010100001111011101011000010100100011110101010011110010010111100100100111101011110010010011110100100111100101111010010011110010100111100100101101101111011011110110111101101101010111100010100011110100010111101011110100010111100010111101010001111010001010111011110101111011101110101111011110101110110100001001101001000011010011100'.match(/.{11}/g);
+function code128Bits(d){
+  const vals = [];
+  if(d.length % 2){ vals.push(104, d.charCodeAt(0) - 32, 99); d = d.slice(1); } else vals.push(105);
+  for(let i = 0; i < d.length; i += 2) vals.push(+d.substr(i, 2));
+  let s = vals[0]; for(let i = 1; i < vals.length; i++) s += vals[i] * i;
+  vals.push(s % 103);
+  return vals.map(v=>C128[v]).join('') + '1100011101011';
+}
+const C39 = {'0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw','5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn','*':'nwnnwnwnn'};
+function code39Bits(d){
+  return ('*' + d + '*').split('').map(ch=>C39[ch].split('').map((w, i)=>(i % 2 ? '0' : '1').repeat(w === 'w' ? 3 : 1)).join('')).join('0');
+}
+// EAN-13/EAN-8/UPC-A quando o dígito confere; código interno em Code 39 (igual às listas dos clientes); o resto em Code 128
+function codBarras(valor, interno){
+  const v = String(valor || '').replace(/\D/g, '');
+  if(!v) return null;
+  if(interno && v.length <= 12) return {bits: code39Bits(v), tipo:'Code 39', texto:v, quiet:12};
+  if(v.length === 13 && eanOk(v)) return {bits: ean13Bits(v), tipo:'EAN-13', texto:v, quiet:11};
+  if(v.length === 12 && eanOk('0' + v)) return {bits: ean13Bits('0' + v), tipo:'UPC-A', texto:v, quiet:11};
+  if(v.length === 8 && eanOk(v)) return {bits: ean8Bits(v), tipo:'EAN-8', texto:v, quiet:8};
+  if(v.length < 8 && eanOk(v.padStart(13, '0')) && v.length > 5) return {bits: ean13Bits(v.padStart(13, '0')), tipo:'EAN-13', texto:v.padStart(13, '0'), quiet:11};
+  return {bits: code128Bits(v), tipo:'Code 128', texto:v, quiet:11};
+}
+// modulo = px (tela) ou mm (impressão); altura na mesma unidade
+function svgBarras(cb, modulo, altura, unidade){
+  const total = cb.bits.length + cb.quiet * 2, H = +(altura / modulo).toFixed(2);
+  let d = '';
+  for(let i = 0; i < cb.bits.length;){
+    if(cb.bits[i] === '1'){ let j = i; while(cb.bits[j] === '1') j++; d += `M${cb.quiet + i} 0h${j - i}v${H}h-${j - i}z`; i = j; }
+    else i++;
+  }
+  const u = unidade || 'px';
+  return `<svg class="cod-svg" xmlns="http://www.w3.org/2000/svg" width="${+(total * modulo).toFixed(2)}${u}" height="${altura}${u}" viewBox="0 0 ${total} ${H}" preserveAspectRatio="none" shape-rendering="crispEdges"><rect width="${total}" height="${H}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+function blocoBarras(valor, interno, largura){
+  const cb = codBarras(valor, interno); if(!cb) return '';
+  const total = cb.bits.length + cb.quiet * 2;
+  const mod = Math.max(1, Math.min(4, Math.floor((largura || 300) / total)));
+  return `<div class="cod-barra" role="button" tabindex="0" data-barra="${esc(cb.texto)}" data-interno="${interno ? 1 : ''}" title="Toque para ver grande">
+    ${svgBarras(cb, mod, 84)}<div class="cod-num">${esc(cb.texto)}</div><div class="cod-tipo">${cb.tipo}${interno ? ' · código interno' : ''} · toque para ampliar</div></div>`;
+}
+// tela cheia: branco, grande, e a tela não apaga enquanto estiver aberta
+let codWake = null;
+function codTelaCheia(valor, interno, girado){
+  const cb = codBarras(valor, interno); if(!cb) return;
+  const ant = document.getElementById('codCheia'); if(ant) ant.remove();
+  const W = window.innerWidth, H = window.innerHeight;
+  const larg = (girado ? H : W) * 0.9, total = cb.bits.length + cb.quiet * 2;
+  const mod = Math.max(1, Math.floor(larg / total)), alt = Math.round(Math.min(girado ? W * 0.5 : H * 0.3, 260));
+  const box = document.createElement('div'); box.id = 'codCheia';
+  box.innerHTML = `<div class="cod-cheia-in ${girado ? 'girado' : ''}">${svgBarras(cb, mod, alt)}<div class="cod-num grande">${esc(cb.texto)}</div></div>
+    <div class="cod-cheia-acoes"><button class="btn secondary" data-girar>↻ ${girado ? 'Normal' : 'Girar (maior)'}</button><button class="btn" data-fechar>Fechar</button></div>
+    <div class="cod-cheia-dica">Aumente o brilho da tela. Se o coletor não ler, use a folha impressa (Listas › Imprimir).</div>`;
+  document.body.appendChild(box);
+  box.querySelector('[data-fechar]').onclick = ()=>{ box.remove(); try{ codWake && codWake.release(); }catch(e){} codWake = null; };
+  box.querySelector('[data-girar]').onclick = ()=>codTelaCheia(valor, interno, !girado);
+  try{ if(navigator.wakeLock && !codWake) navigator.wakeLock.request('screen').then(w=>{ codWake = w; }).catch(()=>{}); }catch(e){}
+}
+document.addEventListener('click', e=>{
+  const b = e.target.closest('[data-barra]'); if(!b) return;
+  codTelaCheia(b.dataset.barra, !!b.dataset.interno, false);
+});
+
+/* ---------- pesquisa ---------- */
+function codItensDasListas(cli){
+  const out = [], vistos = new Set();
+  listasDoCli(cli).forEach(l=>l.itens.forEach(x=>{ const c = String(x[0]); if(vistos.has(c)) return; vistos.add(c); out.push({c, d:x[1] || '', e:x[2] ? [String(x[2])] : [], f:'', n:normalizarNome(x[1] || ''), daLista:true}); }));
+  return {itens: out, porCod: new Map(out.map(i=>[i.c, i])), porEan: new Map(out.flatMap(i=>i.e.map(e=>[e, i]))), info:{}};
+}
+function codBuscar(base, q){
+  q = String(q || '').trim(); if(!q) return {lista:[], numero:''};
+  const limpo = q.replace(/[\s.\-]/g, '');
+  if(/^\d+$/.test(limpo)){
+    const s = limpo.replace(/^0+/, '') || '0', out = [];
+    const add = it=>{ if(it && !out.includes(it)) out.push(it); };
+    add(base.porEan.get(s)); add(base.porCod.get(s));
+    const exato = out.length > 0;
+    if(s.length >= 3) for(const it of base.itens){ if(out.length >= 40) break; if(it.c.startsWith(s) || it.e.some(e=>e.includes(s))) add(it); }
+    return {lista: out, numero: s, exato};
+  }
+  const toks = normalizarNome(q).split(' ').filter(Boolean), out = [];
+  for(const it of base.itens){ if(toks.every(t=>it.n.includes(t))){ out.push(it); if(out.length >= 300) break; } }
+  out.sort((a, b)=>(b.n.startsWith(toks[0]) - a.n.startsWith(toks[0])) || a.n.localeCompare(b.n));
+  return {lista: out.slice(0, 60), numero:'', mais: out.length > 60};
+}
+function tagsItem(cli, it){
+  const t = [];
+  if(it.f.includes('C')) t.push('<span class="tag-cod ctrl">💊 Controlado</span>');
+  if(it.f.includes('G')) t.push('<span class="tag-cod gel">❄️ Geladeira/controlado</span>');
+  listasDoItem(cli, it.c).forEach(n=>t.push(`<span class="tag-cod lista">📋 ${esc(n)}</span>`));
+  return t.join('');
+}
+
+/* ---------- tela ---------- */
+function clientesVisiveisCod(){
+  const ks = new Set(['ARAUJO', 'RD']);
+  [codLocal, codInfoRobo, listasCod()].forEach(o=>Object.keys(o || {}).forEach(k=>ks.add(k)));
+  return [...ks];
+}
+function htmlChipsCli(){
+  return `<div class="chips-cli">${clientesVisiveisCod().map(c=>`<button type="button" class="chip-cli ${c === codUi.cli ? 'on' : ''}" onclick="codTrocarCli('${esc(c)}')">${esc(rotuloCli(c))}</button>`).join('')}</div>`;
+}
+function htmlInfoBase(){
+  const cli = codUi.cli, l = codLocal[cli], r = codInfoRobo[cli], base = codBases[cli];
+  if(codBaixando === cli) return `<div class="msg">⬇️ Baixando o arquivo de produtos ${esc(rotuloCli(cli))}${r && r.kb ? ` (≈ ${fmtMil(r.kb)} KB, só desta vez)` : ''}…</div>`;
+  let h = '';
+  if(base && l) h = `<div class="cod-info">📦 <b>${fmtMil(base.itens.length)} produtos</b> · ${l.origem === 'importado' ? 'importado em ' + esc(l.data || '') : 'arquivo de ' + esc(l.data || '?') + (l.loja ? ' (' + esc(nomeLojaCurto(l.loja)) + ')' : '')}
+    · ${l.soMemoria ? 'só nesta sessão' : '✅ guardado no aparelho (funciona sem internet)'}</div>`;
+  else h = `<div class="msg warn">Ainda não tenho o arquivo de produtos ${esc(rotuloCli(cli))} neste aparelho.${r ? '' : ' Ele chega sozinho pelo robô no próximo e-mail de loja deste cliente (ou use “Importar arquivo”).'}${listasDoCli(cli).length ? ' Enquanto isso, a pesquisa usa só as listas.' : ''}</div>`;
+  if(codTemNovo(cli)) h += `<button class="btn small" type="button" onclick="codBaixar('${esc(cli)}')">⬇️ ${base ? 'Baixar a versão nova' : 'Baixar agora'} (${esc(r.data || '')}${r.kb ? ', ≈ ' + fmtMil(r.kb) + ' KB' : ''})</button>`;
+  if(codAviso) h += `<div class="msg warn">${esc(codAviso)}</div>`;
+  return h;
+}
+const nomeLojaCurto = t => String(t || '').replace(/^DROGARIA\s+ARAUJO\s*-?\s*/i, '').slice(0, 40);
+function renderConsulta(){
+  const sec = document.getElementById('conteudoConsulta'); if(!sec) return;
+  const inp = document.getElementById('buscaCod');
+  if(!inp){
+    sec.innerHTML = `<div class="card">
+      <h2>🔎 Consulta de códigos</h2>
+      <div id="codChips"></div>
+      <div class="busca-robo cod-busca"><span class="lupa" aria-hidden="true">🔍</span>
+        <input type="text" id="buscaCod" placeholder="EAN, código interno ou descrição" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <button type="button" class="cod-teclado" id="codTeclado" title="Trocar teclado">123</button></div>
+      <div id="codInfo"></div>
+      <div id="resCod"></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0">Arquivo de produtos</div>
+      <p class="hint">Vem sozinho pelo robô (de dentro do zip da loja) e só baixa de novo quando muda. Para um cliente que o robô ainda não tem, importe o TXT do cliente.</p>
+      <div class="acoes" style="flex-wrap:wrap">
+        <button class="btn small secondary" type="button" onclick="codAtualizarAgora()">🔄 Ver se tem arquivo novo</button>
+        <button class="btn small secondary" type="button" onclick="document.getElementById('arqCod').click()">📂 Importar arquivo</button>
+      </div>
+      <div id="codVersoes" class="hint"></div>
+      <input type="file" id="arqCod" accept=".txt,.TXT,.csv,.CSV,text/plain,text/csv" multiple hidden>
+    </div>`;
+    const b = document.getElementById('buscaCod');
+    b.addEventListener('input', ()=>{ clearTimeout(b._t); b._t = setTimeout(renderResultadosCod, 180); });
+    b.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); renderResultadosCod(); b.blur(); } });
+    document.getElementById('codTeclado').onclick = ()=>{ codUi.numerico = !codUi.numerico; salvarCodUi(); aplicarTecladoCod(); b.focus(); };
+    document.getElementById('arqCod').onchange = e=>{ codImportar(e.target.files); e.target.value = ''; };
+    aplicarTecladoCod();
+  }
+  document.getElementById('codChips').innerHTML = htmlChipsCli();
+  document.getElementById('codInfo').innerHTML = htmlInfoBase();
+  const vs = Object.keys(Object.assign({}, codLocal, codInfoRobo)).map(c=>{
+    const l = codLocal[c], r = codInfoRobo[c];
+    return `<div>• <b>${esc(rotuloCli(c))}</b>: ${l ? 'no aparelho ' + esc(l.data || '') + ' (' + fmtMil(l.n) + ')' : 'não baixado'}${r ? ' · no robô ' + esc(r.data || '') + (r.fonte ? ' — ' + esc(r.fonte) : '') : ''}</div>`;
+  }).join('');
+  document.getElementById('codVersoes').innerHTML = vs || '';
+  renderResultadosCod();
+}
+function aplicarTecladoCod(){
+  const b = document.getElementById('buscaCod'), t = document.getElementById('codTeclado'); if(!b) return;
+  b.setAttribute('inputmode', codUi.numerico ? 'numeric' : 'search');
+  t.textContent = codUi.numerico ? 'ABC' : '123';
+}
+function renderResultadosCod(){
+  const box = document.getElementById('resCod'); if(!box) return;
+  const cli = codUi.cli, base = codBases[cli] || codItensDasListas(cli);
+  const q = (document.getElementById('buscaCod') || {}).value || '';
+  if(!q.trim()){
+    const ls = listasDoCli(cli);
+    box.innerHTML = ls.length ? `<p class="hint">Listas de ${esc(rotuloCli(cli))}: ${ls.map(l=>`<a href="#" onclick="codListaAberta='${esc(l.id)}';abrirView('listascod');return false">${esc(l.nome)}</a>`).join(' · ')}</p>` : '';
+    return;
+  }
+  const r = codBuscar(base, q);
+  if(codBases[cli]){   // produto que está numa lista mas não no arquivo de produtos desta loja
+    const rl = codBuscar(codItensDasListas(cli), q);
+    rl.lista.forEach(it=>{ if(!r.lista.some(x=>x.c === it.c)) r.lista.push(it); });
+    if(rl.exato) r.exato = true;
+  }
+  let h = '';
+  if(r.numero && !r.exato && r.numero.length >= 6)
+    h += `<div class="msg warn">⚠ O código <b>${esc(r.numero)}</b> não está no arquivo de produtos ${esc(rotuloCli(cli))}${codLocal[cli] ? ' (de ' + esc(codLocal[cli].data || '') + ')' : ''}. Confira com a loja antes de contar.</div>`;
+  if(!r.lista.length){ box.innerHTML = h || '<p class="hint">Nada encontrado.</p>'; return; }
+  box.innerHTML = h + r.lista.map(it=>`<div class="cod-row" role="button" tabindex="0" data-cod="${esc(it.c)}">
+      <div class="cod-desc">${esc(it.d || '(sem descrição)')}</div>
+      <div class="cod-sub">Int. <b>${esc(it.c)}</b>${it.e.length ? ' · EAN ' + esc(it.e[0]) + (it.e.length > 1 ? ` <small>(+${it.e.length - 1})</small>` : '') : ' · sem EAN'}</div>
+      <div>${tagsItem(cli, it)}${it.daLista && codBases[cli] ? '<span class="tag-cod">só na lista (não veio no arquivo da loja)</span>' : ''}</div></div>`).join('') + (r.mais ? '<p class="hint">Mostrando os 60 primeiros — escreva mais palavras para filtrar.</p>' : '');
+  box.querySelectorAll('[data-cod]').forEach(el=>el.onclick = ()=>abrirItemCod(cli, el.dataset.cod));
+}
+function itemCod(cli, cod){
+  const base = codBases[cli];
+  let it = base && base.porCod.get(String(cod));
+  if(!it){ const l = codItensDasListas(cli); it = l.porCod.get(String(cod)); }
+  return it || null;
+}
+function abrirItemCod(cli, cod){
+  const it = itemCod(cli, cod); if(!it) return;
+  const larg = Math.min(window.innerWidth - 48, 420);
+  const ls = listasDoCli(cli);
+  const admin = souCriador();
+  const box = abrirFolha(esc(it.d || 'Produto'), `<div class="cod-ficha">
+      <div style="margin-bottom:6px">${tagsItem(cli, it)}</div>
+      <div class="section-title">Código interno: ${esc(it.c)}</div>${blocoBarras(it.c, true, larg)}
+      ${it.e.length ? it.e.map((e, i)=>`<div class="section-title">EAN${it.e.length > 1 ? ' ' + (i + 1) + ' de ' + it.e.length : ''}: ${esc(e)}</div>${blocoBarras(e, false, larg)}`).join('') : '<p class="hint">Este produto não tem EAN no arquivo do cliente: use o código interno.</p>'}
+      ${it.daLista ? '<p class="hint">Dados da lista (o arquivo de produtos deste cliente ainda não está no aparelho).</p>' : ''}
+      ${admin ? `<div class="section-title">Listas</div><div class="row"><select id="codAddLista" class="full">${ls.map(l=>`<option value="${esc(l.id)}">${esc(l.nome)}${l.itens.some(x=>String(x[0]) === it.c) ? ' ✓' : ''}</option>`).join('')}<option value="__nova__">+ Nova lista…</option></select>
+        <button class="btn small secondary" type="button" data-add-lista>+ Adicionar</button></div>` : ''}
+    </div>`, 'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  const bt = box.querySelector('[data-add-lista]');
+  if(bt) bt.onclick = ()=>{
+    let id = box.querySelector('#codAddLista').value;
+    const todas = copiaListas(); const doCli = todas[cli] = todas[cli] || [];
+    if(id === '__nova__'){ const nome = (prompt('Nome da nova lista (ex.: Avulso, Protetor solar):') || '').trim(); if(!nome) return; id = 'l' + Date.now().toString(36); doCli.push({id, nome, itens:[]}); }
+    const l = doCli.find(x=>x.id === id); if(!l) return;
+    if(l.itens.some(x=>String(x[0]) === it.c)){ toast('Já está nesta lista.'); return; }
+    l.itens.push([it.c, it.d, it.e[0] || '']);
+    salvarListasCod(todas); toast(`Adicionado em “${l.nome}”.`); box.remove(); renderResultadosCod(); renderListasCod();
+  };
+}
+
+/* ---------- Listas + folha para imprimir ---------- */
+function renderListasCod(){
+  const sec = document.getElementById('conteudoListasCod'); if(!sec) return;
+  const cli = codUi.cli, ls = listasDoCli(cli), admin = souCriador();
+  sec.innerHTML = `<div class="card"><h2>📋 Listas de códigos</h2>
+    <p class="hint">Listas de cada cliente (avulso, protetor solar, ração…). Toque no item para ver o código de barras. “Imprimir” gera a folha com os códigos para levar à loja (salve como PDF).${admin ? ' Para incluir um produto: pesquise na Consulta e toque em “+ Adicionar”, ou use “+ Códigos” aqui.' : ''}</p>
+    ${htmlChipsCli()}</div>
+    ${ls.map(l=>{
+      const aberta = codListaAberta === l.id;
+      return `<div class="card"><button class="secao-toggle ${aberta ? 'aberta' : ''}" onclick="codListaAberta=codListaAberta==='${esc(l.id)}'?'':'${esc(l.id)}';renderListasCod()"><span class="seta">▶</span> ${esc(l.nome)} <small>(${l.itens.length})</small></button>
+        ${aberta ? `<div class="acoes" style="flex-wrap:wrap;margin:8px 0">
+            <button class="btn small" type="button" onclick="imprimirListaCod('${esc(cli)}','${esc(l.id)}')">🖨 Imprimir / PDF</button>
+            ${admin ? `<button class="btn small secondary" type="button" onclick="addCodigosLista('${esc(cli)}','${esc(l.id)}')">+ Códigos</button>
+            <button class="btn small secondary" type="button" onclick="renomearListaCod('${esc(cli)}','${esc(l.id)}')">✏️ Nome</button>
+            <button class="btn small secondary" type="button" onclick="excluirListaCod('${esc(cli)}','${esc(l.id)}')">🗑 Excluir</button>` : ''}</div>
+          ${l.itens.map(x=>{ const it = itemCod(cli, x[0]) || {c:String(x[0]), d:x[1], e:x[2] ? [x[2]] : [], f:''}; const ean = String(x[2] || '') || it.e[0] || '';
+            return `<div class="cod-row" role="button" tabindex="0" data-cod-lista="${esc(it.c)}"><div class="cod-desc">${esc(it.d || x[1] || '')}</div>
+              <div class="cod-sub">Int. <b>${esc(it.c)}</b>${ean ? ' · EAN ' + esc(ean) : ' · sem EAN'}${it.f && it.f.includes('C') ? ' · 💊' : ''}
+              ${admin ? `<button class="x-item" type="button" title="Tirar da lista" data-tirar="${esc(it.c)}" data-lista="${esc(l.id)}">✕</button>` : ''}</div></div>`; }).join('') || '<p class="hint">Lista vazia.</p>'}` : ''}</div>`;
+    }).join('')}
+    ${admin ? `<div class="card"><button class="btn small secondary" type="button" onclick="novaListaCod('${esc(cli)}')">+ Nova lista de ${esc(rotuloCli(cli))}</button></div>` : ''}
+    ${!ls.length && !admin ? `<div class="card"><p class="hint">Nenhuma lista de ${esc(rotuloCli(cli))} ainda.</p></div>` : ''}`;
+  sec.querySelectorAll('[data-cod-lista]').forEach(el=>el.onclick = e=>{ if(e.target.closest('[data-tirar]')) return; abrirItemCod(cli, el.dataset.codLista); });
+  sec.querySelectorAll('[data-tirar]').forEach(el=>el.onclick = ()=>{
+    const todas = copiaListas(), l = (todas[cli] || []).find(x=>x.id === el.dataset.lista); if(!l) return;
+    const x = l.itens.find(i=>String(i[0]) === el.dataset.tirar);
+    if(!confirm(`Tirar ${x ? x[1] || x[0] : el.dataset.tirar} da lista “${l.nome}”?`)) return;
+    l.itens = l.itens.filter(i=>String(i[0]) !== el.dataset.tirar); salvarListasCod(todas); renderListasCod();
+  });
+}
+function novaListaCod(cli){
+  const nome = (prompt(`Nome da nova lista de ${rotuloCli(cli)}:`) || '').trim(); if(!nome) return;
+  const todas = copiaListas(); (todas[cli] = todas[cli] || []).push({id:'l' + Date.now().toString(36), nome, itens:[]});
+  salvarListasCod(todas); codListaAberta = todas[cli][todas[cli].length - 1].id; renderListasCod();
+}
+function renomearListaCod(cli, id){
+  const todas = copiaListas(), l = (todas[cli] || []).find(x=>x.id === id); if(!l) return;
+  const nome = (prompt('Novo nome da lista:', l.nome) || '').trim(); if(!nome) return;
+  l.nome = nome; salvarListasCod(todas); renderListasCod();
+}
+function excluirListaCod(cli, id){
+  const todas = copiaListas(), l = (todas[cli] || []).find(x=>x.id === id); if(!l) return;
+  if(!confirm(`Excluir a lista “${l.nome}” (${l.itens.length} itens)?`)) return;
+  todas[cli] = todas[cli].filter(x=>x.id !== id); salvarListasCod(todas); renderListasCod();
+}
+// cola vários códigos de uma vez (interno ou EAN, separados por espaço, vírgula ou linha)
+function addCodigosLista(cli, id){
+  const t = prompt('Cole ou digite os códigos (interno ou EAN), separados por espaço ou vírgula:'); if(!t) return;
+  const todas = copiaListas(), l = (todas[cli] || []).find(x=>x.id === id); if(!l) return;
+  const base = codBases[cli]; let ok = 0; const nao = [];
+  t.split(/[\s,;]+/).map(x=>x.replace(/\D/g, '').replace(/^0+/, '')).filter(Boolean).forEach(c=>{
+    const it = base ? (base.porCod.get(c) || base.porEan.get(c)) : null;
+    if(!it){ if(base){ nao.push(c); return; } if(!l.itens.some(x=>String(x[0]) === c)){ l.itens.push([c, '', '']); ok++; } return; }
+    if(!l.itens.some(x=>String(x[0]) === it.c)){ l.itens.push([it.c, it.d, it.e[0] || '']); ok++; }
+  });
+  salvarListasCod(todas); renderListasCod();
+  toast(`${ok} adicionado(s)${nao.length ? ` · não achei: ${nao.join(', ')}` : ''}.`, 6000);
+}
+function imprimirListaCod(cli, id){
+  const l = listasDoCli(cli).find(x=>x.id === id); if(!l) return;
+  const box = abrirFolha(`🖨 ${esc(l.nome)}`, `<label>Código de barras na folha</label>
+    <select id="codFolhaTipo" class="full"><option value="ean" ${codUi.folha !== 'int' ? 'selected' : ''}>EAN (sem EAN: código interno)</option><option value="int" ${codUi.folha === 'int' ? 'selected' : ''}>Código interno</option></select>
+    <p class="hint">Abre a tela de impressão: escolha a impressora ou “Salvar como PDF”.</p>`, 'Imprimir', b=>{
+      codUi.folha = b.querySelector('#codFolhaTipo').value; salvarCodUi();
+      setTimeout(()=>gerarFolhaCod(cli, l, codUi.folha), 50); return '';
+    });
+  return box;
+}
+function gerarFolhaCod(cli, l, tipo){
+  fecharFolhaCod();
+  const cel = l.itens.map(x=>{
+    const it = itemCod(cli, x[0]) || {c:String(x[0]), d:x[1], e:[]};
+    const ean = String(x[2] || '') || it.e[0] || '';
+    const usaEan = tipo !== 'int' && ean;
+    const cb = codBarras(usaEan ? ean : it.c, !usaEan); if(!cb) return '';
+    const total = cb.bits.length + cb.quiet * 2, mod = Math.min(0.5, 78 / total);
+    return `<div class="fi-cel">${svgBarras(cb, +mod.toFixed(3), 15, 'mm')}<div class="fi-num">${esc(cb.texto)}</div>
+      <div class="fi-desc">${esc(it.d || x[1] || '')}</div><div class="fi-sub">Int. ${esc(it.c)}${usaEan ? '' : (ean ? ' · EAN ' + esc(ean) : '')}</div></div>`;
+  }).join('');
+  const div = document.createElement('div'); div.id = 'folhaImpressao';
+  div.innerHTML = `<div class="fi-tit">${esc(l.nome)} — ${esc(rotuloCli(cli))}</div><div class="fi-sub2">Gerado pela Central de Inventário em ${hojeBR()} · ${l.itens.length} itens</div><div class="fi-grade">${cel}</div>`;
+  document.body.appendChild(div); document.body.classList.add('imprimindo');
+  // a folha fica escondida na tela e só sai quando trocar de aba (no Android a impressão abre depois)
+  setTimeout(()=>{ try{ window.print(); }catch(e){ fecharFolhaCod(); toast('Este aparelho não abriu a impressão.'); } }, 120);
+}
+function fecharFolhaCod(){ const f = document.getElementById('folhaImpressao'); if(f) f.remove(); document.body.classList.remove('imprimindo'); }
+
+
 if(!ui.nav2){ ui.nav2 = true; ui.view = 'inicio'; lsSet(UI_KEY, ui); }
 abrirView(document.getElementById(ui.view) ? ui.view : 'inicio');
 
@@ -8047,11 +8648,12 @@ registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
   ()=>{ const q = lsGet(QUARTOS_KEY, {}); return !(q.coord || q.lider || q.motorista); });
 registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}, metas: robo.metas || {}, segmentos: robo.segmentos || {},
-    setoresCorr: robo.setoresCorr || {}, setoresLoja: robo.setoresLoja || {}, notasResumo: robo.notasResumo || {}, coletoresEstag: robo.coletoresEstag || {}, estimativas: robo.estimativas || [], padroesPrev: robo.padroesPrev || {}, errosDono: robo.errosDono || {}, errosDonoEm: robo.errosDonoEm || {}, setoresCorrEm: robo.setoresCorrEm || {}, desenv: robo.desenv || null}),
+    setoresCorr: robo.setoresCorr || {}, setoresLoja: robo.setoresLoja || {}, notasResumo: robo.notasResumo || {}, coletoresEstag: robo.coletoresEstag || {}, estimativas: robo.estimativas || [], padroesPrev: robo.padroesPrev || {}, errosDono: robo.errosDono || {}, errosDonoEm: robo.errosDonoEm || {}, setoresCorrEm: robo.setoresCorrEm || {}, desenv: robo.desenv || null, listasCod: robo.listasCod || null}),
   v=>{ if(!v || typeof v !== 'object') return;
        ['setoresCorr', 'setoresLoja', 'notasResumo', 'coletoresEstag', 'estimativas', 'padroesPrev', 'errosDono', 'errosDonoEm', 'setoresCorrEm'].forEach(k=>{ if(v[k] && typeof v[k] === 'object') robo[k] = v[k]; });
        if(v.errosDono && typeof v.errosDono === 'object'){ aplicarDonosErros(); salvarRobo(); }
        if(v.desenv && typeof v.desenv === 'object' && JSON.stringify(v.desenv) !== JSON.stringify(robo.desenv || null)){ robo.desenv = v.desenv; salvarRobo(); try{ renderDesenv(); rerenderDev(); }catch(e){} }
+       if(v.listasCod && typeof v.listasCod === 'object' && JSON.stringify(v.listasCod) !== JSON.stringify(robo.listasCod || null)){ robo.listasCod = v.listasCod; salvarRobo(); try{ renderListasCod(); renderResultadosCod(); }catch(e){} }
        try{ renderEstimativasViagem(); renderPrevisao(); }catch(e){}
        if(v.metas && typeof v.metas === 'object'){ robo.metas = v.metas; robo.segmentos = (v.segmentos && typeof v.segmentos === 'object') ? v.segmentos : (robo.segmentos || {}); salvarRobo(); renderRobo(); }
        if(v.nomes && typeof v.nomes === 'object'){ robo.nomes = v.nomes; aplicarNomesRobo(); salvarRobo(); renderRobo(); }
@@ -8064,7 +8666,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 30/10/2026 10:54</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 00:06</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
