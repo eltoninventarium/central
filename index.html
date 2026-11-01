@@ -425,7 +425,14 @@ body.modo-colega .so-criador{display:none !important;}
 .chips-cli{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px;}
 .chip-cli{border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:16px;padding:6px 12px;font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;}
 .chip-cli.on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-ink);}
-.cod-busca input{padding-right:60px;font-size:1rem;}
+.cod-busca input{padding-right:104px;font-size:1rem;}
+.cod-mic{position:absolute;right:54px;top:50%;transform:translateY(-50%);border:1px solid var(--border);background:var(--panel);border-radius:50%;width:38px;height:38px;font-size:1.05rem;cursor:pointer;padding:0;}
+.cod-mic.ouvindo{background:var(--danger);border-color:var(--danger);animation:pulsoMic 1s infinite;}
+@keyframes pulsoMic{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.5);}50%{box-shadow:0 0 0 8px rgba(229,72,77,0);}}
+.cod-voz-linha{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 2px;}
+.cod-voz-linha .chip-cli{font-size:.76rem;padding:5px 10px;}
+.cod-voz-status{font-size:.78rem;color:var(--accent);font-weight:700;}
+.cod-destaque{border:2px solid var(--accent);border-radius:12px;padding:10px 11px;margin-top:8px;}
 .cod-teclado{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:1px solid var(--border);background:var(--panel);color:var(--muted);border-radius:10px;padding:5px 9px;font:inherit;font-size:.72rem;font-weight:800;cursor:pointer;}
 .cod-info{font-size:.82rem;color:var(--muted);margin:8px 0;}
 .cod-row{border:1px solid var(--border);border-radius:12px;padding:9px 11px;margin-top:8px;cursor:pointer;}
@@ -1078,6 +1085,7 @@ function abrirView(id){
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active', s.id===id));
   ui.view = id; ui.ultimaPorGrupo[g] = id; lsSet(UI_KEY, ui);
   if(typeof fecharFolhaCod === 'function') fecharFolhaCod();
+  if(id!=='consulta' && typeof pararVoz === 'function' && (vozMaosLivres || vozOuvindo)) pararVoz();
   if(id==='consulta') codAoAbrir();
   if(id==='listascod'){ renderListasCod(); codCarregar(codUi.cli).then(renderListasCod); }
   if(id==='quartos') renderRJQuartosOptions();
@@ -8150,7 +8158,7 @@ function codMontarBase(txt, info){
   String(txt || '').split('\n').forEach(l=>{
     if(!l) return;
     const p = l.split('\t'); if(!p[0]) return;
-    const it = {c:p[0], d:p[1] || '', e:p[2] ? p[2].split(',').filter(Boolean) : [], f:p[3] || ''};
+    const it = {c:p[0], d:(p[1] || '').replace(/ï¿½|\uFFFD/g, ''), e:p[2] ? p[2].split(',').filter(Boolean) : [], f:p[3] || ''};
     if(it.e.length > 1) it.e.sort((a, b)=>prefEan(a) - prefEan(b));   // EAN da unidade (13) antes do da caixa (14)
     it.n = normalizarNome(it.d);
     porCod.set(it.c, it); it.e.forEach(e=>{ if(!porEan.has(e)) porEan.set(e, it); }); itens.push(it);
@@ -8247,7 +8255,7 @@ function codLerArquivos(arqs){
     cod = String(cod || '').trim().replace(/^0+/, ''); ean = String(ean || '').replace(/\D/g, '').replace(/^0+/, '');
     if(!/^\d{1,9}$/.test(cod)) return;
     let p = mapa.get(cod); if(!p){ p = {d:'', e:[], m:''}; mapa.set(cod, p); }
-    desc = String(desc || '').replace(/[\t\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+    desc = String(desc || '').replace(/ï¿½|\uFFFD/g, '').replace(/[\t\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
     if(desc && !p.d) p.d = desc;
     if(ean && ean !== cod && !p.e.includes(ean)) p.e.push(ean);
     if(marca && !p.m.includes(marca)) p.m += marca;
@@ -8519,7 +8527,52 @@ function codItensDasListas(cli){
   listasDoCli(cli).forEach(l=>l.itens.forEach(x=>{ const c = String(x[0]); if(vistos.has(c)) return; vistos.add(c); out.push({c, d:x[1] || '', e:x[2] ? [String(x[2])] : [], f:'', n:normalizarNome(x[1] || ''), daLista:true}); }));
   return {itens: out, porCod: new Map(out.map(i=>[i.c, i])), porEan: new Map(out.flatMap(i=>i.e.map(e=>[e, i]))), info:{}};
 }
-function codBuscar(base, q){
+/* ---------- pesquisa (digitada ou falada) ---------- */
+// palavra falada → como aparece nos arquivos (vale também digitando: "comprimido" acha CPR/COMP)
+const ABREV_COD = {COMPRIMIDO:['CPR','COMP','CP','COMPRIMIDO'], CAPSULA:['CAPS','CAP','CPS','CAPSULA'], GOTA:['GTS','GOT','GOTA'], XAROPE:['XPE','XAR','XAROPE'],
+  POMADA:['POM','POMADA'], CREME:['CR','CREME'], SOLUCAO:['SOL','SOLUCAO'], INFANTIL:['INF','INFANTIL'], ADULTO:['AD','ADULTO'], PROTETOR:['PROT','PROTETOR'],
+  FRALDA:['FRAL','FRALDA'], SHAMPOO:['SH','SHAMP','SHAMPOO'], XAMPU:['SH','SHAMP','SHAMPOO'], CONDICIONADOR:['COND','CONDICIONADOR'], ENVELOPE:['ENV','ENVELOPE'],
+  SACHE:['SACH','SACHE'], FLACONETE:['FLAC','FLC','FLACONETE'], AMPOLA:['AMP','AMPOLA'], INJETAVEL:['INJ','INJETAVEL'], DRAGEA:['DRG','DG','DRAG','DRAGEA'],
+  EFERVESCENTE:['EF','EFERV','EFERVESCENTE'], GENERICO:['GEN','GENERICO'], LARANJA:['LAR','LARANJA'], MORANGO:['MOR','MORANGO'], PASTILHA:['PAST','PAS','PT','PASTILHA'],
+  COLIRIO:['COLIR','COL','COLIRIO'], SUSPENSAO:['SUSP','SUSPENSAO'], SPRAY:['SPR','SPRAY'], LOCAO:['LOC','LOCAO'], HIDRATANTE:['HIDR','HIDRAT','HIDRATANTE'],
+  DESODORANTE:['DESOD','DES','DESODORANTE'], SABONETE:['SAB','SABON','SABONETE'], ESCOVA:['ESC','ESCOVA'], ABSORVENTE:['ABS','ABSORV','ABSORVENTE'], LENCO:['LENC','LENCO'],
+  CAMISETA:['CAM','CAMIS','CAMISETA'], CAMISA:['CAM','CAMISA'], BERMUDA:['BERM','BERMUDA'], CALCA:['CAL','CALCA'], JAQUETA:['JAQ','JAQUETA'], VESTIDO:['VEST','VESTIDO'],
+  MASCULINO:['MASC','MASCULINO'], FEMININO:['FEM','FEMININO'], PRETO:['PTO','PRETO','PRET'], BRANCO:['BCO','BRANCO','BRAN'], AZUL:['AZ','AZUL'], VERMELHO:['VERM','VERMELHO']};
+const UNIDADES_COD = {MILIGRAMA:'MG', MILIGRAMAS:'MG', MG:'MG', GRAMA:'G', GRAMAS:'G', MILILITRO:'ML', MILILITROS:'ML', ML:'ML', LITRO:'L', LITROS:'L', QUILO:'KG', QUILOS:'KG', KG:'KG', MICROGRAMA:'MCG', MICROGRAMAS:'MCG'};
+const FORMAS_OPCIONAIS = new Set(['COMPRIMIDO','CAPSULA','DRAGEA','PASTILHA','GOTA','ENVELOPE','SACHE','FLACONETE','AMPOLA','CAIXA','UNIDADE']);
+const PALAVRAS_VAZIAS = new Set(['DE','DO','DA','DOS','DAS','COM','E','O','A','OS','AS','PARA','PRA','EM','NO','NA','CAIXA','CODIGO','INTERNO','EAN','BARRA','BARRAS','NUMERO','PRODUTO','ITEM','TAMANHO']);
+// cada palavra vira uma lista de jeitos aceitos (basta um aparecer na descrição)
+function gruposDaBusca(q){
+  const tks = normalizarNome(q).split(' ').filter(Boolean), grupos = [];
+  for(let i = 0; i < tks.length; i++){
+    const t = tks[i], un = UNIDADES_COD[t];
+    if(un && grupos.length && /^\d+$/.test(tks[i - 1])){ const n = tks[i - 1]; grupos[grupos.length - 1] = [n + un, n + ' ' + un]; continue; }
+    if(PALAVRAS_VAZIAS.has(t) && tks.length > 1) continue;
+    const sing = t.length > 4 ? t.replace(/S$/, '') : t;
+    const g = (ABREV_COD[t] || ABREV_COD[sing] || [t]).slice();
+    if(FORMAS_OPCIONAIS.has(t) || FORMAS_OPCIONAIS.has(sing)) g.opcional = true;   // muitos arquivos não escrevem "comprimido"
+    grupos.push(g);
+  }
+  return grupos;
+}
+// "som" da palavra, para achar o que foi falado parecido ("neosaudina" → NEOSALDINA, "prate" → PRATI)
+function fonetica(t){
+  return (' ' + String(t).replace(/[^A-Z0-9]+/g, ' ') + ' ')
+    .replace(/PH/g, 'F').replace(/TH/g, 'T').replace(/CH|SH/g, 'X').replace(/LH/g, 'LI').replace(/NH/g, 'NI')
+    .replace(/Y/g, 'I').replace(/W/g, 'V').replace(/H/g, '')
+    .replace(/C(?=[EI])/g, 'S').replace(/G(?=[EI])/g, 'J').replace(/QU/g, 'K').replace(/[CQ]/g, 'K').replace(/Z/g, 'S')
+    .replace(/L(?=[^AEIOU0-9 ])/g, 'U').replace(/E(?= )/g, 'I').replace(/O(?= )/g, 'U').replace(/([A-Z])\1+/g, '$1')
+    .replace(/\s+/g, ' ').trim();
+}
+// diferença de no máximo 1 letra (troca, sobra ou falta)
+function umaLetra(a, b){
+  if(a === b) return true;
+  const la = a.length, lb = b.length; if(Math.abs(la - lb) > 1) return false;
+  let i = 0, j = 0, dif = 0;
+  while(i < la && j < lb){ if(a[i] === b[j]){ i++; j++; continue; } if(++dif > 1) return false; if(la > lb) i++; else if(lb > la) j++; else { i++; j++; } }
+  return dif + (la - i) + (lb - j) <= 1;
+}
+function codBuscar(base, q, cli){
   q = String(q || '').trim(); if(!q) return {lista:[], numero:''};
   const limpo = q.replace(/[\s.\-]/g, '');
   if(/^\d+$/.test(limpo)){
@@ -8530,10 +8583,38 @@ function codBuscar(base, q){
     if(s.length >= 3) for(const it of base.itens){ if(out.length >= 40) break; if(it.c.startsWith(s) || it.e.some(e=>e.includes(s))) add(it); }
     return {lista: out, numero: s, exato};
   }
-  const toks = normalizarNome(q).split(' ').filter(Boolean), out = [];
-  for(const it of base.itens){ if(toks.every(t=>it.n.includes(t))){ out.push(it); if(out.length >= 300) break; } }
-  out.sort((a, b)=>(b.n.startsWith(toks[0]) - a.n.startsWith(toks[0])) || a.n.localeCompare(b.n));
-  return {lista: out.slice(0, 60), numero:'', mais: out.length > 60};
+  const grupos = gruposDaBusca(q); if(!grupos.length) return {lista:[], numero:''};
+  let out = [], comoSom = false;
+  for(const it of base.itens){ if(grupos.every(g=>g.some(t=>it.n.includes(t)))){ out.push(it); if(out.length >= 300) break; } }
+  // sem nada: tenta sem as palavras de forma (comprimido, cápsula…)
+  if(!out.length && grupos.some(g=>g.opcional) && grupos.some(g=>!g.opcional)){
+    const obrig = grupos.filter(g=>!g.opcional);
+    for(const it of base.itens){ if(obrig.every(g=>g.some(t=>it.n.includes(t)))){ out.push(it); if(out.length >= 300) break; } }
+  }
+  // plano B (só quando não achou nada): pelo som e com 1 letra de diferença — calculado uma vez por arquivo
+  if(!out.length){
+    comoSom = true;
+    if(!base.fon) base.fon = base.itens.map(it=>fonetica(it.n));
+    const fq = grupos.map(g=>g.map(t=>fonetica(t)));
+    base.itens.forEach((it, k)=>{
+      if(out.length >= 300) return;
+      const f = base.fon[k];
+      if(fq.every(g=>g.some(t=>f.includes(t)))) out.push(it);
+    });
+    if(!out.length){
+      const palavras = fq.map(g=>g[0]).filter(t=>t.length >= 4 && !/^\d/.test(t));
+      if(palavras.length) base.itens.forEach((it, k)=>{
+        if(out.length >= 300) return;
+        const ws = base.fon[k].split(' ');
+        if(fq.every(g=>{ const t = g[0]; return t.length < 4 || /^\d/.test(t) ? g.some(x=>base.fon[k].includes(x)) : ws.some(w=>umaLetra(w, t) || (w.length > t.length && umaLetra(w.slice(0, t.length), t))); })) out.push(it);
+      });
+    }
+  }
+  // listas (avulso, protetor…) primeiro: são os itens que mais se procura sem código
+  const naLista = new Set(); if(cli) listasDoCli(cli).forEach(l=>l.itens.forEach(x=>naLista.add(String(x[0]))));
+  const t0 = grupos[0][0];
+  out.sort((a, b)=>(naLista.has(b.c) - naLista.has(a.c)) || (b.n.startsWith(t0) - a.n.startsWith(t0)) || a.n.localeCompare(b.n));
+  return {lista: out.slice(0, 60), numero:'', mais: out.length > 60, comoSom};
 }
 function tagsItem(cli, it){
   const t = [];
@@ -8579,7 +8660,13 @@ function renderConsulta(){
       <div id="codChips"></div>
       <div class="busca-robo cod-busca"><span class="lupa" aria-hidden="true">🔍</span>
         <input type="text" id="buscaCod" placeholder="EAN, código interno ou descrição" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <button type="button" class="cod-mic" id="codMic" title="Pesquisar falando" aria-label="Pesquisar falando">🎤</button>
         <button type="button" class="cod-teclado" id="codTeclado" title="Trocar teclado">123</button></div>
+      <div class="cod-voz-linha">
+        <button type="button" class="chip-cli" id="codMaos">🎧 Mãos livres</button>
+        <button type="button" class="chip-cli" id="codFalar"></button>
+        <span id="codVozStatus" class="cod-voz-status"></span>
+      </div>
       <div id="codInfo"></div>
       <div id="resCod"></div>
     </div>
@@ -8598,7 +8685,10 @@ function renderConsulta(){
     b.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); renderResultadosCod(); b.blur(); } });
     document.getElementById('codTeclado').onclick = ()=>{ codUi.numerico = !codUi.numerico; salvarCodUi(); aplicarTecladoCod(); b.focus(); };
     document.getElementById('arqCod').onchange = e=>{ codImportar(e.target.files); e.target.value = ''; };
-    aplicarTecladoCod();
+    document.getElementById('codMic').onclick = ()=>{ if(vozMaosLivres) pararVoz(); else ouvirUmaVez(); };
+    document.getElementById('codMaos').onclick = ()=>{ if(vozMaosLivres) pararVoz(); else ligarMaosLivres(); };
+    document.getElementById('codFalar').onclick = ()=>{ codUi.falar = codUi.falar === false; salvarCodUi(); if(!codUi.falar && window.speechSynthesis) speechSynthesis.cancel(); pintarVoz(); };
+    aplicarTecladoCod(); pintarVoz();
   }
   document.getElementById('codChips').innerHTML = htmlChipsCli();
   document.getElementById('codInfo').innerHTML = htmlInfoBase();
@@ -8614,6 +8704,127 @@ function aplicarTecladoCod(){
   b.setAttribute('inputmode', codUi.numerico ? 'numeric' : 'search');
   t.textContent = codUi.numerico ? 'ABC' : '123';
 }
+/* ---------- VOZ (01/11/2026): 🎤 tocar e falar · 🎧 mãos livres (vestuário: muitos itens sem código) ----------
+   Usa o reconhecimento de voz do próprio Chrome (de graça, precisa de internet, gasta pouquíssimo).
+   Só carrega quando toca no 🎤. A resposta falada usa a voz do aparelho (funciona sem internet).
+   No iPhone com o app instalado a Apple não libera: o 🎤 manda usar o ditado do teclado (a limpeza de números vale igual). */
+const RecVoz = window.SpeechRecognition || window.webkitSpeechRecognition;
+let vozRec = null, vozMaosLivres = false, vozOuvindo = false, vozFalando = false, vozUltimaResposta = '', vozUltimoEm = 0, vozWake = null, vozReinicio = null, codUltimoResultado = null;
+const NUM_UN = {ZERO:0, UM:1, UMA:1, DOIS:2, DUAS:2, TRES:3, QUATRO:4, CINCO:5, SEIS:6, MEIA:6, SETE:7, OITO:8, NOVE:9};
+const NUM_DEZ = {DEZ:10, ONZE:11, DOZE:12, TREZE:13, QUATORZE:14, CATORZE:14, QUINZE:15, DEZESSEIS:16, DEZESSETE:17, DEZOITO:18, DEZENOVE:19,
+  VINTE:20, TRINTA:30, QUARENTA:40, CINQUENTA:50, SESSENTA:60, SETENTA:70, OITENTA:80, NOVENTA:90};
+const NUM_CEM = {CEM:100, CENTO:100, DUZENTOS:200, DUZENTAS:200, TREZENTOS:300, TREZENTAS:300, QUATROCENTOS:400, QUINHENTOS:500, QUINHENTAS:500, SEISCENTOS:600, SETECENTOS:700, OITOCENTOS:800, NOVECENTOS:900};
+// texto falado → pesquisa: números por extenso viram dígitos ("quatro nove quatro um seis" e "quarenta e nove mil quatrocentos e dezesseis" → 49416)
+function textoDaFala(t){
+  const tks = normalizarNome(t).replace(/[^A-Z0-9 ]/g, ' ').split(' ').filter(Boolean);
+  const ehNum = w => w in NUM_UN || w in NUM_DEZ || w in NUM_CEM || w === 'MIL' || /^\d+$/.test(w);
+  const out = [];
+  for(let i = 0; i < tks.length;){
+    if(!ehNum(tks[i])){ out.push(tks[i]); i++; continue; }
+    const run = [];
+    while(i < tks.length && (ehNum(tks[i]) || (tks[i] === 'E' && run.length && i + 1 < tks.length && ehNum(tks[i + 1])))){ if(tks[i] !== 'E') run.push(tks[i]); i++; }
+    if(run.every(w=>w in NUM_UN || /^\d+$/.test(w))){ out.push(run.map(w=>/^\d+$/.test(w) ? w : NUM_UN[w]).join('')); continue; }
+    let total = 0, cur = 0;
+    run.forEach(w=>{ if(w === 'MIL'){ total += (cur || 1) * 1000; cur = 0; } else cur += /^\d+$/.test(w) ? +w : (NUM_UN[w] ?? NUM_DEZ[w] ?? NUM_CEM[w]); });
+    out.push(String(total + cur));
+  }
+  // só números: junta tudo (EAN ou código falado em pedaços: "78 96 006…")
+  if(out.length && out.every(w=>/^\d+$/.test(w) || PALAVRAS_VAZIAS.has(w))) return out.filter(w=>/^\d+$/.test(w)).join('');
+  return out.join(' ');
+}
+function pintarVoz(){
+  const m = document.getElementById('codMic'), mz = document.getElementById('codMaos'), f = document.getElementById('codFalar'), st = document.getElementById('codVozStatus');
+  if(!m) return;
+  m.classList.toggle('ouvindo', vozOuvindo);
+  mz.classList.toggle('on', vozMaosLivres); mz.textContent = vozMaosLivres ? '⏹ Parar mãos livres' : '🎧 Mãos livres';
+  f.textContent = codUi.falar === false ? '🔇 Não falar resultado' : '🔊 Falar resultado';
+  f.classList.toggle('on', codUi.falar !== false);
+  st.textContent = vozFalando ? 'Falando…' : vozOuvindo ? 'Ouvindo… fale o produto' + (vozMaosLivres ? ' (diga “parar” para sair)' : '') : '';
+}
+function falarCod(texto, depois){
+  vozUltimaResposta = texto;
+  if(codUi.falar === false || !window.speechSynthesis){ if(depois) depois(); return; }
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texto); u.lang = 'pt-BR'; u.rate = 1.1;
+    const v = (speechSynthesis.getVoices() || []).find(x=>/pt[-_]BR/i.test(x.lang)); if(v) u.voice = v;
+    let feito = false; const fim = ()=>{ if(feito) return; feito = true; vozFalando = false; pintarVoz(); if(depois) depois(); };
+    u.onend = fim; u.onerror = fim; setTimeout(fim, 9000);
+    vozFalando = true; pintarVoz(); speechSynthesis.speak(u);
+  }catch(e){ vozFalando = false; if(depois) depois(); }
+}
+const digitosFalados = c => String(c).split('').join(' ');
+function descFalada(d){ return String(d || '').toLowerCase().replace(/\bcpr\b|\bcomp\b/g, 'comprimidos').replace(/(\d)mg\b/g, '$1 miligramas').replace(/(\d)ml\b/g, '$1 mililitros').replace(/c\/(\d+)/g, 'com $1').slice(0, 70); }
+function semVozAqui(msg){
+  toast(msg || 'Neste aparelho use o 🎤 do teclado: toque no campo de pesquisa e depois no microfone do teclado.', 6000);
+  const b = document.getElementById('buscaCod'); if(b){ codUi.numerico = false; aplicarTecladoCod(); b.focus(); }
+}
+function ouvir(){
+  if(!RecVoz){ vozMaosLivres = false; pintarVoz(); semVozAqui(); return; }
+  if(vozOuvindo || vozFalando) return;
+  try{ if(vozRec) vozRec.abort(); }catch(e){}
+  const rec = new RecVoz(); vozRec = rec;
+  rec.lang = 'pt-BR'; rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = false;
+  let final = null;
+  rec.onstart = ()=>{ vozOuvindo = true; pintarVoz(); };
+  rec.onresult = ev=>{
+    const r = ev.results[ev.results.length - 1];
+    const b = document.getElementById('buscaCod');
+    if(!r.isFinal){ if(b) b.value = r[0].transcript; return; }
+    final = [...r].map(a=>a.transcript);
+  };
+  rec.onerror = ev=>{
+    vozOuvindo = false; pintarVoz();
+    if(ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){ vozMaosLivres = false; pintarVoz(); semVozAqui('O microfone não foi liberado para o app. ' + (/iPhone|iPad/.test(navigator.userAgent) ? 'No iPhone use o 🎤 do teclado.' : 'Libere o microfone nas permissões do site/app.')); }
+    else if(ev.error === 'network'){ vozMaosLivres = false; pintarVoz(); toast('Sem internet: a voz precisa de conexão. Digite ou use o 🎤 do teclado.', 6000); }
+  };
+  rec.onend = ()=>{
+    vozOuvindo = false; pintarVoz();
+    if(final){ tratarFala(final); return; }
+    // mãos livres: silêncio → volta a ouvir (até 3 min sem falar nada)
+    if(vozMaosLivres){ if(Date.now() - vozUltimoEm > 180000){ pararVoz(); toast('Mãos livres desligado (3 min sem falar).'); return; } clearTimeout(vozReinicio); vozReinicio = setTimeout(ouvir, 300); }
+  };
+  try{ rec.start(); }catch(e){ vozOuvindo = false; pintarVoz(); }
+}
+function tratarFala(alternativas){
+  vozUltimoEm = Date.now();
+  const cmd = normalizarNome(alternativas[0]);
+  const continuar = ()=>{ if(vozMaosLivres){ clearTimeout(vozReinicio); vozReinicio = setTimeout(ouvir, 250); } };
+  if(vozMaosLivres && /^(PARAR|PARA|SAIR|ENCERRAR|DESLIGAR)$/.test(cmd)){ pararVoz(); falarCod('Mãos livres desligado.'); return; }
+  if(/^(REPETIR|REPETE|DE NOVO)$/.test(cmd)){ falarCod(vozUltimaResposta || 'Nada para repetir.', continuar); return; }
+  if(/^(LIMPAR|APAGAR)$/.test(cmd)){ const b = document.getElementById('buscaCod'); if(b) b.value = ''; renderResultadosCod(); continuar(); return; }
+  // usa a primeira forma ouvida que acha alguma coisa (o reconhecedor manda até 3)
+  const cli = codUi.cli, base = codBases[cli] || codItensDasListas(cli);
+  let texto = textoDaFala(alternativas[0]);
+  for(const a of alternativas){ const t = textoDaFala(a); if(codBuscar(base, t, cli).lista.length){ texto = t; break; } }
+  const b = document.getElementById('buscaCod'); if(b) b.value = texto;
+  renderResultadosCod();
+  const r = codUltimoResultado || {lista:[]};
+  if(!r.lista.length){ falarCod('Não encontrei ' + texto.toLowerCase() + '.', continuar); return; }
+  const it = r.lista[0];
+  if(r.lista.length === 1 || r.exato){
+    falarCod(descFalada(it.d) + '. Interno ' + digitosFalados(it.c) + '.', continuar);
+    if(!vozMaosLivres) codTelaCheia(it.e[0] || it.c, !it.e[0], false);   // tocar e falar: resultado único abre o código grande
+  } else falarCod((r.mais ? 'Mais de 60' : r.lista.length) + ' resultados. Primeiro: ' + descFalada(it.d) + '. Interno ' + digitosFalados(it.c) + '.', continuar);
+}
+// prepara a busca "pelo som" do arquivo atual sem travar a tela (só a 1ª vez, ~0,2 s)
+function prepararSom(){ const base = codBases[codUi.cli]; if(!base || base.fon) return; (window.requestIdleCallback || setTimeout)(()=>{ if(!base.fon) base.fon = base.itens.map(it=>fonetica(it.n)); }); }
+function ouvirUmaVez(){ vozMaosLivres = false; prepararSom(); ouvir(); }
+function ligarMaosLivres(){
+  if(!RecVoz){ semVozAqui(); return; }
+  vozMaosLivres = true; vozUltimoEm = Date.now(); pintarVoz(); renderResultadosCod(); prepararSom();
+  try{ if(navigator.wakeLock && !vozWake) navigator.wakeLock.request('screen').then(w=>{ vozWake = w; }).catch(()=>{}); }catch(e){}
+  falarCod('Mãos livres ligado. Fale o produto.', ouvir);
+}
+function pararVoz(){
+  const estava = vozMaosLivres || vozOuvindo;
+  vozMaosLivres = false; clearTimeout(vozReinicio);
+  try{ if(vozRec) vozRec.abort(); }catch(e){} vozRec = null; vozOuvindo = false;
+  try{ vozWake && vozWake.release(); }catch(e){} vozWake = null;
+  pintarVoz(); if(estava) renderResultadosCod();
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') pararVoz(); });
+
 function renderResultadosCod(){
   const box = document.getElementById('resCod'); if(!box) return;
   const cli = codUi.cli, base = codBases[cli] || codItensDasListas(cli);
@@ -8623,21 +8834,27 @@ function renderResultadosCod(){
     box.innerHTML = ls.length ? `<p class="hint">Listas de ${esc(rotuloCli(cli))}: ${ls.map(l=>`<a href="#" onclick="codListaAberta='${esc(l.id)}';abrirView('listascod');return false">${esc(l.nome)}</a>`).join(' · ')}</p>` : '';
     return;
   }
-  const r = codBuscar(base, q);
+  const r = codBuscar(base, q, cli);
   if(codBases[cli]){   // produto que está numa lista mas não no arquivo de produtos desta loja
-    const rl = codBuscar(codItensDasListas(cli), q);
+    const rl = codBuscar(codItensDasListas(cli), q, cli);
     rl.lista.forEach(it=>{ if(!r.lista.some(x=>x.c === it.c)) r.lista.push(it); });
     if(rl.exato) r.exato = true;
   }
   let h = '';
   if(r.numero && !r.exato && r.numero.length >= 6)
     h += `<div class="msg warn">⚠ O código <b>${esc(r.numero)}</b> não está no arquivo de produtos ${esc(rotuloCli(cli))}${codLocal[cli] ? ' (de ' + esc(codLocal[cli].data || '') + ')' : ''}. Confira com a loja antes de contar.${/^999/.test(r.numero) ? ' (Código começando com 999 costuma ser etiqueta promocional da loja.)' : ''}</div>`;
+  codUltimoResultado = r;
   if(!r.lista.length){ box.innerHTML = h || '<p class="hint">Nada encontrado.</p>'; return; }
-  box.innerHTML = h + r.lista.map(it=>`<div class="cod-row" role="button" tabindex="0" data-cod="${esc(it.c)}">
+  if(r.comoSom) h += '<p class="hint">Não achei igual; mostrando os parecidos pelo som.</p>';
+  // mãos livres: o primeiro já aparece com o código de barras, sem precisar tocar
+  if(vozMaosLivres){ const it = r.lista[0], larg = Math.min(box.clientWidth || 330, 420);
+    h += `<div class="cod-destaque"><div class="cod-desc">${esc(it.d)}</div><div class="cod-sub">Int. <b>${esc(it.c)}</b></div>${it.e[0] ? blocoBarras(it.e[0], false, larg) : ''}${blocoBarras(it.c, true, larg)}</div>`; }
+  box.innerHTML = h + r.lista.slice(vozMaosLivres ? 1 : 0).map(it=>`<div class="cod-row" role="button" tabindex="0" data-cod="${esc(it.c)}">
       <div class="cod-desc">${esc(it.d || '(sem descrição)')}</div>
       <div class="cod-sub">Int. <b>${esc(it.c)}</b>${it.e.length ? ' · EAN ' + esc(it.e[0]) + (it.e.length > 1 ? ` <small>(+${it.e.length - 1})</small>` : '') : ' · sem EAN'}</div>
       <div>${tagsItem(cli, it)}${it.daLista && codBases[cli] ? '<span class="tag-cod">só na lista (não veio no arquivo da loja)</span>' : ''}</div></div>`).join('') + (r.mais ? '<p class="hint">Mostrando os 60 primeiros — escreva mais palavras para filtrar.</p>' : '');
   box.querySelectorAll('[data-cod]').forEach(el=>el.onclick = ()=>abrirItemCod(cli, el.dataset.cod));
+  if(vozMaosLivres) alinharBarras(box);
 }
 function itemCod(cli, cod){
   const base = codBases[cli];
@@ -8808,7 +9025,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 01:57</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 06:40</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
