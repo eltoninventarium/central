@@ -432,6 +432,8 @@ body.modo-colega .so-criador{display:none !important;}
 .cod-voz-linha{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 2px;}
 .cod-voz-linha .chip-cli{font-size:.76rem;padding:5px 10px;}
 .cod-voz-status{font-size:.78rem;color:var(--accent);font-weight:700;}
+.ajuda-mic{padding-left:20px;margin:8px 0;font-size:.88rem;line-height:1.45;}
+.ajuda-mic li{margin-bottom:8px;}
 .cod-destaque{border:2px solid var(--accent);border-radius:12px;padding:10px 11px;margin-top:8px;}
 .cod-teclado{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:1px solid var(--border);background:var(--panel);color:var(--muted);border-radius:10px;padding:5px 9px;font:inherit;font-size:.72rem;font-weight:800;cursor:pointer;}
 .cod-info{font-size:.82rem;color:var(--muted);margin:8px 0;}
@@ -8860,7 +8862,11 @@ function ouvir(){
   };
   rec.onerror = ev=>{
     vozOuvindo = false; pintarVoz();
-    if(ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){ vozMaosLivres = false; pintarVoz(); semVozAqui('O microfone não foi liberado para o app. ' + (/iPhone|iPad/.test(navigator.userAgent) ? 'No iPhone use o 🎤 do teclado.' : 'Libere o microfone nas permissões do site/app.')); }
+    if(ev.error === 'not-allowed' || ev.error === 'service-not-allowed' || ev.error === 'audio-capture'){
+      vozMaosLivres = false; vozMicOk = false; pintarVoz();
+      if(/iPhone|iPad/.test(navigator.userAgent)) semVozAqui('No iPhone com o app instalado use o 🎤 do teclado.');
+      else ajudaMicrofone(ev.error === 'service-not-allowed' ? 'servico' : ev.error === 'audio-capture' ? 'captura' : 'negado');
+    }
     else if(ev.error === 'network'){ vozMaosLivres = false; pintarVoz(); toast('Sem internet: a voz precisa de conexão. Digite ou use o 🎤 do teclado.', 6000); }
   };
   rec.onend = ()=>{
@@ -8896,9 +8902,42 @@ function tratarFala(alternativas){
 }
 // prepara a busca "pelo som" do arquivo atual sem travar a tela (só a 1ª vez, ~0,2 s)
 function prepararSom(){ const base = codBases[codUi.cli]; if(!base || base.fon) return; (window.requestIdleCallback || setTimeout)(()=>{ if(!base.fon) base.fon = base.itens.map(it=>fonetica(it.n)); }); }
-function ouvirUmaVez(){ vozMaosLivres = false; prepararSom(); ouvir(); }
-function ligarMaosLivres(){
+// Pede o microfone de propósito (assim o celular mostra "Permitir"). O reconhecimento de voz sozinho às vezes
+// recusa sem perguntar. Pergunta uma vez por sessão; se estiver bloqueado, mostra onde liberar.
+let vozMicOk = false;
+async function garantirMicrofone(){
+  if(vozMicOk) return true;
+  try{
+    if(navigator.permissions && navigator.permissions.query){
+      const st = await navigator.permissions.query({name:'microphone'}).catch(()=>null);
+      if(st && st.state === 'granted'){ vozMicOk = true; return true; }
+      if(st && st.state === 'denied'){ ajudaMicrofone('negado'); return false; }
+    }
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;   // sem como perguntar: tenta direto
+    const fluxo = await navigator.mediaDevices.getUserMedia({audio:true});
+    fluxo.getTracks().forEach(t=>t.stop());
+    vozMicOk = true; return true;
+  }catch(e){
+    ajudaMicrofone(e && e.name === 'NotFoundError' ? 'semMic' : e && e.name === 'NotReadableError' ? 'ocupado' : 'negado');
+    return false;
+  }
+}
+function ajudaMicrofone(motivo){
+  const box = abrirFolha('🎤 Liberar o microfone', `
+    <p style="margin-top:0">${motivo === 'semMic' ? 'O celular não encontrou microfone.' : motivo === 'ocupado' ? 'O microfone está sendo usado por outro app (ligação, gravador, WhatsApp). Feche o outro app e tente de novo.' : motivo === 'servico' ? 'O serviço de voz do Google está bloqueado neste celular.' : 'O celular está <b>bloqueando o microfone</b> para o app (por isso não aparece a pergunta).'}</p>
+    ${motivo === 'semMic' || motivo === 'ocupado' ? '' : `<ol class="ajuda-mic">
+      <li><b>App instalado:</b> segure o ícone <b>Central</b> na tela inicial → <b>Informações do app</b> (ⓘ) → <b>Permissões</b> → <b>Microfone</b> → <b>Permitir durante o uso</b>. Se aparecer <b>Configurações do site</b>, entre e libere o Microfone.</li>
+      <li><b>Chrome:</b> Configurações do Android → <b>Apps</b> → <b>Chrome</b> → <b>Permissões</b> → <b>Microfone</b> → <b>Permitir durante o uso</b>.</li>
+      <li><b>Site no Chrome:</b> abra o Chrome → ⋮ → <b>Configurações</b> → <b>Configurações do site</b> → <b>Microfone</b>. Se <b>eltoninventarium.github.io</b> estiver em <b>Bloqueado</b>, toque nele e escolha <b>Permitir</b>.</li>
+      <li><b>App Google</b> (é ele que entende a fala): Configurações do Android → <b>Apps</b> → <b>Google</b> → <b>Permissões</b> → <b>Microfone</b> → <b>Permitir</b>.</li>
+      <li>Feche o app Central (tire da lista de apps abertos) e abra de novo.</li></ol>`}
+    <p class="hint">Enquanto isso, dá para usar o 🎤 do teclado: toque no campo de pesquisa e no microfone do teclado.</p>`, 'Testar de novo', ()=>{ vozMicOk = false; setTimeout(()=>ouvirUmaVez(), 100); return ''; });
+  const c = box.querySelector('[data-cancelar]'); if(c) c.textContent = 'Fechar';
+}
+async function ouvirUmaVez(){ vozMaosLivres = false; prepararSom(); if(!RecVoz){ semVozAqui(); return; } if(!(await garantirMicrofone())) return; ouvir(); }
+async function ligarMaosLivres(){
   if(!RecVoz){ semVozAqui(); return; }
+  if(!(await garantirMicrofone())) return;
   vozMaosLivres = true; vozUltimoEm = Date.now(); pintarVoz(); renderResultadosCod(); prepararSom();
   try{ if(navigator.wakeLock && !vozWake) navigator.wakeLock.request('screen').then(w=>{ vozWake = w; }).catch(()=>{}); }catch(e){}
   falarCod('Mãos livres ligado. Fale o produto.', ouvir);
@@ -9116,7 +9155,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 07:10</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 07:18</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
