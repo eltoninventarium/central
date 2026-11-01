@@ -436,16 +436,24 @@ body.modo-colega .so-criador{display:none !important;}
 .tag-cod.ctrl{color:var(--danger);border-color:var(--danger);}
 .tag-cod.gel{color:var(--atest);border-color:var(--atest);}
 .tag-cod.lista{color:var(--accent);border-color:var(--accent);}
-.cod-barra{background:#fff;border:1px solid #ddd;border-radius:10px;padding:10px 4px 8px;text-align:center;margin:6px 0 12px;cursor:pointer;overflow:hidden;}
-.cod-barra svg{display:block;margin:0 auto;}
+.cod-barra{background:#fff;border:1px solid #ddd;border-radius:10px;padding:10px 0 8px;text-align:center;margin:6px 0 12px;cursor:pointer;overflow:hidden;color-scheme:only light;forced-color-adjust:none;}
+.cod-img{display:block;margin:0 auto;max-width:none;image-rendering:pixelated;image-rendering:crisp-edges;-webkit-user-select:none;user-select:none;forced-color-adjust:none;}
 .cod-num{color:#000;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.12em;font-size:1rem;margin-top:4px;}
 .cod-tipo{color:#555;font-size:.68rem;margin-top:2px;}
-#codCheia{position:fixed;inset:0;z-index:400;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-.cod-cheia-in{display:flex;flex-direction:column;align-items:center;flex:none;}
-.cod-cheia-in.girado{transform:rotate(90deg);}
-.cod-num.grande{font-size:1.6rem;}
-.cod-cheia-acoes{position:absolute;left:0;right:0;bottom:calc(22px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;justify-content:center;}
-.cod-cheia-dica{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:16px;right:16px;text-align:center;color:#666;font-size:.8rem;}
+#codCheia{position:fixed;inset:0;z-index:400;background:#fff;color:#111;display:flex;flex-direction:column;align-items:stretch;overflow:hidden;color-scheme:only light;forced-color-adjust:none;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 0 calc(12px + env(safe-area-inset-bottom,0px));}
+#codCheia .cod-cheia-dica{flex:none;text-align:center;color:#555;font-size:.78rem;line-height:1.35;padding:0 16px 10px;}
+#codCheia .cod-cheia-area{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+#codCheia .cod-cheia-num{flex:none;text-align:center;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.1em;color:#000;font-size:1.05rem;padding:12px 16px 0;}
+#codCheia .cod-cheia-ctrl{flex:none;display:flex;flex-direction:column;gap:8px;padding:14px 16px 0;}
+#codCheia .cod-cheia-linha{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;}
+#codCheia .btn.secondary{background:#fff;color:#4b2bb3;border-color:#b9a7f3;}
+#codCheia .cod-mm{min-width:52px;font-size:1.3rem;padding:6px 0;}
+#codCheia .cod-tam{min-width:150px;text-align:center;font-size:.9rem;color:#222;}
+#codCheia .cod-tam small{color:#666;}
+#codCheia .cod-tipo-bt{border:1px solid #ccc;background:#fff;color:#333;border-radius:14px;padding:5px 10px;font:inherit;font-size:.76rem;font-weight:700;cursor:pointer;}
+#codCheia .cod-tipo-bt.on{background:#4b2bb3;border-color:#4b2bb3;color:#fff;}
+#codCheia .cod-tipo-bt:disabled{opacity:.35;}
 #folhaImpressao{display:none;}
 @media print{
   body.imprimindo > *:not(#folhaImpressao){display:none!important;}
@@ -454,6 +462,7 @@ body.modo-colega .so-criador{display:none !important;}
   #folhaImpressao .fi-tit{font-size:14pt;font-weight:700;}
   #folhaImpressao .fi-sub2{font-size:8pt;color:#444;margin-bottom:4mm;}
   #folhaImpressao .fi-grade{display:grid;grid-template-columns:1fr 1fr;gap:3mm;}
+  #folhaImpressao .fi-grade.uma{grid-template-columns:1fr;}
   #folhaImpressao .fi-cel{border:.3mm solid #999;padding:2mm;text-align:center;break-inside:avoid;page-break-inside:avoid;}
   #folhaImpressao svg{display:block;margin:0 auto;}
   #folhaImpressao .fi-num{font-family:monospace;font-size:10pt;font-weight:700;letter-spacing:1px;}
@@ -8346,51 +8355,158 @@ const C39 = {'0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4'
 function code39Bits(d){
   return ('*' + d + '*').split('').map(ch=>C39[ch].split('').map((w, i)=>(i % 2 ? '0' : '1').repeat(w === 'w' ? 3 : 1)).join('')).join('0');
 }
-// EAN-13/EAN-8/UPC-A quando o dígito confere; código interno em Code 39 (igual às listas dos clientes); o resto em Code 128
-function codBarras(valor, interno){
+// Tipo do código: EAN-13/EAN-8/UPC-A quando o dígito confere; o resto (e o código interno) em Code 39,
+// que é o que o coletor antigo (Symbol PDT 3200) já lê nas listas da RD. Code 128 só quando escolhido para teste.
+// forcar: '' (automático) | 'c39' | 'c128' | 'ean'
+function eanDe(v){
+  if(v.length === 13 && eanOk(v)) return {bits: ean13Bits(v), tipo:'EAN-13', texto:v};
+  if(v.length === 12 && eanOk('0' + v)) return {bits: ean13Bits('0' + v), tipo:'UPC-A', texto:v};
+  if(v.length === 8 && eanOk(v)) return {bits: ean8Bits(v), tipo:'EAN-8', texto:v};
+  return null;
+}
+function codBarras(valor, interno, forcar){
   const v = String(valor || '').replace(/\D/g, '');
   if(!v) return null;
-  if(interno && v.length <= 12) return {bits: code39Bits(v), tipo:'Code 39', texto:v, quiet:12};
-  if(v.length === 13 && eanOk(v)) return {bits: ean13Bits(v), tipo:'EAN-13', texto:v, quiet:11};
-  if(v.length === 12 && eanOk('0' + v)) return {bits: ean13Bits('0' + v), tipo:'UPC-A', texto:v, quiet:11};
-  if(v.length === 8 && eanOk(v)) return {bits: ean8Bits(v), tipo:'EAN-8', texto:v, quiet:8};
-  if(v.length < 8 && eanOk(v.padStart(13, '0')) && v.length > 5) return {bits: ean13Bits(v.padStart(13, '0')), tipo:'EAN-13', texto:v.padStart(13, '0'), quiet:11};
-  return {bits: code128Bits(v), tipo:'Code 128', texto:v, quiet:11};
+  const c39 = ()=>({bits: code39Bits(v), tipo:'Code 39', texto:v});
+  if(forcar === 'c39') return c39();
+  if(forcar === 'c128') return {bits: code128Bits(v), tipo:'Code 128', texto:v};
+  if(forcar === 'ean') return eanDe(v) || c39();
+  if(interno) return c39();
+  return eanDe(v) || c39();
 }
-// modulo = px (tela) ou mm (impressão); altura na mesma unidade
-function svgBarras(cb, modulo, altura, unidade){
-  const total = cb.bits.length + cb.quiet * 2, H = +(altura / modulo).toFixed(2);
+const QUIET_TELA = 15, QUIET_FOLHA = 10;   // margem branca, em módulos, de cada lado
+const dprTela = ()=>window.devicePixelRatio || 1;
+// ≈ milímetros de 1 pixel real (celular: ~160 px do CSS por polegada)
+const mmPorPx = ()=>25.4 / (160 * dprTela());
+// Desenha no tamanho REAL da tela: cada barra fina = "mod" pixels reais (número inteiro), sem suavização.
+// A imagem é mostrada com largura = pixels ÷ devicePixelRatio, então cada pixel da imagem cai em 1 pixel da tela
+// (vale para devicePixelRatio quebrado: 2,625 / 2,75). "girado" desenha as barras deitadas (sem girar por CSS).
+// tamanho em pixels que o navegador consegue mostrar sem arredondar (ele guarda medidas em 1/64 de px do CSS)
+function pxExato(n){
+  const d = dprTela(), certo = (m, f)=>{ const v = m * f / d; return Math.abs(v - Math.round(v)) < 1e-6; };
+  for(let k = 0; k < 64; k++) if(certo(n + k, 1)) return n + k;     // melhor: px do CSS inteiro (2 → par; 2,625 → múltiplo de 21; 2,75 → de 11)
+  for(let k = 0; k < 64; k++) if(certo(n + k, 64)) return n + k;    // senão: 1/64 de px, que o navegador guarda sem arredondar
+  return n;
+}
+function imgBarras(cb, mod, altPx, girado, cls){
+  const q = QUIET_TELA, comp = (cb.bits.length + q * 2) * mod;
+  const cv = document.createElement('canvas');
+  cv.width = pxExato(girado ? altPx : comp); cv.height = pxExato(girado ? comp : altPx);   // a sobra vira margem branca
+  const c = cv.getContext('2d');
+  c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height); c.fillStyle = '#000';
+  for(let i = 0; i < cb.bits.length;){
+    if(cb.bits[i] === '1'){ let j = i; while(cb.bits[j] === '1') j++; const x = (q + i) * mod, w = (j - i) * mod; if(girado) c.fillRect(0, x, altPx, w); else c.fillRect(x, 0, w, altPx); i = j; }
+    else i++;
+  }
+  const d = dprTela();
+  return `<img class="cod-img ${cls || ''}" alt="${esc(cb.texto)}" draggable="false" src="${cv.toDataURL('image/png')}" style="width:${cv.width / d}px;height:${cv.height / d}px" data-mod="${mod}" data-px="${cv.width}x${cv.height}">`;
+}
+// para a folha impressa (vetor): modulo e altura em mm
+function svgBarras(cb, modulo, altura, unidade, quiet){
+  const q = quiet == null ? QUIET_FOLHA : quiet;
+  const total = cb.bits.length + q * 2, H = +(altura / modulo).toFixed(2);
   let d = '';
   for(let i = 0; i < cb.bits.length;){
-    if(cb.bits[i] === '1'){ let j = i; while(cb.bits[j] === '1') j++; d += `M${cb.quiet + i} 0h${j - i}v${H}h-${j - i}z`; i = j; }
+    if(cb.bits[i] === '1'){ let j = i; while(cb.bits[j] === '1') j++; d += `M${q + i} 0h${j - i}v${H}h-${j - i}z`; i = j; }
     else i++;
   }
   const u = unidade || 'px';
-  return `<svg class="cod-svg" xmlns="http://www.w3.org/2000/svg" width="${+(total * modulo).toFixed(2)}${u}" height="${altura}${u}" viewBox="0 0 ${total} ${H}" preserveAspectRatio="none" shape-rendering="crispEdges"><rect width="${total}" height="${H}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+  return `<svg class="cod-svg" xmlns="http://www.w3.org/2000/svg" width="${+(total * modulo).toFixed(3)}${u}" height="${altura}${u}" viewBox="0 0 ${total} ${H}" preserveAspectRatio="none" shape-rendering="crispEdges"><rect width="${total}" height="${H}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
 }
+// encaixa cada código no pixel real da tela (sem isso, numa posição tipo 31,25 px uma coluna sai duplicada)
+function alinharBarras(raiz){
+  const d = dprTela();
+  (raiz || document).querySelectorAll('.cod-img').forEach(img=>{
+    img.style.position = 'relative'; img.style.left = '0px'; img.style.top = '0px';
+    const r = img.getBoundingClientRect();
+    const fx = r.left * d - Math.round(r.left * d), fy = r.top * d - Math.round(r.top * d);
+    // deslocamento de layout (não usa transform, que faz o navegador suavizar a imagem)
+    if(Math.abs(fx) > 0.001) img.style.left = (-fx / d) + 'px';
+    if(Math.abs(fy) > 0.001) img.style.top = (-fy / d) + 'px';
+  });
+}
+window.addEventListener('resize', ()=>alinharBarras());
+// código pequeno na ficha do produto
 function blocoBarras(valor, interno, largura){
   const cb = codBarras(valor, interno); if(!cb) return '';
-  const total = cb.bits.length + cb.quiet * 2;
-  const mod = Math.max(1, Math.min(4, Math.floor((largura || 300) / total)));
+  const d = dprTela(), total = cb.bits.length + QUIET_TELA * 2;
+  const alvo = Math.max(1, Math.round(0.33 / mmPorPx()));
+  const mod = Math.max(1, Math.min(alvo, Math.floor((largura || 300) * d / total)));
   return `<div class="cod-barra" role="button" tabindex="0" data-barra="${esc(cb.texto)}" data-interno="${interno ? 1 : ''}" title="Toque para ver grande">
-    ${svgBarras(cb, mod, 84)}<div class="cod-num">${esc(cb.texto)}</div><div class="cod-tipo">${cb.tipo}${interno ? ' · código interno' : ''} · toque para ampliar</div></div>`;
+    ${imgBarras(cb, mod, Math.round(80 * d))}<div class="cod-num">${esc(cb.texto)}</div><div class="cod-tipo">${cb.tipo}${interno ? ' · código interno' : ''} · toque para ampliar</div></div>`;
 }
-// tela cheia: branco, grande, e a tela não apaga enquanto estiver aberta
-let codWake = null;
+
+/* ---------- tela cheia: branco, tamanho ajustável (− / +), tipo para teste, girar ---------- */
+const COD_TELA_KEY = 'central_cod_tela_v1';
+function lerCodTela(){ try{ return JSON.parse(localStorage.getItem(COD_TELA_KEY)) || {}; }catch(e){ return {}; } }
+function gravarCodTela(v){ try{ localStorage.setItem(COD_TELA_KEY, JSON.stringify(v)); }catch(e){} }
+let codWake = null, codCheiaAtual = null;
 function codTelaCheia(valor, interno, girado){
-  const cb = codBarras(valor, interno); if(!cb) return;
-  const ant = document.getElementById('codCheia'); if(ant) ant.remove();
-  const W = window.innerWidth, H = window.innerHeight;
-  const larg = (girado ? H : W) * 0.9, total = cb.bits.length + cb.quiet * 2;
-  const mod = Math.max(1, Math.floor(larg / total)), alt = Math.round(Math.min(girado ? W * 0.5 : H * 0.3, 260));
-  const box = document.createElement('div'); box.id = 'codCheia';
-  box.innerHTML = `<div class="cod-cheia-in ${girado ? 'girado' : ''}">${svgBarras(cb, mod, alt)}<div class="cod-num grande">${esc(cb.texto)}</div></div>
-    <div class="cod-cheia-acoes"><button class="btn secondary" data-girar>↻ ${girado ? 'Normal' : 'Girar (maior)'}</button><button class="btn" data-fechar>Fechar</button></div>
-    <div class="cod-cheia-dica">Aumente o brilho da tela. Se o coletor não ler, use a folha impressa (Listas › Imprimir).</div>`;
-  document.body.appendChild(box);
-  box.querySelector('[data-fechar]').onclick = ()=>{ box.remove(); try{ codWake && codWake.release(); }catch(e){} codWake = null; };
-  box.querySelector('[data-girar]').onclick = ()=>codTelaCheia(valor, interno, !girado);
+  const pref = lerCodTela();
+  codCheiaAtual = {valor, interno, girado: !!girado, tipo: pref.tipo || '', mod: pref.mod || 0};
+  let box = document.getElementById('codCheia');
+  if(!box){
+    box = document.createElement('div'); box.id = 'codCheia';
+    box.innerHTML = `<div class="cod-cheia-dica">Brilho no máximo · celular um pouco inclinado (uns 15°) · coletor a 10–20 cm.<br>Se não ler na tela, use a folha impressa (Listas › Imprimir).</div>
+      <div class="cod-cheia-area" id="codCheiaArea"></div>
+      <div class="cod-cheia-num" id="codCheiaNum"></div>
+      <div class="cod-cheia-ctrl">
+        <div class="cod-cheia-linha" id="codCheiaTipos"></div>
+        <div class="cod-cheia-linha"><button class="btn secondary cod-mm" data-menos aria-label="Diminuir">−</button><span class="cod-tam" id="codCheiaTam"></span><button class="btn secondary cod-mm" data-mais aria-label="Aumentar">+</button></div>
+        <div class="cod-cheia-linha"><button class="btn secondary" data-girar></button><button class="btn" data-fechar>Fechar</button></div>
+      </div>`;
+    document.body.appendChild(box);
+    box.querySelector('[data-fechar]').onclick = fecharCodCheia;
+    box.querySelector('[data-girar]').onclick = ()=>{ codCheiaAtual.girado = !codCheiaAtual.girado; desenharCodCheia(); };
+    box.querySelector('[data-menos]').onclick = ()=>mudarModCheia(-1);
+    box.querySelector('[data-mais]').onclick = ()=>mudarModCheia(1);
+    box.querySelector('#codCheiaTipos').onclick = e=>{ const b = e.target.closest('[data-tipo]'); if(!b || b.disabled) return; codCheiaAtual.tipo = b.dataset.tipo; gravarCodTela(Object.assign(lerCodTela(), {tipo: codCheiaAtual.tipo})); desenharCodCheia(); };
+    window.addEventListener('resize', ()=>{ if(document.getElementById('codCheia')) desenharCodCheia(); });
+  }
+  desenharCodCheia();
   try{ if(navigator.wakeLock && !codWake) navigator.wakeLock.request('screen').then(w=>{ codWake = w; }).catch(()=>{}); }catch(e){}
+}
+function fecharCodCheia(){
+  const box = document.getElementById('codCheia'); if(box) box.remove();
+  try{ codWake && codWake.release(); }catch(e){} codWake = null; codCheiaAtual = null;
+}
+function limitesCodCheia(cb){
+  const area = document.getElementById('codCheiaArea'), d = dprTela();
+  const total = cb.bits.length + QUIET_TELA * 2;
+  const disp = Math.floor((codCheiaAtual.girado ? area.clientHeight : area.clientWidth) * d * 0.96);
+  const caber = Math.max(1, Math.floor(disp / total));
+  const min = caber >= 2 ? 2 : 1;   // PC com tela comum (dpr 1): 1 px se 2 não couber
+  return {min, max: Math.max(min, Math.min(12, caber)), caber, padrao: Math.max(min, Math.min(12, caber, Math.round(0.4 / mmPorPx())))};
+}
+function mudarModCheia(passo){
+  const cb = codBarras(codCheiaAtual.valor, codCheiaAtual.interno, codCheiaAtual.tipo); if(!cb) return;
+  const lim = limitesCodCheia(cb);
+  const atual = Math.min(codCheiaAtual.mod || lim.padrao, lim.max);
+  const novo = Math.max(lim.min, Math.min(lim.max, atual + passo));
+  if(novo === atual){ toast(passo > 0 ? (codCheiaAtual.girado ? 'Este é o maior que cabe na tela.' : 'Este é o maior que cabe. Toque em Girar para ficar maior.') : 'Este é o menor tamanho.'); return; }
+  codCheiaAtual.mod = novo; gravarCodTela(Object.assign(lerCodTela(), {mod: novo}));
+  desenharCodCheia();
+}
+function desenharCodCheia(){
+  const box = document.getElementById('codCheia'); if(!box || !codCheiaAtual) return;
+  const st = codCheiaAtual, v = String(st.valor).replace(/\D/g, '');
+  const podeEan = !!eanDe(v);
+  const tipos = [['', 'Automático'], ['c39', 'Code 39'], ['c128', 'Code 128'], ['ean', 'EAN']];
+  if(st.tipo === 'ean' && !podeEan) st.tipo = '';
+  box.querySelector('#codCheiaTipos').innerHTML = tipos.map(([k, r])=>`<button type="button" class="cod-tipo-bt ${st.tipo === k ? 'on' : ''}" data-tipo="${k}" ${k === 'ean' && !podeEan ? 'disabled title="Este número não é um EAN válido"' : ''}>${r}</button>`).join('');
+  box.querySelector('[data-girar]').textContent = st.girado ? '↻ Normal' : '↻ Girar (maior)';
+  const cb = codBarras(st.valor, st.interno, st.tipo); if(!cb) return;
+  const area = box.querySelector('#codCheiaArea'), d = dprTela();
+  area.innerHTML = '';
+  const lim = limitesCodCheia(cb);
+  const mod = Math.max(lim.min, Math.min(lim.max, st.mod || lim.padrao));
+  const limitado = st.mod && st.mod > lim.max;
+  // barras altas para mirar com a linha do laser (sem encostar nos botões)
+  const alt = st.girado ? Math.floor(Math.min(area.clientWidth * 0.86, 520) * d) : Math.floor(Math.min(area.clientHeight * 0.92, 360) * d);
+  area.innerHTML = imgBarras(cb, mod, alt, st.girado);
+  alinharBarras(area);
+  box.querySelector('#codCheiaNum').textContent = cb.texto + ' · ' + cb.tipo;
+  box.querySelector('#codCheiaTam').innerHTML = `barra <b>${mod} px</b> <small>(≈ ${(mod * mmPorPx()).toFixed(2).replace('.', ',')} mm)${limitado ? ' · limitado à tela' : ''}</small>`;
 }
 document.addEventListener('click', e=>{
   const b = e.target.closest('[data-barra]'); if(!b) return;
@@ -8543,6 +8659,7 @@ function abrirItemCod(cli, cod){
         <button class="btn small secondary" type="button" data-add-lista>+ Adicionar</button></div>` : ''}
     </div>`, 'Fechar', ()=>{});
   const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  alinharBarras(box); box.addEventListener('scroll', ()=>alinharBarras(box), {passive:true});
   const bt = box.querySelector('[data-add-lista]');
   if(bt) bt.onclick = ()=>{
     let id = box.querySelector('#codAddLista').value;
@@ -8615,27 +8732,33 @@ function addCodigosLista(cli, id){
 }
 function imprimirListaCod(cli, id){
   const l = listasDoCli(cli).find(x=>x.id === id); if(!l) return;
+  const mm = String(codUi.folhaMod || '0.5');
   const box = abrirFolha(`🖨 ${esc(l.nome)}`, `<label>Código de barras na folha</label>
     <select id="codFolhaTipo" class="full"><option value="ean" ${codUi.folha !== 'int' ? 'selected' : ''}>EAN (sem EAN: código interno)</option><option value="int" ${codUi.folha === 'int' ? 'selected' : ''}>Código interno</option></select>
-    <p class="hint">Abre a tela de impressão: escolha a impressora ou “Salvar como PDF”.</p>`, 'Imprimir', b=>{
-      codUi.folha = b.querySelector('#codFolhaTipo').value; salvarCodUi();
-      setTimeout(()=>gerarFolhaCod(cli, l, codUi.folha), 50); return '';
+    <label style="margin-top:8px">Largura da barra fina</label>
+    <select id="codFolhaMod" class="full">${[['0.33', '0,33 mm (menor)'], ['0.5', '0,5 mm (padrão)'], ['0.66', '0,66 mm (maior)']].map(([v, r])=>`<option value="${v}" ${mm === v ? 'selected' : ''}>${r}</option>`).join('')}</select>
+    <p class="hint">Abre a tela de impressão: escolha a impressora ou “Salvar como PDF”. Imprima em 100% (sem “ajustar à página”).</p>`, 'Imprimir', b=>{
+      codUi.folha = b.querySelector('#codFolhaTipo').value; codUi.folhaMod = b.querySelector('#codFolhaMod').value; salvarCodUi();
+      setTimeout(()=>gerarFolhaCod(cli, l, codUi.folha, +codUi.folhaMod), 50); return '';
     });
   return box;
 }
-function gerarFolhaCod(cli, l, tipo){
+function gerarFolhaCod(cli, l, tipo, modMm){
   fecharFolhaCod();
-  const cel = l.itens.map(x=>{
+  const mod = [0.33, 0.5, 0.66].includes(modMm) ? modMm : 0.5;
+  const itens = l.itens.map(x=>{
     const it = itemCod(cli, x[0]) || {c:String(x[0]), d:x[1], e:[]};
     const ean = String(x[2] || '') || it.e[0] || '';
     const usaEan = tipo !== 'int' && ean;
-    const cb = codBarras(usaEan ? ean : it.c, !usaEan); if(!cb) return '';
-    const total = cb.bits.length + cb.quiet * 2, mod = Math.min(0.5, 78 / total);
-    return `<div class="fi-cel">${svgBarras(cb, +mod.toFixed(3), 15, 'mm')}<div class="fi-num">${esc(cb.texto)}</div>
-      <div class="fi-desc">${esc(it.d || x[1] || '')}</div><div class="fi-sub">Int. ${esc(it.c)}${usaEan ? '' : (ean ? ' · EAN ' + esc(ean) : '')}</div></div>`;
-  }).join('');
+    const cb = codBarras(usaEan ? ean : it.c, !usaEan);
+    return cb ? {x, it, ean, usaEan, cb, larg: (cb.bits.length + QUIET_FOLHA * 2) * mod} : null;
+  }).filter(Boolean);
+  // 2 colunas quando todos cabem em ~88 mm; senão 1 coluna (código nunca é encolhido)
+  const umaColuna = itens.some(o=>o.larg > 88);
+  const cel = itens.map(o=>`<div class="fi-cel">${svgBarras(o.cb, mod, mod >= 0.6 ? 20 : 15, 'mm', QUIET_FOLHA)}<div class="fi-num">${esc(o.cb.texto)}</div>
+      <div class="fi-desc">${esc(o.it.d || o.x[1] || '')}</div><div class="fi-sub">Int. ${esc(o.it.c)}${o.usaEan ? '' : (o.ean ? ' · EAN ' + esc(o.ean) : '')} · ${o.cb.tipo}</div></div>`).join('');
   const div = document.createElement('div'); div.id = 'folhaImpressao';
-  div.innerHTML = `<div class="fi-tit">${esc(l.nome)} — ${esc(rotuloCli(cli))}</div><div class="fi-sub2">Gerado pela Central de Inventário em ${hojeBR()} · ${l.itens.length} itens</div><div class="fi-grade">${cel}</div>`;
+  div.innerHTML = `<div class="fi-tit">${esc(l.nome)} — ${esc(rotuloCli(cli))}</div><div class="fi-sub2">Gerado pela Central de Inventário em ${hojeBR()} · ${l.itens.length} itens · barra fina ${String(mod).replace('.', ',')} mm</div><div class="fi-grade ${umaColuna ? 'uma' : ''}">${cel}</div>`;
   document.body.appendChild(div); document.body.classList.add('imprimindo');
   // a folha fica escondida na tela e só sai quando trocar de aba (no Android a impressão abre depois)
   setTimeout(()=>{ try{ window.print(); }catch(e){ fecharFolhaCod(); toast('Este aparelho não abriu a impressão.'); } }, 120);
@@ -8685,7 +8808,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 00:30</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 01:57</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
