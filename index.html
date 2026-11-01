@@ -9004,11 +9004,11 @@ async function abrirCameraCod(){
   const box = document.createElement('div'); box.id = 'codCam';
   box.innerHTML = `<video id="camVideo" playsinline muted autoplay></video>
     <div class="cam-quadro" id="camQuadro"><div class="cam-linha"></div></div>
-    <div class="cam-topo">Aponte para o <b>código de barras</b>: ele lê sozinho.<br>Número <b>escrito à mão</b> ou borrado: coloque dentro do quadro e toque em <b>Ler número</b>.</div>
+    <div class="cam-topo">Aponte para o <b>código de barras</b>: ele lê sozinho.<br>Número ou nome <b>escrito à mão</b>, ou borrado: coloque dentro do quadro e toque em <b>Ler</b>.</div>
     <div class="cam-status" id="camStatus">Abrindo a câmera…</div>
     <div class="cam-acoes">
       <button class="btn secondary" type="button" data-torch hidden>🔦 Lanterna</button>
-      <button class="btn" type="button" data-ler>🔢 Ler número</button>
+      <button class="btn" type="button" data-ler>🔢 Ler escrito</button>
       <button class="btn secondary" type="button" data-fechar>Fechar</button>
     </div>
     <div class="cam-sug" id="camSug" hidden></div>`;
@@ -9082,28 +9082,42 @@ function recorteDoQuadro(){
   c.drawImage(v, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
   return cv;
 }
-// cinza com contraste esticado + versão preto e branco (Otsu); se o fundo for escuro, inverte
+// cinza com contraste esticado + preto e branco por LIMIAR LOCAL (Bradley): cada ponto é comparado com a vizinhança,
+// então borda do papel, dedo, sombra ou fundo cinza dentro do quadro não apagam a escrita. + versão com traço engrossado.
 function preparaParaLer(cv){
-  const w = cv.width, h = cv.height, c = cv.getContext('2d'), img = c.getImageData(0, 0, w, h), d = img.data;
-  const g = new Uint8ClampedArray(w * h); let mn = 255, mx = 0;
-  for(let i = 0, j = 0; i < d.length; i += 4, j++){ const y = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000; g[j] = y; }
-  const hist = new Array(256).fill(0); g.forEach(v=>hist[v]++);
-  let acc = 0; for(let k = 0; k < 256; k++){ acc += hist[k]; if(acc > g.length * 0.02){ mn = k; break; } }
+  const w = cv.width, h = cv.height, c = cv.getContext('2d'), d = c.getImageData(0, 0, w, h).data;
+  const g = new Float32Array(w * h);
+  for(let i = 0, j = 0; i < d.length; i += 4, j++) g[j] = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
+  // contraste esticado (2% mais escuros / mais claros)
+  const hist = new Array(256).fill(0); for(let j = 0; j < g.length; j++) hist[g[j] | 0]++;
+  let mn = 0, mx = 255, acc = 0;
+  for(let k = 0; k < 256; k++){ acc += hist[k]; if(acc > g.length * 0.02){ mn = k; break; } }
   acc = 0; for(let k = 255; k >= 0; k--){ acc += hist[k]; if(acc > g.length * 0.02){ mx = k; break; } }
   const amp = Math.max(1, mx - mn);
   for(let j = 0; j < g.length; j++) g[j] = Math.max(0, Math.min(255, (g[j] - mn) * 255 / amp));
-  // Otsu
-  const h2 = new Array(256).fill(0); g.forEach(v=>h2[v]++);
-  let soma = 0; for(let k = 0; k < 256; k++) soma += k * h2[k];
-  let sB = 0, wB = 0, melhor = 0, limiar = 128;
-  for(let k = 0; k < 256; k++){ wB += h2[k]; if(!wB) continue; const wF = g.length - wB; if(!wF) break; sB += k * h2[k];
-    const mB = sB / wB, mF = (soma - sB) / wF, entre = wB * wF * (mB - mF) * (mB - mF); if(entre > melhor){ melhor = entre; limiar = k; } }
-  let escuros = 0; for(let j = 0; j < g.length; j++) if(g[j] < limiar) escuros++;
-  const inverter = escuros > g.length / 2;   // fundo escuro, número claro
-  const mk = bin=>{ const o = document.createElement('canvas'); o.width = w; o.height = h; const oc = o.getContext('2d'), od = oc.createImageData(w, h);
-    for(let j = 0, i = 0; j < g.length; j++, i += 4){ let v = bin ? (g[j] < limiar ? 0 : 255) : g[j]; if(inverter) v = 255 - v; od.data[i] = od.data[i + 1] = od.data[i + 2] = v; od.data[i + 3] = 255; }
+  // imagem integral para a média da vizinhança
+  const S = new Float64Array((w + 1) * (h + 1));
+  for(let y = 0; y < h; y++){ let lin = 0; for(let x = 0; x < w; x++){ lin += g[y * w + x]; S[(y + 1) * (w + 1) + x + 1] = S[y * (w + 1) + x + 1] + lin; } }
+  const r = Math.max(8, Math.round(Math.min(w, h) / 10));
+  const bin = new Uint8Array(w * h); let pretos = 0;
+  for(let y = 0; y < h; y++){
+    const y0 = Math.max(0, y - r), y1 = Math.min(h - 1, y + r);
+    for(let x = 0; x < w; x++){
+      const x0 = Math.max(0, x - r), x1 = Math.min(w - 1, x + r), area = (x1 - x0 + 1) * (y1 - y0 + 1);
+      const soma = S[(y1 + 1) * (w + 1) + x1 + 1] - S[y0 * (w + 1) + x1 + 1] - S[(y1 + 1) * (w + 1) + x0] + S[y0 * (w + 1) + x0];
+      const escuro = g[y * w + x] * area < soma * 0.82 && g[y * w + x] < 200;
+      if(escuro){ bin[y * w + x] = 1; pretos++; }
+    }
+  }
+  const inverter = pretos > bin.length * 0.5;   // fundo escuro, escrita clara
+  const desenha = f=>{ const o = document.createElement('canvas'); o.width = w; o.height = h; const oc = o.getContext('2d'), od = oc.createImageData(w, h);
+    for(let j = 0, i = 0; j < g.length; j++, i += 4){ let v = f(j); if(inverter) v = 255 - v; od.data[i] = od.data[i + 1] = od.data[i + 2] = v; od.data[i + 3] = 255; }
     oc.putImageData(od, 0, 0); return o; };
-  return [mk(true), mk(false)];
+  // traço de caneta fina: engrossa o preto para o leitor não perder o "1"
+  const rr = Math.max(1, Math.round(Math.min(w, h) / 160)), grosso = new Uint8Array(w * h);
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){ if(!bin[y * w + x]) continue;
+    for(let dy = -rr; dy <= rr; dy++){ const yy = y + dy; if(yy < 0 || yy >= h) continue; for(let dx = -rr; dx <= rr; dx++){ const xx = x + dx; if(xx >= 0 && xx < w) grosso[yy * w + xx] = 1; } } }
+  return [desenha(j=>bin[j] ? 0 : 255), desenha(j=>g[j]), desenha(j=>grosso[j] ? 0 : 255)];
 }
 // pedaços de número no texto lido (junta grupos separados por espaço: "7 896006 290070")
 function candidatosDoTexto(texto, comLetras){
@@ -9112,12 +9126,18 @@ function candidatosDoTexto(texto, comLetras){
   t.split(/\n+/).forEach(linha=>{
     const re = comLetras ? /[0-9A-Z]+/g : /\d+/g;
     const partes = linha.match(re) || [];
-    partes.forEach(p=>{ if(p.length >= 3 && /\d/.test(p)) out.add(p); });
+    partes.forEach(p=>{ if(p.length >= 4 && /\d/.test(p)) out.add(p); });
     const junto = partes.join(''); if(junto.length >= 4 && /\d/.test(junto)) out.add(junto);
   });
   return [...out].sort((a, b)=>b.length - a.length).slice(0, 8);
 }
 // diferença em dígitos (0, 1 ou 2; >2 = longe). Mesmo tamanho: troca; tamanho ±1: sobra/falta + até 1 troca
+// palavras lidas (ex.: "APRACUR" escrito à mão) → produtos pelo nome
+function palavrasDoTexto(texto){
+  const out = new Set();
+  String(texto || '').toUpperCase().split(/\n+/).forEach(l=>{ const ws = (l.match(/[A-Z]{3,}/g) || []).filter(w=>!/^[IL1]+$/.test(w)); const junto = ws.join(' '); if(junto.replace(/ /g, '').length >= 5) out.add(junto); ws.forEach(w=>{ if(w.length >= 4) out.add(w); }); });
+  return [...out].slice(0, 4);
+}
 function distDigitos(a, b){
   if(a === b) return 0;
   const la = a.length, lb = b.length;
@@ -9128,7 +9148,7 @@ function distDigitos(a, b){
   return 3;
 }
 // confere o lido com o arquivo do cliente: igual primeiro, depois 1 e 2 dígitos de diferença (EAN com dígito verificador certo vale mais)
-function sugestoesDaLeitura(cli, cands){
+function sugestoesDaLeitura(cli, cands, palavras){
   const base = codBases[cli] || codItensDasListas(cli), achados = new Map();
   const por = (it, dist, lido)=>{ if(!it) return; const k = it.c; const at = achados.get(k); if(!at || dist < at.dist) achados.set(k, {it, dist, lido}); };
   for(const c of cands){
@@ -9137,15 +9157,21 @@ function sugestoesDaLeitura(cli, cands){
   }
   if(![...achados.values()].some(x=>x.dist === 0)){
     for(const c of cands){
-      if(c.length < 5) continue;
+      if(c.length < 4) continue;
+      const curto = c.length < 5;   // 4 dígitos: só 1 de diferença
       const s = /^\d+$/.test(c) ? c.replace(/^0+/, '') || c : c;
       const okEan = v=>v.length === 13 && /^\d+$/.test(v) && eanOk(v);
-      base.porEan.forEach((it, e)=>{ const d = distDigitos(s, e); if(d <= 2) por(it, d - (okEan(e) && !okEan(s) ? 0.3 : 0), c); });
-      base.porCod.forEach((it, k)=>{ if(k.length < 4) return; const d = distDigitos(s, k); if(d <= 2) por(it, d, c); });
+      base.porEan.forEach((it, e)=>{ const d = distDigitos(s, e); if(d <= (curto ? 1 : 2)) por(it, d - (okEan(e) && !okEan(s) ? 0.3 : 0), c); });
+      base.porCod.forEach((it, k)=>{ if(k.length < 4) return; const d = distDigitos(s, k); if(d <= (curto ? 1 : 2)) por(it, d, c); });
       if(base.soCod) for(const k of base.soCod){ const kk = k.replace(/ /g, ''); const d = distDigitos(c, kk); if(d <= 2) por(itemSoCod(base, kk), d, c); }
       if(achados.size > 60) break;
     }
     // pedaço do código (o começo ou o fim ficou fora do quadro ou apagado): "89600629007" acha 7896006290070
+    // começo do código (o fim apagou/sumiu): "6466" acha 64661
+    for(const c of cands){
+      if(c.length < 4 || c.length >= 7) continue;
+      base.porCod.forEach((it, k)=>{ if(k.length === c.length + 1 && k.startsWith(c)) por(it, 0.9, c); });
+    }
     for(const c of cands){
       if(c.length < 7) continue;
       const s = /^\d+$/.test(c) ? c.replace(/^0+/, '') : c;
@@ -9154,9 +9180,11 @@ function sugestoesDaLeitura(cli, cands){
       if(base.soCod) for(const k of base.soCod){ const kk = k.replace(/ /g, ''); if(kk.length > c.length && kk.includes(c)) por(itemSoCod(base, kk), 0.9, c); }
     }
   }
+  // nome escrito à mão: pesquisa pela descrição (com parecidos pelo som)
+  (palavras || []).forEach(w=>{ const r = codBuscar(base, w, cli); r.lista.slice(0, 6).forEach(it=>por(it, r.comoSom ? 1.2 : 0.5, w)); });
   // empate: itens das listas (avulso, protetor…) primeiro — são os que mais aparecem escritos à mão
   const naLista = new Set(); listasDoCli(cli).forEach(l=>l.itens.forEach(x=>naLista.add(String(x[0]))));
-  return [...achados.values()].map(x=>Object.assign(x, {ord: x.dist - (naLista.has(x.it.c) ? 0.5 : 0)})).sort((a, b)=>a.ord - b.ord).slice(0, 6);
+  return [...achados.values()].map(x=>Object.assign(x, {ord: x.dist - (naLista.has(x.it.c) ? 0.5 : 0)})).sort((a, b)=>(a.ord - b.ord) || (String(b.lido).length - String(a.lido).length)).slice(0, 6);
 }
 async function lerNumeroCam(){
   if(camLendo) return;
@@ -9169,35 +9197,46 @@ async function lerNumeroCam(){
       camLeitorNum = await leitorOCR((s2, p)=>{ if(st && /load|download/i.test(s2)) st.textContent = 'Baixando o leitor de números (só na 1ª vez)…'; });
     }
     const roupa = CLIENTES_ROUPA.has(codUi.cli) || !!(codBases[codUi.cli] && codBases[codUi.cli].soCod && codBases[codUi.cli].soCod.length);
+    const imgs = preparaParaLer(cv);
+    // 1) só números (e letras, em roupa): cada versão da imagem
     await camLeitorNum.setParameters({tessedit_char_whitelist: roupa ? '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ ' : '0123456789 ', tessedit_pageseg_mode: '7'});
-    let textos = [];
-    for(const img of preparaParaLer(cv)){ const r = await camLeitorNum.recognize(img); textos.push(r && r.data ? r.data.text : ''); }
-    await camLeitorNum.setParameters({tessedit_pageseg_mode: '6'});
-    const r6 = await camLeitorNum.recognize(preparaParaLer(cv)[0]); textos.push(r6 && r6.data ? r6.data.text : '');
-    const cands = [...new Set(textos.flatMap(t=>candidatosDoTexto(t, roupa)))];
-    const lista = cands.length ? sugestoesDaLeitura(codUi.cli, cands) : [];
-    mostrarSugestoesCam(cands, lista);
+    const textos = [];
+    for(const img of imgs){ const r = await camLeitorNum.recognize(img); textos.push(r && r.data ? r.data.text : ''); }
+    // número curto escrito à mão: modo "palavra única" no traço engrossado pega o último dígito fino ("6466 1")
+    await camLeitorNum.setParameters({tessedit_pageseg_mode: '8'});
+    { const r = await camLeitorNum.recognize(imgs[2]); textos.push(r && r.data ? r.data.text : ''); }
+    // 2) letras e números: nome do produto escrito à mão ("APRACUR")
+    await camLeitorNum.setParameters({tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ', tessedit_pageseg_mode: '6'});
+    const textosL = [];
+    for(const img of [imgs[0], imgs[2]]){ const r = await camLeitorNum.recognize(img); textosL.push(r && r.data ? r.data.text : ''); }
+    window.__ultimaLeitura = {textos, textosL};   // para conferência
+    const cands = [...new Set(textos.concat(textosL.map(t=>t.replace(/[A-Z]{3,}/g, ' '))).flatMap(t=>candidatosDoTexto(t, roupa)))];
+    const palavras = [...new Set(textosL.flatMap(t=>palavrasDoTexto(t)))];
+    const lista = (cands.length || palavras.length) ? sugestoesDaLeitura(codUi.cli, cands, palavras) : [];
+    mostrarSugestoesCam(cands, lista, palavras);
   }catch(e){
     if(st) st.textContent = 'Não consegui ler agora (' + (e.message || e) + '). Tente de novo com mais luz.';
   }finally{ camLendo = false; }
 }
-function mostrarSugestoesCam(cands, lista){
+function mostrarSugestoesCam(cands, lista, palavras){
   const sug = document.getElementById('camSug'), st = document.getElementById('camStatus'); if(!sug) return;
   if(st) st.textContent = '';
-  const rot = d=>d <= 0 ? '<span class="tag-cod" style="color:var(--ok);border-color:var(--ok)">igual</span>' : d < 0.75 ? '<span class="tag-cod">1 dígito diferente</span>' : d < 1.05 ? '<span class="tag-cod">parte do código</span>' : d < 1.5 ? '<span class="tag-cod">1 dígito diferente</span>' : '<span class="tag-cod">2 dígitos diferentes</span>';
+  const rot = (d, x)=>x && /[A-Z]{3}/.test(x.lido || '') ? '<span class="tag-cod">pelo nome escrito</span>' : d <= 0 ? '<span class="tag-cod" style="color:var(--ok);border-color:var(--ok)">igual</span>' : d < 0.75 ? '<span class="tag-cod">1 dígito diferente</span>' : d < 1.05 ? '<span class="tag-cod">parte do código</span>' : d < 1.5 ? '<span class="tag-cod">1 dígito diferente</span>' : '<span class="tag-cod">2 dígitos diferentes</span>';
   sug.hidden = false;
-  sug.innerHTML = `<div class="cam-sug-tit">${cands.length ? 'Li: <b>' + esc(cands[0]) + '</b>' : 'Não consegui ler um número.'}</div>
+  // "Li:" mostra primeiro o que bateu com o arquivo
+  const lidos = [...new Set((lista[0] ? [lista[0].lido] : []).concat(cands.slice(0, 1), (palavras || []).slice(0, 1)))].slice(0, 2);
+  sug.innerHTML = `<div class="cam-sug-tit">${lidos.length ? 'Li: <b>' + lidos.map(esc).join('</b> · <b>') + '</b>' : 'Não consegui ler.'}</div>
     ${lista.length ? lista.map((x, i)=>`<div class="cod-row" role="button" tabindex="0" data-i="${i}"><div class="cod-desc">${esc(x.it.d || (x.it.soCod ? '✅ Código existe no arquivo' : '(sem descrição)'))}</div>
-      <div class="cod-sub">${x.it.f.includes('B') ? 'Código' : 'Int.'} <b>${esc(x.it.c)}</b>${x.it.e && x.it.e[0] ? ' · EAN ' + esc(x.it.e[0]) : ''} ${rot(x.dist)}</div></div>`).join('')
+      <div class="cod-sub">${x.it.f.includes('B') ? 'Código' : 'Int.'} <b>${esc(x.it.c)}</b>${x.it.e && x.it.e[0] ? ' · EAN ' + esc(x.it.e[0]) : ''} ${rot(x.dist, x)}</div></div>`).join('')
       : `<p class="hint">${cands.length ? 'Nenhum código parecido no arquivo de ' + esc(rotuloCli(codUi.cli)) + '.' : ''} Dicas: chegue mais perto, deixe o número dentro do quadro, com luz (🔦), e números grandes e separados.</p>`}
-    <div class="acoes" style="margin-top:8px"><button class="btn secondary" type="button" data-denovo>↻ Ler de novo</button>${cands.length ? `<button class="btn secondary" type="button" data-usar>Pesquisar “${esc(cands[0])}”</button>` : ''}</div>`;
+    <div class="acoes" style="margin-top:8px"><button class="btn secondary" type="button" data-denovo>↻ Ler de novo</button>${lidos.length ? `<button class="btn secondary" type="button" data-usar>Pesquisar “${esc(lidos[0])}”</button>` : ''}</div>`;
   sug.querySelectorAll('[data-i]').forEach(el=>el.onclick = ()=>{
     const x = lista[+el.dataset.i]; fecharCameraCod();
     const b = document.getElementById('buscaCod'); if(b){ b.value = x.it.c; mostrarLimparCod(); renderResultadosCod(); }
     abrirItemCod(codUi.cli, x.it.c);
   });
   const dn = sug.querySelector('[data-denovo]'); if(dn) dn.onclick = ()=>{ sug.hidden = true; lerNumeroCam(); };
-  const us = sug.querySelector('[data-usar]'); if(us) us.onclick = ()=>{ fecharCameraCod(); const b = document.getElementById('buscaCod'); if(b){ b.value = cands[0]; mostrarLimparCod(); renderResultadosCod(); } };
+  const us = sug.querySelector('[data-usar]'); if(us) us.onclick = ()=>{ fecharCameraCod(); const b = document.getElementById('buscaCod'); if(b){ b.value = lidos[0]; mostrarLimparCod(); renderResultadosCod(); } };
 }
 
 function renderResultadosCod(){
@@ -9404,7 +9443,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 07:55</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 09:00</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
