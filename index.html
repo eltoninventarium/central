@@ -1355,6 +1355,18 @@ function cadastroPessoa(nome){
     const nomes = new Set(fortes.map(x=>normalizarNome(x.p.nome)));
     if(nomes.size === 1) achado = ord(fortes)[0];
   }
+  // 1 letra de diferença num sobrenome do meio ("CORREIA" × "CORREA"), com primeiro e último nome iguais
+  if(!achado){
+    const t = k.split(' ');
+    const umaLetraNome = (a, b)=>{ if(a === b) return true; if(Math.abs(a.length - b.length) > 1) return false; let i = 0, j = 0, d = 0;
+      while(i < a.length && j < b.length){ if(a[i] === b[j]){ i++; j++; continue; } if(++d > 1) return false; if(a.length > b.length) i++; else if(b.length > a.length) j++; else { i++; j++; } }
+      return d + (a.length - i) + (b.length - j) <= 1; };
+    const parecidos = t.length >= 3 ? todos.filter(x=>{ const u = normalizarNome(x.p.nome).split(' ');
+      if(u.length !== t.length || u[0] !== t[0] || u[u.length - 1] !== t[t.length - 1]) return false;
+      let dif = 0; for(let i = 1; i < u.length - 1; i++) if(u[i] !== t[i]){ if(!umaLetraNome(u[i], t[i]) || u[i].length < 4) return false; dif++; }
+      return dif <= 1; }) : [];
+    if(new Set(parecidos.map(x=>normalizarNome(x.p.nome))).size === 1) achado = ord(parecidos)[0];
+  }
   cadIdx.set(k, achado);
   return achado;
 }
@@ -3554,7 +3566,7 @@ function renderPresenca(){
           ${p.instrutor ? '' : `<button class="pill coordpill ${p.estagiario?'on':''}" onclick="toggleEstagiario(${i})">Estag.</button>`}` : ''}
         ${statusVisiveis().map(([st,d])=>`<button class="pill ${st} ${p.presenca===st?'on':''}" onclick="marcarPresenca(${i},'${st}')">${d.rotulo}</button>`).join('')}
         ${editandoLista ? `<button class="pill transferir" onclick="abrirTransferir(${i})">Transferir</button>` : ''}`;
-    html += `<div class="pessoa-row ${p.coordenador?'coord':''}" id="pres-${i}"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" onclick="abrirFichaRapida(${i})">${esc(p.nome)} <small class="hint">ⓘ</small></span>${seloDev(p.nome)}${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${marcaTransf}${marcaRec}${hist}${histAtraso}${marcaAtraso}</span>
+    html += `<div class="pessoa-row ${p.coordenador?'coord':''}" id="pres-${i}"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" onclick="abrirFichaRapida(${i})">${esc(p.nome)} <small class="hint">ⓘ</small></span>${seloDev(p.nome)}${p.instrutor && !p.coordenador ? '<span class="tag-instr">INSTRUTOR</span>' : ''}${p.estagiario && !p.coordenador && !p.instrutor ? '<span class="tag-estag">ESTAGIÁRIO</span>' : ''}${ehFree(p) ? '<span class="tag-free">FREE</span>' : ''}${p.coordenador ? '' : `<br><small class="hint cat-nivel">${esc(catPresenca(p))}</small>`}${marcaTransf}${marcaRec}${hist}${histAtraso}${marcaAtraso}</span>
       <span class="pill-btns">
         ${botoes}
         ${editandoLista ? `<button class="pill remover" onclick="removerPessoa(${i})" aria-label="Remover">×</button>` : ''}
@@ -3571,6 +3583,7 @@ function renderPresenca(){
       <button class="btn" onclick="salvarNoHistorico()">Salvar no histórico</button>
       <button class="btn secondary" onclick="exportarPresencaPNG()">Imagem (PNG)</button>
       <button class="btn secondary" onclick="exportarPresencaExcel()">Excel</button>
+      <button class="btn secondary" onclick="abrirCategoriasPresenca()">📋 Categorias</button>
       <button class="btn secondary" onclick="exportarRelatorioFinalPNG()">Relatório final (imagem)</button>
       <button class="btn secondary" onclick="alternarEdicaoLista()">${editandoLista?'Concluir edição':'Editar lista'}</button>
       <button class="btn danger" onclick="limparPresenca()">Limpar lista</button>
@@ -3610,6 +3623,62 @@ async function exportarPresencaExcel(){
     },
     congelar:true });
   await salvarExcel(wb, `Presenca - ${nomeBaseLoja()}.xlsx`);
+}
+
+/* ---------- CATEGORIAS DA EQUIPE DA LOJA (01/11/2026) ----------
+   Conferente IV/III/II/I, Freelance ou Estagiário de cada pessoa da Presença (vem do cadastro da equipe; quem não está no
+   cadastro e veio marcado FREE na escala conta como Freelance). Compartilha em imagem ou Excel. */
+const ORDEM_CAT = ['Conferente IV', 'Conferente III', 'Conferente II', 'Conferente I', 'CLT (sem nível)', 'Freelance', 'Estagiário', 'Instrutor', 'Fora do cadastro'];
+const COR_CAT = {'Conferente IV':['#E2F5E6','#1E6B33'], 'Conferente III':['#DDEBF7','#1F4E79'], 'Conferente II':['#FFF2CC','#7F6000'], 'Conferente I':['#FCE4D6','#843C0C'],
+  'CLT (sem nível)':['#EDEDED','#404040'], 'Freelance':['#E4DFEC','#4a2a96'], 'Estagiário':['#FFF9DB','#7F6000'], 'Instrutor':['#E4DFEC','#4a2a96'], 'Fora do cadastro':['#F2F2F2','#7F7F7F']};
+function catPresenca(p){
+  if(p.instrutor) return 'Instrutor';
+  if(p.estagiario) return 'Estagiário';
+  const c = categoriaDe(p.nome);
+  if(c.rot === 'CLT') return 'CLT (sem nível)';
+  if(c.rot) return c.rot === 'RJ' ? 'Freelance' : c.rot;
+  return ehFree(p) ? 'Freelance' : 'Fora do cadastro';
+}
+function equipeCategorias(){
+  const lista = loja.pessoas.filter(p=>!p.coordenador).map(p=>({nome: p.nome, cat: catPresenca(p), st: STATUS[p.presenca] ? STATUS[p.presenca].texto : 'PENDENTE'}));
+  lista.sort((a, b)=>(ORDEM_CAT.indexOf(a.cat) - ORDEM_CAT.indexOf(b.cat)) || a.nome.localeCompare(b.nome));
+  const cont = {}; lista.forEach(x=>{ cont[x.cat] = (cont[x.cat] || 0) + 1; });
+  return {lista, cont, coords: loja.pessoas.filter(p=>p.coordenador).map(p=>p.nome)};
+}
+function abrirCategoriasPresenca(){
+  if(!loja.pessoas.length){ toast('Carregue a equipe da loja primeiro.'); return; }
+  const e = equipeCategorias();
+  const chips = ORDEM_CAT.filter(k=>e.cont[k]).map(k=>`<span class="tag-cod" style="background:${COR_CAT[k][0]};color:${COR_CAT[k][1]};border-color:${COR_CAT[k][1]}">${esc(k)}: <b>${e.cont[k]}</b></span>`).join(' ');
+  const box = abrirFolha(`📋 Categorias — ${esc(loja.nome || 'Equipe')}`, `<div style="margin-bottom:8px">${chips}</div>
+    <div style="max-height:52vh;overflow:auto">${e.lista.map(x=>`<div class="setor-row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>${esc(x.nome)}</span>
+      <span class="tag-cod" style="background:${COR_CAT[x.cat][0]};color:${COR_CAT[x.cat][1]};border-color:${COR_CAT[x.cat][1]};white-space:nowrap">${esc(x.cat)}</span></div>`).join('')}</div>
+    ${e.cont['Fora do cadastro'] ? '<p class="hint">“Fora do cadastro”: não está no cadastro da equipe (Viagem › Equipe). Cadastre para aparecer a categoria.</p>' : ''}`, 'Imagem (PNG)', ()=>{ exportarCategoriasPNG(); return ''; });
+  const canc = box.querySelector('[data-cancelar]');
+  if(canc){ const bx = document.createElement('button'); bx.className = 'btn secondary'; bx.textContent = 'Excel'; bx.onclick = ()=>exportarCategoriasExcel(); canc.parentNode.insertBefore(bx, canc); canc.textContent = 'Fechar'; }
+}
+function exportarCategoriasPNG(){
+  const e = equipeCategorias();
+  let h = `<div style="font-size:20px;font-weight:700;margin-bottom:2px">${esc(loja.nome || 'Equipe')}</div>
+    <div style="color:#62597a;font-size:13px;margin-bottom:10px">Categorias da equipe${loja.data ? ' · ' + esc(loja.data) : ''} · ${e.lista.length} pessoas${e.coords.length ? ' · coord.: ' + e.coords.map(n=>esc(nomeProprio ? nomeProprio(n) : n)).join(', ') : ''}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${ORDEM_CAT.filter(k=>e.cont[k]).map(k=>`<div style="background:${COR_CAT[k][0]};color:${COR_CAT[k][1]};border:1px solid ${COR_CAT[k][1]};border-radius:8px;padding:5px 9px;font-size:13px;font-weight:700">${esc(k)}: ${e.cont[k]}</div>`).join('')}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">`;
+  e.lista.forEach((x, i)=>{ const [f, t] = COR_CAT[x.cat];
+    h += `<tr><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;color:#857c9c;width:28px">${i + 1}</td><td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;color:#1c1530">${esc(x.nome)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #e6e1f0;text-align:right"><span style="background:${f};color:${t};border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap">${esc(x.cat)}</span></td></tr>`; });
+  h += '</table>';
+  gerarImagem(h, `Categorias - ${nomeBaseLoja()}.png`);
+}
+async function exportarCategoriasExcel(){
+  if(!excelDisponivel()) return;
+  const e = equipeCategorias(), wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Categorias');
+  const r = cabecalhoPlanilha(ws, (loja.nome || 'Equipe') + ' — categorias da equipe', [loja.data ? 'Data: ' + loja.data : '', e.coords.length ? 'Coordenador(es): ' + e.coords.join(', ') : '']);
+  const resumo = ORDEM_CAT.filter(k=>e.cont[k]);
+  const r2 = tabelaExcel(ws, r, resumo.map(k=>k.toUpperCase()).concat(['TOTAL']), [resumo.map(k=>e.cont[k]).concat([e.lista.length])], {alinhar: resumo.map(()=> 'center').concat(['center'])});
+  tabelaExcel(ws, r2, ['Nº', 'NOME', 'CATEGORIA', 'PRESENÇA'], e.lista.map((x, i)=>[i + 1, x.nome, x.cat, x.st]), {
+    larguras: [6, larguraPara(e.lista.map(x=>x.nome), 30, 48), 18, 14], alinhar: ['center', 'left', 'left', 'center'],
+    estilo: (i, j, lin)=>j === 2 ? {fundo: 'FF' + COR_CAT[lin[2]][0].slice(1), fonte: {bold: true, color: {argb: 'FF' + COR_CAT[lin[2]][1].slice(1)}}} : null });
+  ws.getColumn(1).width = Math.max(ws.getColumn(1).width || 0, 16);
+  await salvarExcel(wb, `Categorias - ${nomeBaseLoja()}.xlsx`);
 }
 
 function exportarPresencaPNG(){
@@ -9636,7 +9705,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 09:33</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 09:39</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
