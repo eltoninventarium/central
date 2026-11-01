@@ -434,6 +434,17 @@ body.modo-colega .so-criador{display:none !important;}
 .cod-voz-linha{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 2px;}
 .cod-voz-linha .chip-cli{font-size:.76rem;padding:5px 10px;}
 .cod-voz-status{font-size:.78rem;color:var(--accent);font-weight:700;}
+#codCam{position:fixed;inset:0;z-index:420;background:#000;color:#fff;overflow:hidden;}
+#codCam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+#codCam .cam-quadro{position:absolute;left:8%;right:8%;top:32%;height:22%;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);}
+#codCam .cam-linha{position:absolute;left:6px;right:6px;top:50%;height:2px;background:#ff3b3b;opacity:.8;}
+#codCam .cam-topo{position:absolute;left:14px;right:14px;top:calc(14px + env(safe-area-inset-top,0px));text-align:center;font-size:.86rem;line-height:1.4;text-shadow:0 1px 3px #000;}
+#codCam .cam-status{position:absolute;left:14px;right:14px;top:56%;margin-top:10px;text-align:center;font-size:.86rem;text-shadow:0 1px 3px #000;}
+#codCam .cam-acoes{position:absolute;left:0;right:0;bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 10px;}
+#codCam .cam-acoes .btn.secondary{background:rgba(255,255,255,.92);color:#2a1a66;border-color:#fff;}
+#codCam .cam-acoes .btn.on{background:#ffd54a;color:#000;}
+#codCam .cam-sug{position:absolute;left:10px;right:10px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-height:52%;overflow:auto;background:var(--panel);color:var(--text);border-radius:14px;padding:12px;box-shadow:0 6px 24px rgba(0,0,0,.5);}
+#codCam .cam-sug-tit{font-size:.95rem;margin-bottom:4px;}
 .ajuda-mic{padding-left:20px;margin:8px 0;font-size:.88rem;line-height:1.45;}
 .ajuda-mic li{margin-bottom:8px;}
 .cod-destaque{border:2px solid var(--accent);border-radius:12px;padding:10px 11px;margin-top:8px;}
@@ -1090,6 +1101,7 @@ function abrirView(id){
   ui.view = id; ui.ultimaPorGrupo[g] = id; lsSet(UI_KEY, ui);
   if(typeof fecharFolhaCod === 'function') fecharFolhaCod();
   if(id!=='consulta' && typeof pararVoz === 'function' && (vozMaosLivres || vozOuvindo)) pararVoz();
+  if(id!=='consulta' && typeof fecharCameraCod === 'function') fecharCameraCod();
   if(id==='consulta') codAoAbrir();
   if(id==='listascod'){ renderListasCod(); codCarregar(codUi.cli).then(renderListasCod); }
   if(id==='quartos') renderRJQuartosOptions();
@@ -8747,6 +8759,7 @@ function renderConsulta(){
         <button type="button" class="cod-mic" id="codMic" title="Pesquisar falando" aria-label="Pesquisar falando">🎤</button>
         <button type="button" class="cod-teclado" id="codTeclado" title="Trocar teclado">123</button></div>
       <div class="cod-voz-linha">
+        <button type="button" class="chip-cli" id="codCamera">📷 Câmera</button>
         <button type="button" class="chip-cli" id="codMaos">🎧 Mãos livres</button>
         <button type="button" class="chip-cli" id="codFalar"></button>
         <span id="codVozStatus" class="cod-voz-status"></span>
@@ -8772,6 +8785,7 @@ function renderConsulta(){
     document.getElementById('arqCod').onchange = e=>{ codImportar(e.target.files); e.target.value = ''; };
     document.getElementById('codMic').onclick = ()=>{ if(vozMaosLivres) pararVoz(); else ouvirUmaVez(); };
     document.getElementById('codMaos').onclick = ()=>{ if(vozMaosLivres) pararVoz(); else ligarMaosLivres(); };
+    document.getElementById('codCamera').onclick = ()=>{ pararVoz(); abrirCameraCod(); };
     document.getElementById('codFalar').onclick = ()=>{ codUi.falar = codUi.falar === false; salvarCodUi(); if(!codUi.falar && window.speechSynthesis) speechSynthesis.cancel(); pintarVoz(); };
     aplicarTecladoCod(); pintarVoz();
   }
@@ -8933,16 +8947,17 @@ async function garantirMicrofone(){
     return false;
   }
 }
-function ajudaMicrofone(motivo){
-  const box = abrirFolha('🎤 Liberar o microfone', `
-    <p style="margin-top:0">${motivo === 'semMic' ? 'O celular não encontrou microfone.' : motivo === 'ocupado' ? 'O microfone está sendo usado por outro app (ligação, gravador, WhatsApp). Feche o outro app e tente de novo.' : motivo === 'servico' ? 'O serviço de voz do Google está bloqueado neste celular.' : 'O celular está <b>bloqueando o microfone</b> para o app (por isso não aparece a pergunta).'}</p>
+function ajudaMicrofone(motivo, recurso){
+  const cam = recurso === 'camera', nomeR = cam ? 'Câmera' : 'Microfone';
+  const box = abrirFolha(cam ? '📷 Liberar a câmera' : '🎤 Liberar o microfone', `
+    <p style="margin-top:0">${motivo === 'semMic' ? (cam ? 'O celular não encontrou câmera.' : 'O celular não encontrou microfone.') : motivo === 'ocupado' ? `${cam ? 'A câmera' : 'O microfone'} está sendo usado por outro app (ligação, câmera, WhatsApp). Feche o outro app e tente de novo.` : motivo === 'servico' ? 'O serviço de voz do Google está bloqueado neste celular.' : `O celular está <b>bloqueando ${cam ? 'a câmera' : 'o microfone'}</b> para o app (por isso não aparece a pergunta).`}</p>
     ${motivo === 'semMic' || motivo === 'ocupado' ? '' : `<ol class="ajuda-mic">
-      <li><b>App instalado:</b> segure o ícone <b>Central</b> na tela inicial → <b>Informações do app</b> (ⓘ) → <b>Permissões</b> → <b>Microfone</b> → <b>Permitir durante o uso</b>. Se aparecer <b>Configurações do site</b>, entre e libere o Microfone.</li>
-      <li><b>Chrome:</b> Configurações do Android → <b>Apps</b> → <b>Chrome</b> → <b>Permissões</b> → <b>Microfone</b> → <b>Permitir durante o uso</b>.</li>
-      <li><b>Site no Chrome:</b> abra o Chrome → ⋮ → <b>Configurações</b> → <b>Configurações do site</b> → <b>Microfone</b>. Se <b>eltoninventarium.github.io</b> estiver em <b>Bloqueado</b>, toque nele e escolha <b>Permitir</b>.</li>
-      <li><b>App Google</b> (é ele que entende a fala): Configurações do Android → <b>Apps</b> → <b>Google</b> → <b>Permissões</b> → <b>Microfone</b> → <b>Permitir</b>.</li>
+      <li><b>App instalado:</b> segure o ícone <b>Central</b> na tela inicial → <b>Informações do app</b> (ⓘ) → <b>Permissões</b> → <b>${nomeR}</b> → <b>Permitir durante o uso</b>. Se aparecer <b>Configurações do site</b>, entre e libere ${cam ? 'a Câmera' : 'o Microfone'}.</li>
+      <li><b>Chrome:</b> Configurações do Android → <b>Apps</b> → <b>Chrome</b> → <b>Permissões</b> → <b>${nomeR}</b> → <b>Permitir durante o uso</b>.</li>
+      <li><b>Site no Chrome:</b> abra o Chrome → ⋮ → <b>Configurações</b> → <b>Configurações do site</b> → <b>${nomeR}</b>. Se <b>eltoninventarium.github.io</b> estiver em <b>Bloqueado</b>, toque nele e escolha <b>Permitir</b>.</li>
+      ${cam ? '<li><b>iPhone:</b> Ajustes → <b>Safari</b> → <b>Câmera</b> → <b>Permitir</b>.</li>' : '<li><b>App Google</b> (é ele que entende a fala): Configurações do Android → <b>Apps</b> → <b>Google</b> → <b>Permissões</b> → <b>Microfone</b> → <b>Permitir</b>.</li>'}
       <li>Feche o app Central (tire da lista de apps abertos) e abra de novo.</li></ol>`}
-    <p class="hint">Enquanto isso, dá para usar o 🎤 do teclado: toque no campo de pesquisa e no microfone do teclado.</p>`, 'Testar de novo', ()=>{ vozMicOk = false; setTimeout(()=>ouvirUmaVez(), 100); return ''; });
+    ${cam ? '' : '<p class="hint">Enquanto isso, dá para usar o 🎤 do teclado: toque no campo de pesquisa e no microfone do teclado.</p>'}`, 'Testar de novo', ()=>{ if(cam) setTimeout(()=>abrirCameraCod(), 100); else { vozMicOk = false; setTimeout(()=>ouvirUmaVez(), 100); } return ''; });
   const c = box.querySelector('[data-cancelar]'); if(c) c.textContent = 'Fechar';
 }
 async function ouvirUmaVez(){ vozMaosLivres = false; prepararSom(); if(!RecVoz){ semVozAqui(); return; } if(!(await garantirMicrofone())) return; ouvir(); }
@@ -8961,6 +8976,229 @@ function pararVoz(){
   pintarVoz(); if(estava) renderResultadosCod();
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') pararVoz(); });
+
+/* ---------- CÂMERA (01/11/2026): código de barras borrado e número escrito à mão / borrado ----------
+   1) Código de barras: lido sozinho, ao vivo (leitor do próprio Chrome no Android; no iPhone, leitor grátis baixado 1 vez, ~400 KB).
+      A câmera aceita código bem mais borrado, amassado ou riscado que o laser do coletor.
+   2) "Ler número": lê o que está dentro do quadro (escrito a caneta, ou o número impresso embaixo das barras) com o mesmo
+      leitor de imagem da escala (Tesseract, grátis, no aparelho). O número lido é CONFERIDO com o arquivo do cliente:
+      se um dígito vier errado, o app mostra os códigos que existem e são mais parecidos, com a descrição, para confirmar.
+   Nada fica gravado e não tem ligação com o cartelado do robô. */
+const BARCODE_CDN = 'https://cdn.jsdelivr.net/npm/barcode-detector@3.0.8/dist/iife/ponyfill.js';
+const FORMATOS_CAM = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'code_128', 'itf', 'codabar'];
+let camFluxo = null, camLoop = null, camDetector = null, camLendo = false, camLeitorNum = null, camTorch = false;
+async function detectorCodigos(){
+  if(camDetector) return camDetector;
+  try{
+    if('BarcodeDetector' in window){
+      const sup = await window.BarcodeDetector.getSupportedFormats();
+      if(sup && sup.includes('ean_13')){ camDetector = new window.BarcodeDetector({formats: FORMATOS_CAM.filter(f=>sup.includes(f))}); return camDetector; }
+    }
+  }catch(e){}
+  if(!window.BarcodeDetectionAPI) await carregarScript(BARCODE_CDN);
+  camDetector = new window.BarcodeDetectionAPI.BarcodeDetector({formats: FORMATOS_CAM});
+  return camDetector;
+}
+async function abrirCameraCod(){
+  fecharCameraCod();
+  const box = document.createElement('div'); box.id = 'codCam';
+  box.innerHTML = `<video id="camVideo" playsinline muted autoplay></video>
+    <div class="cam-quadro" id="camQuadro"><div class="cam-linha"></div></div>
+    <div class="cam-topo">Aponte para o <b>código de barras</b>: ele lê sozinho.<br>Número <b>escrito à mão</b> ou borrado: coloque dentro do quadro e toque em <b>Ler número</b>.</div>
+    <div class="cam-status" id="camStatus">Abrindo a câmera…</div>
+    <div class="cam-acoes">
+      <button class="btn secondary" type="button" data-torch hidden>🔦 Lanterna</button>
+      <button class="btn" type="button" data-ler>🔢 Ler número</button>
+      <button class="btn secondary" type="button" data-fechar>Fechar</button>
+    </div>
+    <div class="cam-sug" id="camSug" hidden></div>`;
+  document.body.appendChild(box);
+  box.querySelector('[data-fechar]').onclick = fecharCameraCod;
+  box.querySelector('[data-ler]').onclick = lerNumeroCam;
+  const st = t=>{ const e = document.getElementById('camStatus'); if(e) e.innerHTML = t; };
+  try{
+    camFluxo = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}});
+  }catch(e){
+    fecharCameraCod();
+    ajudaMicrofone(e && e.name === 'NotFoundError' ? 'semMic' : e && e.name === 'NotReadableError' ? 'ocupado' : 'negado', 'camera');
+    return;
+  }
+  const v = document.getElementById('camVideo'); if(!v){ fecharCameraCod(); return; }
+  v.srcObject = camFluxo; try{ await v.play(); }catch(e){}
+  // lanterna, se o celular deixar
+  try{
+    const tr = camFluxo.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {};
+    if(cap && cap.torch){ const bt = box.querySelector('[data-torch]'); bt.hidden = false; bt.onclick = async ()=>{ camTorch = !camTorch; try{ await tr.applyConstraints({advanced:[{torch: camTorch}]}); }catch(e){} bt.classList.toggle('on', camTorch); }; }
+  }catch(e){}
+  st('Procurando código de barras…');
+  let det = null;
+  try{ det = await detectorCodigos(); }catch(e){ st('Leitor de código de barras indisponível agora (sem internet na 1ª vez?). Use <b>Ler número</b>.'); }
+  if(!det) return;
+  const passo = async ()=>{
+    if(!document.getElementById('codCam') || camLendo) return;
+    try{
+      if(v.readyState >= 2){
+        const achados = await det.detect(v);
+        const bom = (achados || []).find(a=>a && a.rawValue && String(a.rawValue).trim().length >= 3);
+        if(bom){ codigoLidoCam(String(bom.rawValue).trim(), bom.format); return; }
+      }
+    }catch(e){}
+    camLoop = setTimeout(passo, 220);
+  };
+  passo();
+}
+function fecharCameraCod(){
+  clearTimeout(camLoop); camLoop = null; camLendo = false; camTorch = false;
+  if(camFluxo){ try{ camFluxo.getTracks().forEach(t=>t.stop()); }catch(e){} camFluxo = null; }
+  const box = document.getElementById('codCam'); if(box) box.remove();
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') fecharCameraCod(); });
+// código de barras lido pela câmera → pesquisa e (se for 1 só) abre o código grande para o coletor
+function codigoLidoCam(valor, formato){
+  try{ navigator.vibrate && navigator.vibrate(80); }catch(e){}
+  fecharCameraCod();
+  const b = document.getElementById('buscaCod'); if(!b) return;
+  b.value = valor.toUpperCase(); mostrarLimparCod(); renderResultadosCod();
+  const r = codUltimoResultado || {lista:[]};
+  toast(`📷 Lido: ${valor}${r.lista.length ? '' : ' — não está no arquivo deste cliente'}`, 4000);
+  if(r.lista.length === 1 || (r.exato && r.lista.length)){
+    const it = r.lista[0], roupa = it.f.includes('B');
+    codTelaCheia(roupa ? it.c : (it.e[0] || it.c), roupa ? false : !it.e[0], false);
+  }
+}
+// recorte do quadro na resolução real da câmera (o vídeo aparece "cortado" para encher a tela)
+function recorteDoQuadro(){
+  const v = document.getElementById('camVideo'), q = document.getElementById('camQuadro');
+  if(!v || !q || !v.videoWidth) return null;
+  const rv = v.getBoundingClientRect(), rq = q.getBoundingClientRect();
+  const esc = Math.max(rv.width / v.videoWidth, rv.height / v.videoHeight);
+  const ox = (rv.width - v.videoWidth * esc) / 2, oy = (rv.height - v.videoHeight * esc) / 2;
+  const sx = Math.max(0, (rq.left - rv.left - ox) / esc), sy = Math.max(0, (rq.top - rv.top - oy) / esc);
+  const sw = Math.min(v.videoWidth - sx, rq.width / esc), sh = Math.min(v.videoHeight - sy, rq.height / esc);
+  const cv = document.createElement('canvas');
+  const fator = Math.min(3, Math.max(1, 900 / sw));   // número pequeno: amplia
+  cv.width = Math.round(sw * fator); cv.height = Math.round(sh * fator);
+  const c = cv.getContext('2d'); c.imageSmoothingQuality = 'high';
+  c.drawImage(v, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+  return cv;
+}
+// cinza com contraste esticado + versão preto e branco (Otsu); se o fundo for escuro, inverte
+function preparaParaLer(cv){
+  const w = cv.width, h = cv.height, c = cv.getContext('2d'), img = c.getImageData(0, 0, w, h), d = img.data;
+  const g = new Uint8ClampedArray(w * h); let mn = 255, mx = 0;
+  for(let i = 0, j = 0; i < d.length; i += 4, j++){ const y = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000; g[j] = y; }
+  const hist = new Array(256).fill(0); g.forEach(v=>hist[v]++);
+  let acc = 0; for(let k = 0; k < 256; k++){ acc += hist[k]; if(acc > g.length * 0.02){ mn = k; break; } }
+  acc = 0; for(let k = 255; k >= 0; k--){ acc += hist[k]; if(acc > g.length * 0.02){ mx = k; break; } }
+  const amp = Math.max(1, mx - mn);
+  for(let j = 0; j < g.length; j++) g[j] = Math.max(0, Math.min(255, (g[j] - mn) * 255 / amp));
+  // Otsu
+  const h2 = new Array(256).fill(0); g.forEach(v=>h2[v]++);
+  let soma = 0; for(let k = 0; k < 256; k++) soma += k * h2[k];
+  let sB = 0, wB = 0, melhor = 0, limiar = 128;
+  for(let k = 0; k < 256; k++){ wB += h2[k]; if(!wB) continue; const wF = g.length - wB; if(!wF) break; sB += k * h2[k];
+    const mB = sB / wB, mF = (soma - sB) / wF, entre = wB * wF * (mB - mF) * (mB - mF); if(entre > melhor){ melhor = entre; limiar = k; } }
+  let escuros = 0; for(let j = 0; j < g.length; j++) if(g[j] < limiar) escuros++;
+  const inverter = escuros > g.length / 2;   // fundo escuro, número claro
+  const mk = bin=>{ const o = document.createElement('canvas'); o.width = w; o.height = h; const oc = o.getContext('2d'), od = oc.createImageData(w, h);
+    for(let j = 0, i = 0; j < g.length; j++, i += 4){ let v = bin ? (g[j] < limiar ? 0 : 255) : g[j]; if(inverter) v = 255 - v; od.data[i] = od.data[i + 1] = od.data[i + 2] = v; od.data[i + 3] = 255; }
+    oc.putImageData(od, 0, 0); return o; };
+  return [mk(true), mk(false)];
+}
+// pedaços de número no texto lido (junta grupos separados por espaço: "7 896006 290070")
+function candidatosDoTexto(texto, comLetras){
+  const t = String(texto || '').toUpperCase().replace(/[OQD]/g, m=>comLetras ? m : '0').replace(/[IL|!]/g, m=>comLetras && m !== '|' && m !== '!' ? m : '1').replace(/S/g, m=>comLetras ? m : '5').replace(/B/g, m=>comLetras ? m : '8');
+  const out = new Set();
+  t.split(/\n+/).forEach(linha=>{
+    const re = comLetras ? /[0-9A-Z]+/g : /\d+/g;
+    const partes = linha.match(re) || [];
+    partes.forEach(p=>{ if(p.length >= 3 && /\d/.test(p)) out.add(p); });
+    const junto = partes.join(''); if(junto.length >= 4 && /\d/.test(junto)) out.add(junto);
+  });
+  return [...out].sort((a, b)=>b.length - a.length).slice(0, 8);
+}
+// diferença em dígitos (0, 1 ou 2; >2 = longe). Mesmo tamanho: troca; tamanho ±1: sobra/falta + até 1 troca
+function distDigitos(a, b){
+  if(a === b) return 0;
+  const la = a.length, lb = b.length;
+  if(la === lb){ let d = 0; for(let i = 0; i < la; i++) if(a[i] !== b[i] && ++d > 2) return 3; return d; }
+  if(Math.abs(la - lb) !== 1) return 3;
+  const [c, l] = la < lb ? [a, b] : [b, a];
+  for(let k = 0; k <= l.length; k++){ const sem = l.slice(0, k) + l.slice(k + 1); let d = 0; for(let i = 0; i < c.length; i++) if(c[i] !== sem[i] && ++d > 1) break; if(d <= 1) return 1 + d; }
+  return 3;
+}
+// confere o lido com o arquivo do cliente: igual primeiro, depois 1 e 2 dígitos de diferença (EAN com dígito verificador certo vale mais)
+function sugestoesDaLeitura(cli, cands){
+  const base = codBases[cli] || codItensDasListas(cli), achados = new Map();
+  const por = (it, dist, lido)=>{ if(!it) return; const k = it.c; const at = achados.get(k); if(!at || dist < at.dist) achados.set(k, {it, dist, lido}); };
+  for(const c of cands){
+    const s = /^\d+$/.test(c) ? c.replace(/^0+/, '') || c : c;
+    por(base.porEan.get(s), 0, c); por(base.porCod.get(s), 0, c); por(base.porCod.get(c), 0, c); por(itemSoCod(base, c), 0, c);
+  }
+  if(![...achados.values()].some(x=>x.dist === 0)){
+    for(const c of cands){
+      if(c.length < 5) continue;
+      const s = /^\d+$/.test(c) ? c.replace(/^0+/, '') || c : c;
+      const okEan = v=>v.length === 13 && /^\d+$/.test(v) && eanOk(v);
+      base.porEan.forEach((it, e)=>{ const d = distDigitos(s, e); if(d <= 2) por(it, d - (okEan(e) && !okEan(s) ? 0.3 : 0), c); });
+      base.porCod.forEach((it, k)=>{ if(k.length < 4) return; const d = distDigitos(s, k); if(d <= 2) por(it, d, c); });
+      if(base.soCod) for(const k of base.soCod){ const kk = k.replace(/ /g, ''); const d = distDigitos(c, kk); if(d <= 2) por(itemSoCod(base, kk), d, c); }
+      if(achados.size > 60) break;
+    }
+    // pedaço do código (o começo ou o fim ficou fora do quadro ou apagado): "89600629007" acha 7896006290070
+    for(const c of cands){
+      if(c.length < 7) continue;
+      const s = /^\d+$/.test(c) ? c.replace(/^0+/, '') : c;
+      base.porEan.forEach((it, e)=>{ if(e.length > s.length && e.includes(s)) por(it, 0.8 + (e.length - s.length) * 0.1, c); });
+      base.porCod.forEach((it, k)=>{ if(k.length > s.length && k.includes(s)) por(it, 0.8 + (k.length - s.length) * 0.1, c); });
+      if(base.soCod) for(const k of base.soCod){ const kk = k.replace(/ /g, ''); if(kk.length > c.length && kk.includes(c)) por(itemSoCod(base, kk), 0.9, c); }
+    }
+  }
+  // empate: itens das listas (avulso, protetor…) primeiro — são os que mais aparecem escritos à mão
+  const naLista = new Set(); listasDoCli(cli).forEach(l=>l.itens.forEach(x=>naLista.add(String(x[0]))));
+  return [...achados.values()].map(x=>Object.assign(x, {ord: x.dist - (naLista.has(x.it.c) ? 0.5 : 0)})).sort((a, b)=>a.ord - b.ord).slice(0, 6);
+}
+async function lerNumeroCam(){
+  if(camLendo) return;
+  const st = document.getElementById('camStatus'), sug = document.getElementById('camSug');
+  const cv = recorteDoQuadro(); if(!cv){ if(st) st.textContent = 'A câmera ainda não abriu.'; return; }
+  camLendo = true; clearTimeout(camLoop);
+  if(st) st.innerHTML = 'Lendo o número…';
+  try{
+    if(!camLeitorNum){
+      camLeitorNum = await leitorOCR((s2, p)=>{ if(st && /load|download/i.test(s2)) st.textContent = 'Baixando o leitor de números (só na 1ª vez)…'; });
+    }
+    const roupa = CLIENTES_ROUPA.has(codUi.cli) || !!(codBases[codUi.cli] && codBases[codUi.cli].soCod && codBases[codUi.cli].soCod.length);
+    await camLeitorNum.setParameters({tessedit_char_whitelist: roupa ? '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ ' : '0123456789 ', tessedit_pageseg_mode: '7'});
+    let textos = [];
+    for(const img of preparaParaLer(cv)){ const r = await camLeitorNum.recognize(img); textos.push(r && r.data ? r.data.text : ''); }
+    await camLeitorNum.setParameters({tessedit_pageseg_mode: '6'});
+    const r6 = await camLeitorNum.recognize(preparaParaLer(cv)[0]); textos.push(r6 && r6.data ? r6.data.text : '');
+    const cands = [...new Set(textos.flatMap(t=>candidatosDoTexto(t, roupa)))];
+    const lista = cands.length ? sugestoesDaLeitura(codUi.cli, cands) : [];
+    mostrarSugestoesCam(cands, lista);
+  }catch(e){
+    if(st) st.textContent = 'Não consegui ler agora (' + (e.message || e) + '). Tente de novo com mais luz.';
+  }finally{ camLendo = false; }
+}
+function mostrarSugestoesCam(cands, lista){
+  const sug = document.getElementById('camSug'), st = document.getElementById('camStatus'); if(!sug) return;
+  if(st) st.textContent = '';
+  const rot = d=>d <= 0 ? '<span class="tag-cod" style="color:var(--ok);border-color:var(--ok)">igual</span>' : d < 0.75 ? '<span class="tag-cod">1 dígito diferente</span>' : d < 1.05 ? '<span class="tag-cod">parte do código</span>' : d < 1.5 ? '<span class="tag-cod">1 dígito diferente</span>' : '<span class="tag-cod">2 dígitos diferentes</span>';
+  sug.hidden = false;
+  sug.innerHTML = `<div class="cam-sug-tit">${cands.length ? 'Li: <b>' + esc(cands[0]) + '</b>' : 'Não consegui ler um número.'}</div>
+    ${lista.length ? lista.map((x, i)=>`<div class="cod-row" role="button" tabindex="0" data-i="${i}"><div class="cod-desc">${esc(x.it.d || (x.it.soCod ? '✅ Código existe no arquivo' : '(sem descrição)'))}</div>
+      <div class="cod-sub">${x.it.f.includes('B') ? 'Código' : 'Int.'} <b>${esc(x.it.c)}</b>${x.it.e && x.it.e[0] ? ' · EAN ' + esc(x.it.e[0]) : ''} ${rot(x.dist)}</div></div>`).join('')
+      : `<p class="hint">${cands.length ? 'Nenhum código parecido no arquivo de ' + esc(rotuloCli(codUi.cli)) + '.' : ''} Dicas: chegue mais perto, deixe o número dentro do quadro, com luz (🔦), e números grandes e separados.</p>`}
+    <div class="acoes" style="margin-top:8px"><button class="btn secondary" type="button" data-denovo>↻ Ler de novo</button>${cands.length ? `<button class="btn secondary" type="button" data-usar>Pesquisar “${esc(cands[0])}”</button>` : ''}</div>`;
+  sug.querySelectorAll('[data-i]').forEach(el=>el.onclick = ()=>{
+    const x = lista[+el.dataset.i]; fecharCameraCod();
+    const b = document.getElementById('buscaCod'); if(b){ b.value = x.it.c; mostrarLimparCod(); renderResultadosCod(); }
+    abrirItemCod(codUi.cli, x.it.c);
+  });
+  const dn = sug.querySelector('[data-denovo]'); if(dn) dn.onclick = ()=>{ sug.hidden = true; lerNumeroCam(); };
+  const us = sug.querySelector('[data-usar]'); if(us) us.onclick = ()=>{ fecharCameraCod(); const b = document.getElementById('buscaCod'); if(b){ b.value = cands[0]; mostrarLimparCod(); renderResultadosCod(); } };
+}
 
 function renderResultadosCod(){
   const box = document.getElementById('resCod'); if(!box) return;
@@ -9166,7 +9404,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 07:36</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 01/11/2026 07:55</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
