@@ -5065,7 +5065,8 @@ function dadosViagem(t){
 }
 function nomeViagem(t){
   const d = dadosViagem(t);
-  const nome = [d.cliente, d.cidades].filter(Boolean).join(' · ') || ('Viagem ' + (viagens.lista.indexOf(t) + 1));
+  const i = viagens.lista.indexOf(t);
+  const nome = [d.cliente, d.cidades].filter(Boolean).join(' · ') || (i < 0 ? 'Viagem do backup (sem nome)' : 'Viagem ' + (i + 1));
   return {nome, datas:d.datas, d};
 }
 function guardarViagemAberta(){
@@ -5148,18 +5149,77 @@ function editarViagem(){
 function excluirViagem(id){
   const t = viagens.lista.find(x=>x.id === id); if(!t || id === viagens.ativa) return;
   if(!confirm(`Apagar a viagem "${nomeViagem(t).nome}"? Os convites e confirmados dela somem (o cadastro da equipe fica).`)) return;
+  // vai para a lixeira (dá para recuperar depois; ficam as 5 últimas)
+  viagens.lixeira = [Object.assign({}, t, {apagadaEm:Date.now()})].concat(viagens.lixeira || []).slice(0, 5);
   viagens.lista = viagens.lista.filter(x=>x.id !== id); salvarViagens(); abrirSeletorViagem();
+}
+function recuperarDaLixeira(id){
+  const t = (viagens.lixeira || []).find(x=>x.id === id); if(!t) return;
+  viagens.lixeira = viagens.lixeira.filter(x=>x.id !== id); delete t.apagadaEm;
+  viagens.lista.push(t); salvarViagens(); abrirSeletorViagem(); toast('Viagem recuperada: ' + nomeViagem(t).nome);
+}
+// Recuperar viagem de um arquivo de backup (o do app ou o automático do robô no Drive),
+// sem mexer em mais nada: a viagem entra na lista como mais uma.
+function viagensDoBackup(b){
+  const v = b && b.dados && b.dados.escala, q = b && b.dados && b.dados.quartos;
+  if(!v) return [];
+  const paraDados = (x, quartos)=>{
+    const e = Object.assign({}, x); ['_niveis', '_plano', '_viagens', '_formViagem'].forEach(c=>delete e[c]);
+    const d = {};
+    if(Object.keys(e).length) d[ESCALA_KEY] = JSON.stringify(e);
+    if(x._niveis) d[NIVEIS_KEY] = JSON.stringify(x._niveis);
+    if(x._plano) d[PLANO_KEY] = JSON.stringify(x._plano);
+    if(x._formViagem) d[VIAGEM_FORM_KEY] = JSON.stringify(x._formViagem);
+    if(quartos) d[QUARTOS_KEY] = JSON.stringify(quartos);
+    return d;
+  };
+  if(v._viagens && Array.isArray(v._viagens.lista)){
+    return v._viagens.lista.concat(v._viagens.lixeira || []).map(t=>{
+      const c = JSON.parse(JSON.stringify(t)); delete c.apagadaEm;
+      if(t.id === v._viagens.ativa) c.dados = paraDados(v, q);
+      return c;
+    });
+  }
+  return [{id:'vbk' + (b.geradoEm ? Date.parse(b.geradoEm) : Date.now()), criadaEm:Date.now(), dados:paraDados(v, q)}];
+}
+function recuperarViagemBackup(){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json,text/plain';
+  inp.onchange = async ()=>{
+    const f = inp.files[0]; if(!f) return;
+    let b = null; try{ b = JSON.parse(new TextDecoder('utf-8').decode(await f.arrayBuffer()).replace(/^\uFEFF/, '')); }catch(e){}
+    if(!b || b.app !== 'central-inventario' || !b.dados){ toast('Esse arquivo não é um backup do app.', 4000); return; }
+    const jaTem = new Set(viagens.lista.map(t=>t.id));
+    const achadas = viagensDoBackup(b).filter(t=>t.dados && Object.keys(t.dados).length);
+    if(!achadas.length){ toast('Esse backup não tem viagem guardada.', 4000); return; }
+    const quando = b.geradoEm ? new Date(b.geradoEm).toLocaleString('pt-BR') : '';
+    const linhas = achadas.map((t, i)=>{ const {nome, datas, d} = nomeViagem(t), igual = jaTem.has(t.id);
+      return `<label class="via-item"><input type="checkbox" data-rec="${i}" ${igual ? '' : 'checked'}><span class="via-abrir"><b>${esc(nome)}</b><small>${esc(datas || 'sem datas')} · ✅ ${d.conf}${d.vagas ? ' de ' + d.vagas : ''} confirmado(s)${igual ? ' · já está no app (marque para trazer uma cópia)' : ''}</small></span></label>`; }).join('');
+    abrirFolha('♻️ Recuperar viagem', `<p class="hint" style="margin-top:0">Backup de ${esc(quando)}. Marque a(s) viagem(ns) para trazer de volta. Nada mais do app é mexido.</p><div class="via-lista">${linhas}</div>`, 'Recuperar', box=>{
+      const marcadas = [...box.querySelectorAll('[data-rec]:checked')].map(x=>achadas[+x.dataset.rec]);
+      if(!marcadas.length) return 'Marque pelo menos uma viagem.';
+      marcadas.forEach(t=>{ if(jaTem.has(t.id)) t.id = t.id + '_' + Date.now().toString(36); viagens.lista.push(t); });
+      salvarViagens(); renderBarraViagem(grupoDaView(ui.view) === 'viagem'); if(ui.view === 'inicio') renderPainel();
+      toast(`${marcadas.length} viagem(ns) recuperada(s). Abra pelo seletor 🧳.`, 5000);
+    });
+  };
+  inp.click();
 }
 function abrirSeletorViagem(){
   const linhas = viagens.lista.map(t=>{ const {nome, datas, d} = nomeViagem(t), at = t.id === viagens.ativa;
     return `<div class="via-item ${at ? 'on' : ''}"><button type="button" class="via-abrir" data-via="${t.id}"><b>${at ? '✔️ ' : ''}${esc(nome)}</b><small>${esc(datas || 'sem datas')} · ✅ ${d.conf}${d.vagas ? ' de ' + d.vagas : ''} confirmado(s)${d.ag + d.env ? ` · ⏳ ${d.ag + d.env} em aberto` : ''}</small></button>
       ${at ? '<small class="hint">aberta</small>' : `<button type="button" class="pill falta" data-via-apagar="${t.id}" title="Apagar">🗑️</button>`}</div>`; }).join('');
-  const box = abrirFolha('🧳 Minhas viagens', `<div class="via-lista">${linhas}</div><button type="button" class="btn" style="margin-top:10px" data-via-nova>+ Nova viagem</button>`, 'Fechar', ()=>{});
+  const lix = (viagens.lixeira || []).map(t=>{ const {nome, datas} = nomeViagem(t);
+    return `<div class="via-item"><span class="via-abrir"><b>🗑️ ${esc(nome)}</b><small>${esc(datas || 'sem datas')} · apagada em ${new Date(t.apagadaEm).toLocaleString('pt-BR')}</small></span><button type="button" class="pill" data-via-lix="${t.id}">♻️ Recuperar</button></div>`; }).join('');
+  const box = abrirFolha('🧳 Minhas viagens', `<div class="via-lista">${linhas}</div><button type="button" class="btn" style="margin-top:10px" data-via-nova>+ Nova viagem</button>
+    ${lix ? `<div class="section-title">Apagadas</div><div class="via-lista">${lix}</div>` : ''}
+    <button type="button" class="btn secondary small" style="margin-top:10px" data-via-bk>♻️ Recuperar viagem de um backup</button>`, 'Fechar', ()=>{});
   box.querySelector('[data-cancelar]').remove();
   box.addEventListener('click', e=>{
     const a = e.target.closest('[data-via]'); if(a){ box.remove(); trocarViagem(a.dataset.via); return; }
     const x = e.target.closest('[data-via-apagar]'); if(x){ excluirViagem(x.dataset.viaApagar); return; }
     if(e.target.closest('[data-via-nova]')){ box.remove(); novaViagem(); }
+    const lx = e.target.closest('[data-via-lix]'); if(lx){ box.remove(); recuperarDaLixeira(lx.dataset.viaLix); return; }
+    if(e.target.closest('[data-via-bk]')){ box.remove(); recuperarViagemBackup(); }
   });
 }
 function renderBarraViagem(mostrar){
@@ -9925,7 +9985,7 @@ registrarSinc('equipe', ()=>db,
   ()=>!(db.clt.length || db.fl.length || db.rj.length));
 registrarSinc('escala', ()=>{ const e = lsGet(ESCALA_KEY, null), n = lsGet(NIVEIS_KEY, null), pl = lsGet(PLANO_KEY, null);
     // as outras viagens guardadas vão junto (cada uma com a escala, Por nível, quartos e dados dela)
-    const vs = viagens.lista.length > 1 ? {_viagens:{ativa:viagens.ativa, lista:viagens.lista}, _formViagem:lsGet(VIAGEM_FORM_KEY, null)} : {};
+    const vs = (viagens.lista.length > 1 || (viagens.lixeira || []).length) ? {_viagens:{ativa:viagens.ativa, lista:viagens.lista, lixeira:viagens.lixeira || []}, _formViagem:lsGet(VIAGEM_FORM_KEY, null)} : {};
     return (n || pl || vs._viagens) ? Object.assign({}, e || {}, n ? {_niveis:n} : {}, pl ? {_plano:pl} : {}, vs) : e; },
   v=>{ if(v && v._viagens){ v = Object.assign({}, v);
          viagens = v._viagens; lsSet(VIAGENS_KEY, viagens); if(v._formViagem) lsSet(VIAGEM_FORM_KEY, v._formViagem);
@@ -9962,7 +10022,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 06/11/2026 23:41</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 07/11/2026 10:10</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
