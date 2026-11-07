@@ -1377,6 +1377,7 @@ function cadastroPessoa(nome){
 }
 // "Conferente IV", "Estagiário", "Freelance", "RJ" (lista colada do Conferente I vale primeiro)
 function categoriaDe(nome){
+  if(ehCoordenadorExato(nome)) return {rot:'Coordenador(a)', deslig:false, tipo:'coord'};
   const c = cadastroPessoa(nome); if(!c) return {rot:'', deslig:false, tipo:''};
   let rot;
   const kI = (typeof niveis !== 'undefined' && Array.isArray(niveis.nivelI)) ? niveis.nivelI.map(normalizarNome) : [];
@@ -1410,6 +1411,11 @@ function extrasCadastro(cab){
   return out;
 }
 // Coordenadores (aba COORDENADORES do cadastro): nunca entram na produtividade da equipe, mesmo quando contam
+// só o nome do coordenador (igual ou mesma pessoa escrita diferente), sem "contém as palavras"
+function ehCoordenadorExato(nome){
+  const k = normalizarNome(nome); if(!k) return false;
+  return (db.coord||[]).some(c=>{ const n = normalizarNome(c); return n && (n === k || mesmoNomeFlex(n, k)); });
+}
 function ehCoordenadorCadastro(nome){
   const k = normalizarNome(nome); if(!k) return false;
   return (db.coord||[]).some(c=>{ const n = normalizarNome(c); if(!n) return false;
@@ -1468,7 +1474,9 @@ function importarPlanilha(){
         else if(key==='DESLIGADOS') novo._desl = aoa.slice(1).filter(l=>l && l[0]).map(l=>({nome:String(l[0]).replace(/\s+/g,' ').trim().toUpperCase(), era:String(l[1]||'').toUpperCase(), data:String(l[2]||'')}));
         else if(/^COORDENADOR/.test(normalizarNome(key))) novo.coord = aoa.slice(1).map(l=>String((l||[])[0]||'').replace(/\s+/g,' ').trim().toUpperCase()).filter(Boolean);
       });
-      if(!novo.coord) novo.coord = db.coord || [];
+      // coordenadores marcados no app continuam (soma com a aba COORDENADORES da planilha); ignorados também
+      novo.coord = [...new Set([...(novo.coord || []), ...(db.coord || []).map(n=>String(n).toUpperCase())])];
+      novo.ignorar = db.ignorar || [];
       // freelancers que o app aprendeu pela escala (azul) e ainda não estão na planilha continuam no cadastro
       const jaTem = new Set([...novo.clt, ...novo.fl].map(x=>normalizarNome(x.nome)));
       (db.fl||[]).filter(x=>x.novo && !jaTem.has(normalizarNome(x.nome))).forEach(x=>novo.fl.push(x));
@@ -2798,6 +2806,7 @@ function aprenderFreelancers(nomes){
   const novos = [];
   nomes.forEach(n=>{
     if(noCadastroFL(n) || noCadastroCLT(n) || novos.some(x=>normalizarNome(x)===normalizarNome(n))) return;
+    if(cadastroPessoa(n) || ehCoordenadorExato(n) || (typeof ignorados === 'function' && ignorados().has(normalizarNome(n)))) return;
     db.fl.push({nome:n.toUpperCase(), genero:'', afastado:false, prioridade:99, novo:true});
     novos.push(n.toUpperCase());
   });
@@ -5040,6 +5049,7 @@ const NIVEIS_KEY = 'central_niveis_v1';
 let niveis = lsGet(NIVEIS_KEY, null) || {status:{}, nivelI:null};
 // v2: o "⏳ Aguardando" antigo era "já chamei" → vira ✉️ Convite enviado
 if(!niveis.v2){ Object.keys(niveis.status || {}).forEach(k=>{ if(niveis.status[k] === 'A') niveis.status[k] = 'E'; }); niveis.v2 = true; }
+if((niveis.ignorar || []).length && !(db.ignorar || []).length){ db.ignorar = [...niveis.ignorar]; lsSet(LS_KEY, db); }
 /* =====================================================================
    VIAGEM: VÁRIAS VIAGENS AO MESMO TEMPO (06/11)
    Cada viagem guarda a própria escala, o Por nível (status, lista do Conferente I, vagas),
@@ -5390,9 +5400,10 @@ function regrasConfirmados(cs){
 }
 let buscaNivel = '';
 // gente que apareceu nas lojas (robô e Presença) e não está no cadastro
+function ignorados(){ return new Set([...(db.ignorar || []), ...(niveis.ignorar || [])]); }
 function foraDoCadastro(){
   const cad = [...db.clt, ...db.fl, ...db.rj].map(p=>p.nome);
-  const kc = new Set(cad.map(normalizarNome)), ign = new Set(niveis.ignorar || []);
+  const kc = new Set(cad.map(normalizarNome)), ign = ignorados();
   const visto = {};
   const add = (nome, data, origem, estag) => {
     if(!nome || /TREINAMENTO|^COLETOR/i.test(nome)) return;
@@ -5475,8 +5486,11 @@ function renderNiveis(){
   }
   if(abaNivel === 'NV'){
     const fora = foraDoCadastro();
-    h += `<p class="hint" style="margin:8px 2px">${fora.length} pessoa(s) que apareceram nas lojas (robô ou Presença) e não estão no cadastro. Coloque cada uma na categoria certa, ou toque em Ignorar (ex.: coordenador, gente de outra regional).</p>`;
+    h += `<p class="hint" style="margin:8px 2px">${fora.length} pessoa(s) que apareceram nas lojas (robô ou Presença) e não estão no cadastro. Toque em + Adicionar e escolha a categoria (Conferente, Estagiário, Freelance ou Coordenador(a)). Ignorar é para gente de outra regional.</p>`;
     h += fora.length ? fora.map(linhaFora).join('') : '<p class="hint">Todo mundo das lojas já está no cadastro. 👍</p>';
+    const ig = [...ignorados()].filter(k=>!cadastroPessoa(k) && !ehCoordenadorExato(k)).sort();
+    if(ig.length) h += `<details class="card via-det" style="margin-top:12px"><summary><b>🙈 Ignorados (${ig.length})</b></summary><p class="hint" style="margin-top:0">Quem você ignorou antes. Classifique (ex.: coordenador) ou volte para a lista.</p>` +
+      ig.map(k=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(k)}</b></span><span class="pill-btns"><button class="pill presente" type="button" data-fora-add="${esc(k)}" data-fora-nv="">Classificar</button><button class="pill" type="button" data-fora-voltar="${esc(k)}">Voltar à lista</button></span></div>`).join('') + '</details>';
     div.innerHTML = h; return;
   }
   if(abaNivel === 'AG'){
@@ -5514,7 +5528,9 @@ document.addEventListener('click', e=>{
   const s = e.target.closest('[data-nivel-st]'); if(s){ marcarNivel(s.dataset.nome, s.dataset.nivelSt, s.dataset.nv); return; }
   const ed = e.target.closest('[data-nivel-editar]'); if(ed){ editarPessoaNivel(ed.dataset.nivelEditar); return; }
   const fa = e.target.closest('[data-fora-add]'); if(fa){ editarPessoaNivel(null, fa.dataset.foraAdd, fa.dataset.foraNv || ''); return; }
-  const fi = e.target.closest('[data-fora-ign]'); if(fi){ niveis.ignorar = [...new Set([...(niveis.ignorar || []), normalizarNome(fi.dataset.foraIgn)])]; salvarNiveis(); renderNiveis(); toast(fi.dataset.foraIgn + ': não aparece mais aqui.'); return; }
+  const fi = e.target.closest('[data-fora-ign]'); if(fi){ db.ignorar = [...new Set([...(db.ignorar || []), normalizarNome(fi.dataset.foraIgn)])]; saveDB(db); renderNiveis(); toast(fi.dataset.foraIgn + ': foi para "Ignorados" (no fim da lista dá para classificar depois).'); return; }
+  const fv = e.target.closest('[data-fora-voltar]'); if(fv){ const k = normalizarNome(fv.dataset.foraVoltar); db.ignorar = (db.ignorar || []).filter(x=>x !== k);
+    if(niveis.ignorar){ niveis.ignorar = niveis.ignorar.filter(x=>x !== k); salvarNiveis(); } saveDB(db); renderNiveis(); return; }
   const f = e.target.closest('[data-nivel-ficha]'); if(f){ abrirFicha(f.dataset.nivelFicha); }
 });
 function textoConfirmados(){
@@ -5529,6 +5545,7 @@ function whatsConfirmados(){
 // ✏️ mudar categoria/gênero ou + adicionar pessoa nova (vale para o cadastro inteiro)
 function nivelAtualDe(nome){
   const k = normalizarNome(nome);
+  if(ehCoordenadorExato(nome)) return 'CO';
   if(Array.isArray(niveis.nivelI) && niveis.nivelI.some(n=>normalizarNome(n) === k)) return 'I';
   const c = db.clt.find(p=>normalizarNome(p.nome) === k); if(c) return c.nivel || 'I';
   return db.fl.some(p=>normalizarNome(p.nome) === k) ? 'FL' : '';
@@ -5538,16 +5555,16 @@ function editarPessoaNivel(nome, preNome, preNivel){
   const cad = novo ? null : cadastroDe(nome);
   const nv0 = novo ? (preNivel || (['OK','AG','NV'].includes(abaNivel) ? 'I' : abaNivel)) : nivelAtualDe(nome);
   const gen0 = cad ? String(cad.genero || '').slice(0,1).toUpperCase() : '';
-  const ops = [['IV','Conferente IV'],['III','Conferente III'],['II','Conferente II'],['I','Conferente I'],['ES','Estagiário'],['FL','Freelance']];
+  const ops = [['IV','Conferente IV'],['III','Conferente III'],['II','Conferente II'],['I','Conferente I'],['ES','Estagiário'],['FL','Freelance'],['CO','Coordenador(a)']];
   const box = abrirFolha(novo ? '+ Adicionar pessoa' : `✏️ ${esc(nome)}`, `
     ${novo ? `<label>Nome completo</label><input type="text" id="edNome" class="full" value="${esc(preNome || '')}" placeholder="Ex.: INGRID MARTINS SILVA DE PAULA">` : ''}
     <label>Categoria</label><select id="edNivel" class="full">${ops.map(([v, r])=>`<option value="${v}" ${v === nv0 ? 'selected' : ''}>${r}</option>`).join('')}</select>
     <label>Gênero</label><select id="edGen" class="full"><option value="">—</option><option value="F" ${gen0 === 'F' ? 'selected' : ''}>Feminino</option><option value="M" ${gen0 === 'M' ? 'selected' : ''}>Masculino</option></select>
-    <p class="hint">Muda no cadastro da equipe (Viagem › Equipe) e vale para as próximas escalas.</p>`, 'Salvar', b=>{
+    <p class="hint">Muda no cadastro da equipe (Viagem › Equipe) e vale para as próximas escalas. Coordenador(a) não entra na escala nem na produtividade da equipe.</p>`, 'Salvar', b=>{
     const nomeF = novo ? String(b.querySelector('#edNome').value || '').replace(/\s+/g, ' ').trim().toUpperCase() : nome;
     if(!nomeF || nomeF.length < 3) return 'Digite o nome.';
     const k = normalizarNome(nomeF);
-    if(novo && (cadastroDe(nomeF) || db.rj.some(p=>normalizarNome(p.nome) === k))) return 'Essa pessoa já está no cadastro. Ache o nome na aba dela e toque em ✏️.';
+    if(novo && (cadastroDe(nomeF) || ehCoordenadorExato(nomeF) || db.rj.some(p=>normalizarNome(p.nome) === k))) return 'Essa pessoa já está no cadastro. Ache o nome em Gestão › Quadro da equipe e toque em ✏️ Categoria.';
     const nv = b.querySelector('#edNivel').value, g = b.querySelector('#edGen').value;
     const genero = g === 'F' ? 'FEMININO' : g === 'M' ? 'MASCULINO' : '';
     // tira de onde estava
@@ -5557,14 +5574,18 @@ function editarPessoaNivel(nome, preNome, preNivel){
     base = base || {nome:nomeF, afastado:false, prioridade:99};
     base.genero = genero || base.genero || '';
     delete base.novo;
-    if(nv === 'FL'){ delete base.nivel; db.fl.push(base); } else { base.nivel = nv; db.clt.push(base); }
+    // coordenador(a): sai da equipe e entra na lista de coordenadores; quem deixa de ser coordenador sai dela
+    db.coord = (db.coord || []).filter(c=>{ const n = normalizarNome(c); return !(n === k || mesmoNomeFlex(n, k)); });
+    if(nv === 'CO') db.coord.push(nomeF);
+    else if(nv === 'FL'){ delete base.nivel; db.fl.push(base); } else { base.nivel = nv; db.clt.push(base); }
+    db.ignorar = (db.ignorar || []).filter(x=>x !== k);
     // lista colada do Conferente I acompanha a mudança
     if(Array.isArray(niveis.nivelI) && niveis.nivelI.length){
       niveis.nivelI = niveis.nivelI.filter(n=>normalizarNome(n) !== k);
       if(nv === 'I') niveis.nivelI.push(nomeF);
       salvarNiveis();
     }
-    lsSet(LS_KEY, db); marcarAlterado('equipe'); nomesConhecidosCache = null;
+    lsSet(LS_KEY, db); marcarAlterado('equipe'); nomesConhecidosCache = null; indCache = null; cachePapeis = null;
     cadIdx = null; try{ renderEquipe(); renderQuadro(); }catch(e){}
     if(novo && !preNome) abaNivel = nv;
     renderNiveis();
@@ -5577,7 +5598,7 @@ function renderQuadro(){
   const div = document.getElementById('listaQuadro'); if(!div) return;
   if(!souCriador()){ div.innerHTML = ''; return; }
   const busca = normalizarNome((document.getElementById('buscaQuadro') || {}).value || ''), filtro = (document.getElementById('filtroQuadro') || {}).value || 'ativos';
-  const todos = [...db.clt.map(p=>({p, tipo:'clt'})), ...db.fl.map(p=>({p, tipo:'fl'})), ...(db.rj||[]).map(p=>({p, tipo:'rj'}))]
+  const todos = [...db.clt.map(p=>({p, tipo:'clt'})), ...db.fl.map(p=>({p, tipo:'fl'})), ...(db.rj||[]).map(p=>({p, tipo:'rj'})), ...(db.coord||[]).map(n=>({p:{nome:String(n).toUpperCase()}, tipo:'coord'}))]
     .filter(x=>filtro === 'todos' || (filtro === 'deslig' ? x.p.desligado : !x.p.desligado))
     .filter(x=>!busca || normalizarNome(x.p.nome).includes(busca))
     .sort((a,b)=>a.p.nome.localeCompare(b.p.nome, 'pt-BR'));
@@ -5585,14 +5606,14 @@ function renderQuadro(){
   const lim = 150, mostra = todos.slice(0, lim);
   div.innerHTML = `<p class="hint" style="margin:0 2px 8px">${todos.length} pessoa(s)${filtro !== 'deslig' && nDesl ? ` · ${nDesl} desligada(s) (filtro "Desligados")` : ''}${todos.length > lim ? ` · mostrando ${lim}, use a pesquisa` : ''}</p>` +
     (mostra.length ? mostra.map(({p, tipo})=>{
-      const cat = tipo === 'fl' ? 'Freelance' : tipo === 'rj' ? 'RJ' : textoCategoria(p.nome).replace(' (desligado)', '');
+      const cat = tipo === 'coord' ? 'Coordenador(a)' : tipo === 'fl' ? 'Freelance' : tipo === 'rj' ? 'RJ' : textoCategoria(p.nome).replace(' (desligado)', '');
       const ind = indicadoresDe(p.nome);
       const nf = (ind.faltas || 0) + (ind.atestados || 0);
       const det = [cat, (p.genero || '').slice(0,1) || 'sem gênero', ind.ih ? fmtN(ind.ih) + ' itens/h' : '', nf ? `faltou ${nf} de ${ind.lojasHist || nf} loja(s)` : '', ind.ultima ? 'última loja ' + String(ind.ultima).slice(0,5) : '', p.afastado ? 'afastado(a)' : '',
         p.desligado ? `<b style="color:var(--danger)">desligado(a)${p.desligadoEm ? ' em ' + esc(p.desligadoEm) : ''}</b>` : ''].filter(Boolean).join(' · ');
       return `<div class="pessoa-row"><span class="pessoa-nome"><span class="nome-ficha" role="button" tabindex="0" data-quadro-ficha="${esc(p.nome)}"><b>${esc(p.nome)}</b></span><small class="hist">${det}</small></span>
         <span class="pill-btns">${p.desligado ? '' : `<button class="pill" type="button" data-nivel-editar="${esc(p.nome)}">✏️ Categoria</button>`}
-          <button class="pill ${p.desligado ? 'presente' : 'falta'}" type="button" data-desligar="${esc(p.nome)}" data-tipo="${tipo}">${p.desligado ? 'Reativar' : 'Desligar'}</button></span></div>`;
+          ${tipo === 'coord' ? '' : `<button class="pill ${p.desligado ? 'presente' : 'falta'}" type="button" data-desligar="${esc(p.nome)}" data-tipo="${tipo}">${p.desligado ? 'Reativar' : 'Desligar'}</button>`}</span></div>`;
     }).join('') : '<p class="hint">Ninguém encontrado.</p>');
 }
 document.addEventListener('click', e=>{
@@ -5997,6 +6018,7 @@ function normLojaRobo(o){
     // faltas e transferidos do Relatório de Gestão (vazio = loja antiga ou sem relatório)
     faltas:String(o['FALTAS']||'').split(';').map(x=>x.trim()).filter(Boolean).map(x=>{ const m = x.match(/^(.*?)\s*\((ATESTADO)\)$/); return m ? {nome:nomeCompletoCadastro(m[1]), atestado:true} : {nome:nomeCompletoCadastro(x), atestado:false}; }),
     transferidos:String(o['TRANSFERIDOS']||'').split(';').map(x=>x.trim()).filter(Boolean).map(nomeCompletoCadastro),
+    azuis:String(o['FREELANCERS (AZUL NA ESCALA)']||'').split(';').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean),
     temGestao: o['FALTAS'] !== undefined};
 }
 function numOuNulo(v){ return (v === '' || v === null || v === undefined) ? null : (Number(v) || 0); }
@@ -6100,6 +6122,10 @@ async function atualizarDoRobo(manual, soConvites, rodada){
     if(j.versao) robo.versao = String(j.versao);
     const antes = new Set(robo.lojas.map(l=>l.id));
     robo.lojas = (j.lojas||[]).map(normLojaRobo).filter(l=>l.id);
+    // nome em azul na escala da loja = freelancer: quem não está no cadastro entra sozinho como freelancer NOVO
+    try{ if(souCriador()){ const az = []; robo.lojas.forEach(l=>(l.azuis || []).forEach(n=>az.push(n)));
+      const novosFl = az.length ? aprenderFreelancers(az) : [];
+      if(novosFl.length) toast(`${novosFl.length} freelancer(s) novo(s) entraram no cadastro (nome em azul na escala): ${novosFl.slice(0, 3).join(', ')}${novosFl.length > 3 ? '…' : ''}. Confira em Gestão › Quadro da equipe.`, 7000); } }catch(e){}
     nomesConhecidosCache = null;
     robo.pessoas = (j.pessoas||[]).map(normPessoaRobo).filter(p=>p.id && p.nome);
     if(Array.isArray(j.erros)) robo.erros = j.erros.map(normErroRobo).filter(e=>e.id);
@@ -10022,7 +10048,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 07/11/2026 10:10</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 07/11/2026 11:46</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
