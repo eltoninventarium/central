@@ -7955,7 +7955,7 @@ function renderFichaAberta(todas, rankNota){
     ${ind.registros && ind.registros.length ? `<div class="section-title">Presença (histórico das lojas)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Status</th><th>Setor</th></tr></thead><tbody>${
       ind.registros.slice().reverse().map(r=>`<tr><td>${esc(r.data)}</td><td>${esc(r.loja)}</td><td>${rotuloHist(r)}${r.origem ? ' <small class="hint">(relatório de gestão)</small>' : ''}</td><td>${(r.setores||[]).map(esc).join(', ') || '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
     ${!lojasRobo.length && !(ind.registros||[]).length ? '<p class="hint">Ainda não há lojas do robô nem do histórico com esse nome.</p>' : ''}
-    <div class="acoes"><button class="btn secondary" onclick="exportarFichaPNG()">Imagem (PNG)</button><button class="btn secondary" onclick="fichaAberta=null;renderFichas()">Fechar</button></div>
+    <div class="acoes"><button class="btn secondary" onclick="exportarFichaPNG('outros')" title="Sem nota e sem convites de viagem">🖼️ Imagem para compartilhar</button>${souCriador() ? `<button class="btn secondary" onclick="exportarFichaPNG('meu')" title="Com nota e convites de viagem">🔒 Imagem do meu controle</button>` : ''}<button class="btn secondary" onclick="fichaAberta=null;renderFichas()">Fechar</button></div>
   </div>`;
 }
 function htmlAvalFicha(nome){
@@ -8358,17 +8358,20 @@ async function abrirPlanejadoReal(id){
 }
 
 function abrirFicha(nome){ fichaAberta = normalizarNome(nome); abrirView('fichas'); setTimeout(()=>{ const el = document.getElementById('cardFicha'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 50); }
-function exportarFichaPNG(){
+// dois jeitos: 'outros' (para mostrar a outras pessoas: sem nota e sem convites de viagem) e 'meu' (controle completo)
+function exportarFichaPNG(modo){
+  modo = modo === 'meu' ? 'meu' : 'outros';
   const x = pessoasDasFichas().find(t=>normalizarNome(t.nome)===fichaAberta); if(!x) return;
   const ind = x.ind;
   const lojasRobo = robo.pessoas.filter(p=>mesmoNomeFlex(p.nome, x.nome)).map(p=>({p, l:robo.lojas.find(l=>l.id===p.id)})).filter(r=>r.l)
     .sort((a,b)=>dataParaChave(b.l.data)-dataParaChave(a.l.data)).slice(0, 12);
-  let h = cabecalhoImagem(esc(x.nome), esc(rotuloTipo(x)) + ' · ficha de ' + esc(hojeBR()));
-  h += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">${blocosFicha(ind).map(([k,v,det])=>
+  let h = cabecalhoImagem(esc(x.nome), esc(rotuloTipo(x)) + ' · ficha de ' + esc(hojeBR()) + (modo === 'meu' ? ' · 🔒 controle do coordenador' : ''));
+  const blocos = blocosFicha(ind).filter(([k])=>modo === 'meu' || (k !== 'Nota' && k !== 'Viagens'));
+  h += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">${blocos.map(([k,v,det])=>
     `<div style="border:1px solid #ddd6ea;border-radius:8px;padding:6px 8px;font-size:12px;color:#62597a">${k}<div style="font-size:18px;font-weight:700;color:#1c1530">${v}</div>${det?`<div style="font-size:10px">${det}</div>`:''}</div>`).join('')}</div>`;
   if(lojasRobo.length) h += `<div style="font-weight:700;margin:4px 0 6px">Produtividade por loja</div>` + tabelaImagem(['Data','Loja','Peças','Itens/h'],
     lojasRobo.map(({p,l})=>[esc(l.data), esc(l.loja) + (segDaLoja(l) === 'SUPERMERCADO' ? ' <span style="color:#0e6b62;font-size:11px">🛒 supermercado</span>' : '') + (p.atraso ? ` <span style="color:#9C0006;font-size:11px">⏰ ${esc(p.chegada)}</span>` : ''), fmtN(p.pecas), fmtIH(p.ih)]), ['', '', 'right', 'right'], 3);
-  gerarImagem(h, `Ficha - ${limpaNomeArquivo(x.nome)}.png`);
+  gerarImagem(h, `Ficha - ${limpaNomeArquivo(x.nome)}${modo === 'meu' ? ' (controle)' : ''}.png`);
 }
 
 /* =====================================================================
@@ -10199,7 +10202,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 08/11/2026 16:43</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 08/11/2026 18:02</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
