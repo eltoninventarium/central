@@ -457,6 +457,16 @@ details.dia-lojas>summary::after{content:'▸';color:var(--muted)}
 details.dia-lojas[open]>summary::after{transform:rotate(90deg)}
 
 .tag-seg{display:inline-block;margin-left:6px;font-size:.7rem;padding:1px 7px;border-radius:10px;background:var(--accent-soft);color:var(--accent);vertical-align:middle}
+
+.evo-svg{width:100%;height:auto;display:block;background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-top:4px}
+.evo-svg .evo-eixo{font-size:10px;fill:var(--muted)}
+.evo-svg .evo-media{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 4}
+.evo-svg .evo-tend{stroke-width:2;opacity:.75}
+.evo-svg .evo-linha{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round}
+.evo-svg .evo-pt{cursor:pointer}.evo-svg .acima{fill:var(--ok)}.evo-svg .abaixo{fill:var(--danger)}
+.evo-svg .evo-pt.sel circle+circle{stroke:var(--text);stroke-width:2.5}
+.evo-det{margin-top:8px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:.88rem}
+.evo-det-num{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 4px}.evo-det-num span{display:flex;flex-direction:column;font-size:.72rem;color:var(--muted)}.evo-det-num b{font-size:1.05rem;color:var(--text)}
 </style>
 </head>
 <body>
@@ -7964,7 +7974,7 @@ function blocosFicha(ind){
     ['Presença', ind.presPct!=null && ind.lojasHist ? ind.presPct + '%' : '—', ind.lojasHist ? `${ind.presente||0} de ${ind.lojasHist} loja(s)` : ''],
     ['Faltas', (ind.faltas||0) + (ind.atestados||0), ind.atestados ? `${ind.faltas||0} falta · ${ind.atestados} atestado` : ''],
     ['Atrasos', ind.atrasos||0, ind.atrasos ? `média ${Math.round(ind.minAtraso/ind.atrasos)} min` : ''],
-    ['Peças', ind.pecas ? fmtN(ind.pecas) : '—', ind.melhor ? `melhor loja ${fmtN(ind.melhor)}/h` : ''],
+    ['Peças por loja', ind.pecas && ind.lojasRobo ? fmtN(Math.round(ind.pecas / ind.lojasRobo)) : '—', ind.lojasRobo ? `média por loja · melhor ritmo ${fmtN(ind.melhor || 0)}/h` : ''],
     ['Erros', ind.lojasComRel ? (ind.erros||0) : '—', ind.lojasComRel ? `precisão ${fmtPct(ind.precisao)} · ${fmtN(ind.pecasErro||0)} pç ajust.` : 'sem relatório de ajustes'],
     ['Viagens', (ind.convSim||ind.convNao) ? `✅ ${ind.convSim||0} · ❌ ${ind.convNao||0}` : '—', 'convites (90 dias)'],
     ['Setor mais comum', ind.setores && ind.setores[0] ? esc(ind.setores[0].nome) : '—', ind.setores && ind.setores[0] ? ind.setores[0].n + '×' : '']]
@@ -8059,15 +8069,62 @@ function evolucaoDe(nome){
   const pronto = ult.length >= 3 && ult.every(x=>x.rel >= 0.9) && ult.every(x=>x.err === null || x.errEq === null || x.err <= x.errEq * 1.1);
   return {pts, texto, tendencia, pronto};
 }
+// 📈 Evolução comparada com ELA MESMA (08/11): itens/h de cada loja em linha, com a média dela e a tendência.
+// Tocar num ponto mostra aquela loja (peças, itens/h, horas, erros, posição), nunca soma de lojas.
+let evoAtual = null;
 function htmlEvolucao(nome, novato){
   const ev = evolucaoDe(nome); if(!ev || ev.pts.length < 2) return '';
-  const max = Math.max(...ev.pts.map(x=>x.rel), 1.3);
-  return `<div class="section-title">📈 Evolução (ritmo comparado à equipe de cada loja)</div>
-    <p class="hint" style="margin:0 2px 6px">${esc(ev.texto)}${novato && ev.pronto ? ' · <b style="color:var(--ok)">✅ pronto para setor de experiente</b> (3 últimas lojas no ritmo da equipe e sem errar mais que ela)' : ''}</p>
-    ${ev.pts.slice(-10).map(x=>`<div class="linha-fr" style="display:flex;justify-content:space-between;gap:8px;font-size:.82rem;padding:3px 0"><span class="hint" style="width:96px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.data.slice(0,5))} · ${esc(String(x.loja).replace(/^.*?\s[-–]\s/, ''))}</span>
-      <span style="flex:1;min-width:40px"><i class="evo-barra" style="width:${Math.round(100 * Math.min(x.rel, max) / max)}%;background:${x.rel >= 1 ? 'var(--ok)' : x.rel >= 0.8 ? 'var(--warn)' : 'var(--danger)'}"></i></span>
-      <span style="flex:none;text-align:right">${fmtN(x.ih)}/h · ${x.rel >= 1 ? '+' : ''}${Math.round((x.rel - 1) * 100)}%${x.err !== null ? ` · ${fmt1(x.err)}‰ erro` : ''}</span></div>`).join('')}`;
+  const pts = ev.pts.slice(-15).map(x=>{ const pe = robo.pessoas.find(p=>p.id === x.id && mesmoNomeFlex(p.nome, nome)) || {}; const ls = pessoasDaLojaRobo(x.id);
+    return Object.assign({}, x, {pecas:pe.pecas || 0, horas:pe.horas || 0, erros:pe.erros, pos:ls.indexOf(pe) + 1, de:ls.length}); });
+  const media = pts.reduce((t, x)=>t + x.ih, 0) / pts.length;
+  // tendência (reta pelos pontos) e comparação início × fim, tudo com ela mesma
+  const n = pts.length, mx = (n - 1) / 2, my = media;
+  let num = 0, den = 0; pts.forEach((x, i)=>{ num += (i - mx) * (x.ih - my); den += (i - mx) ** 2; });
+  const incl = den ? num / den : 0, t0 = my - incl * mx, t1 = my + incl * mx;
+  const k = Math.min(3, Math.max(1, n >> 1));
+  const ini = pts.slice(0, k).reduce((t, x)=>t + x.ih, 0) / k, fim = pts.slice(-k).reduce((t, x)=>t + x.ih, 0) / k;
+  const varPct = ini ? Math.round(100 * (fim - ini) / ini) : 0;
+  const frase = n < 4 ? `${n} lojas: ainda pouco para ver tendência` :
+    Math.abs(varPct) < 5 ? `Ritmo estável: ${fmtN(Math.round(ini))}/h nas primeiras → ${fmtN(Math.round(fim))}/h nas últimas` :
+    `Ritmo ${varPct > 0 ? 'subindo 📈' : 'caindo 📉'} ${varPct > 0 ? '+' : ''}${varPct}%: ${fmtN(Math.round(ini))}/h nas ${k} primeiras → ${fmtN(Math.round(fim))}/h nas ${k} últimas`;
+  // desenho
+  const W = 340, H = 170, L = 38, R = 10, T = 14, B = 26;
+  const vals = pts.map(x=>x.ih).concat([t0, t1]);
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = Math.max(30, (hi - lo) * 0.15); lo = Math.max(0, lo - pad); hi += pad;
+  const X = i => L + (n === 1 ? (W - L - R) / 2 : i * (W - L - R) / (n - 1)), Y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  const linha = pts.map((x, i)=>`${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(x.ih).toFixed(1)}`).join(' ');
+  const corT = varPct >= 5 ? 'var(--ok)' : varPct <= -5 ? 'var(--danger)' : 'var(--muted)';
+  const passo = Math.ceil(n / 5);
+  const svg = `<svg class="evo-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Itens por hora de cada loja">
+    <text x="${L - 6}" y="${Y(hi - pad) + 4}" text-anchor="end" class="evo-eixo">${fmtN(Math.round(hi - pad))}</text>
+    <text x="${L - 6}" y="${Y(lo + pad) + 4}" text-anchor="end" class="evo-eixo">${fmtN(Math.round(lo + pad))}</text>
+    <line x1="${L}" x2="${W - R}" y1="${Y(media)}" y2="${Y(media)}" class="evo-media"/>
+    ${n >= 3 ? `<line x1="${X(0)}" x2="${X(n - 1)}" y1="${Y(t0)}" y2="${Y(t1)}" stroke="${corT}" class="evo-tend"/>` : ''}
+    <path d="${linha}" class="evo-linha"/>
+    ${pts.map((x, i)=>`<g class="evo-pt" data-evo-i="${i}"><circle cx="${X(i)}" cy="${Y(x.ih)}" r="13" fill="transparent"/><circle cx="${X(i)}" cy="${Y(x.ih)}" r="5" class="${x.ih >= media ? 'acima' : 'abaixo'}"/></g>`).join('')}
+    ${pts.map((x, i)=>(i % passo === 0 || i === n - 1) ? `<text x="${X(i)}" y="${H - 8}" text-anchor="middle" class="evo-eixo">${esc(x.data.slice(0, 5))}</text>` : '').join('')}
+  </svg>`;
+  evoAtual = {pts, media};
+  const lista = pts.slice().reverse().map((x, ri)=>{ const i = n - 1 - ri, ant = pts[i - 1], dv = ant ? Math.round(100 * (x.ih - ant.ih) / ant.ih) : null;
+    return `<tr class="linha-clicavel" data-evo-i="${i}"><td>${esc(x.data.slice(0, 5))}</td><td>${esc(String(x.loja).replace(/^DROGARIA\s+\S+\s*-\s*/i, ''))}</td><td>${fmtN(x.pecas)}</td><td><b>${fmtN(x.ih)}</b></td><td>${dv === null ? '—' : `<span style="color:${dv >= 0 ? 'var(--ok)' : 'var(--danger)'}">${dv >= 0 ? '+' : ''}${dv}%</span>`}</td></tr>`; }).join('');
+  return `<div class="section-title">📈 Evolução (comparada com ela mesma)</div>
+    <p class="hint" style="margin:0 2px 6px"><b style="color:${corT}">${esc(frase)}</b>${novato && ev.pronto ? ' · <b style="color:var(--ok)">✅ pronto para setor de experiente</b>' : ''}</p>
+    ${svg}
+    <p class="hint" style="margin:4px 2px 0"><span style="color:var(--ok)">●</span> acima da média dela · <span style="color:var(--danger)">●</span> abaixo · ┄ média dela: <b>${fmtN(Math.round(media))}/h</b> · reta = tendência. Toque num ponto para ver a loja.</p>
+    <div id="evoDet" class="evo-det" hidden></div>
+    <details class="via-det" style="margin-top:6px"><summary><b>Ver loja por loja</b></summary><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Peças</th><th>Itens/h</th><th>vs anterior</th></tr></thead><tbody>${lista}</tbody></table></div></details>`;
 }
+function mostrarEvoDet(i){
+  const d = document.getElementById('evoDet'); if(!d || !evoAtual) return;
+  const x = evoAtual.pts[i]; if(!x) return;
+  const vm = Math.round(100 * (x.ih - evoAtual.media) / evoAtual.media);
+  document.querySelectorAll('.evo-pt').forEach(g=>g.classList.toggle('sel', +g.dataset.evoI === i));
+  d.hidden = false;
+  d.innerHTML = `<b>${esc(x.data)} · ${esc(x.loja)}</b>
+    <div class="evo-det-num"><span><b>${fmtN(x.ih)}</b>itens/h</span><span><b>${fmtN(x.pecas)}</b>peças nesta loja</span>${x.horas ? `<span><b>${fmt1(x.horas)} h</b>trabalhadas</span>` : ''}<span><b>${x.pos ? x.pos + 'º' : '—'}</b>de ${x.de}</span></div>
+    <small>${vm >= 0 ? '+' : ''}${vm}% da média dela${x.erros !== undefined && x.erros !== null ? ` · ${x.erros} erro(s)` : ''}</small>`;
+}
+document.addEventListener('click', e=>{ const g = e.target.closest('[data-evo-i]'); if(g) mostrarEvoDet(+g.dataset.evoI); });
 
 // ---- 2) distribuição completa sugerida (só preenche quem está sem setor; você confere e aplica)
 function pessoasTipicasPorSetor(seg){
@@ -10142,7 +10199,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 08/11/2026 14:55</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 08/11/2026 16:43</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
