@@ -446,6 +446,15 @@ details.ajuda[open]>summary{margin-bottom:6px}
 .via-ini{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer}.via-ini:last-child{border-bottom:0}
 .via-ini>div{flex:1;min-width:0}.via-ini small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
 .via-ini-n{font-size:1.3rem;font-weight:800;text-align:center;line-height:1}.via-ini-n small{display:block;font-size:.65rem;font-weight:500;color:var(--muted)}
+
+.busca-loja{margin:10px 0 4px}.busca-loja input{width:100%}
+details.dia-lojas{border-top:1px solid var(--border);padding:2px 0}
+details.dia-lojas>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 2px}
+details.dia-lojas>summary::-webkit-details-marker{display:none}
+details.dia-lojas>summary b{white-space:nowrap}
+details.dia-lojas>summary small{color:var(--muted);font-size:.78rem;text-align:right;margin-left:auto}
+details.dia-lojas>summary::after{content:'▸';color:var(--muted)}
+details.dia-lojas[open]>summary::after{transform:rotate(90deg)}
 </style>
 </head>
 <body>
@@ -719,7 +728,7 @@ details.ajuda[open]>summary{margin-bottom:6px}
         <button class="btn secondary" onclick="abrirResumoRobo()">Resumo da viagem</button>
         <button class="btn secondary" onclick="abrirRelatorioEstagiarios()">🎓 Estagiários</button></div>
       <div class="busca-robo"><span class="lupa" aria-hidden="true">🔍</span>
-        <input type="text" inputmode="search" enterkeyhint="search" id="buscaRobo" placeholder="Pesquisar loja ou conferente" autocomplete="off" oninput="roboBusca=this.value; renderRobo()"></div>
+        <input type="text" inputmode="search" enterkeyhint="search" id="buscaRobo" placeholder="Pesquisar conferente (mostra as lojas dele)" autocomplete="off" oninput="roboBusca=this.value; renderRobo()"></div>
     </div>
     <div id="listaRobo"></div>
     <div id="detalheRobo"></div>
@@ -6456,6 +6465,19 @@ function abrirErros(id, nome){
   }
   return folhaErros('Erros da equipe', sub + ` · ${fmtN(l.errosItens)} erro(s)`, gruposDaLoja(l), false);
 }
+// lojas agrupadas pelo dia do inventário (data do relatório da loja, não a do e-mail)
+let roboBuscaLoja = '';
+const DIAS_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+function gruposPorData(lojas){
+  const m = new Map();
+  lojas.forEach(l=>{ const k = l.data || 'sem data'; if(!m.has(k)) m.set(k, []); m.get(k).push(l); });
+  return [...m.entries()].map(([d, ls])=>{
+    const p = String(d).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const ds = p ? DIAS_SEMANA[new Date(+p[3], +p[2] - 1, +p[1]).getDay()] : '';
+    const eqs = ls.map(equipeLojaRobo).filter(eq=>eq.meta);
+    return {rot:(ds ? ds + ', ' : '') + d, lojas:ls, meta:eqs.length, bateu:eqs.filter(eq=>eq.bateu).length};
+  });
+}
 function renderRobo(){
   const st = document.getElementById('statusRobo'); if(!st) return;
   try{ aplicarPapel(); }catch(e){}
@@ -6477,21 +6499,25 @@ function renderRobo(){
   const busca = normalizarNome(roboBusca || '');
   const casaPessoa = id => busca && robo.pessoas.some(p=>p.id===id && normalizarNome(p.nome).includes(busca));
   const casaBusca = l => normalizarNome(`${l.data} ${l.loja} ${l.num}`).includes(busca) || casaPessoa(l.id);
-  const lojas = busca ? todasLojas.filter(casaBusca) : todasLojas;
+  const buscaLoja = normalizarNome(roboBuscaLoja || '');
+  const lojas = (busca ? todasLojas.filter(casaBusca) : todasLojas).filter(l=>!buscaLoja || normalizarNome(`${l.loja} ${l.num} ${l.cliente || ''}`).includes(buscaLoja) || String(+l.num) === buscaLoja.replace(/^0+/, ''));
   // pesquisa que só acha resultado no outro tipo de cliente: oferece trocar
   const outroSeg = busca && !lojas.length ? Object.keys(SEGMENTOS).find(s=>s !== segAtivo && lojasDoSeg(s).some(casaBusca)) : null;
   const avisoOutro = outroSeg ? `<p class="hint" style="margin-top:8px">Nada em ${rotSeg}, mas tem resultado em ${ROTULO_SEG[outroSeg].toLowerCase()}. <button class="btn small secondary" style="margin:0 0 0 4px" data-seg-chave="${outroSeg}">Ver ${ROTULO_SEG[outroSeg].toLowerCase()}</button></p>` : '';
-  const abrirLojas = roboUi.lojas || !!busca;
-  const contLojas = busca ? `${lojas.length} de ${todasLojas.length}` : `${todasLojas.length}`;
+  const abrirLojas = roboUi.lojas || !!busca || !!buscaLoja;
+  const contLojas = (busca || buscaLoja) ? `${lojas.length} de ${todasLojas.length}` : `${todasLojas.length}`;
   const comMeta = todasLojas.map(equipeLojaRobo).filter(eq=>eq.meta);
   const placarMeta = comMeta.length ? ` · ✅ ${comMeta.filter(eq=>eq.bateu).length} de ${comMeta.length} na meta` : '';
   renderMetas();
   document.getElementById('listaRobo').innerHTML = !todasLojas.length
     ? (robo.lojas.length ? `<div class="card"><p class="hint" style="margin:0">Nenhuma loja de ${segAtivo === 'OUTRO' ? 'outros clientes' : rotSeg.replace(/s$/, '')} recebida ainda.${segAtivo === 'SUPERMERCADO' ? ' Assim que chegar o e-mail de um supermercado (Farid, por exemplo), ela aparece aqui.' : ''}</p>${avisoOutro}</div>` : '')
     : `<div class="card"><button class="secao-toggle ${abrirLojas?'aberta':''}" onclick="alternarSecaoRobo('lojas')"><span class="seta">▶</span> Lojas recebidas <small>(${contLojas}${placarMeta})</small></button>${avisoOutro}${
-    !abrirLojas ? '' : !lojas.length ? (avisoOutro ? '' : '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>') : lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.data)} · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
+    !abrirLojas ? '' : `<div class="busca-loja"><input type="search" id="buscaLojaRobo" placeholder="🔎 Pesquisar loja (nome ou número)" value="${esc(roboBuscaLoja || '')}" autocomplete="off"></div>` +
+    (!lojas.length ? (avisoOutro ? '' : '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>') : gruposPorData(lojas).map((g, gi)=>`<details class="dia-lojas" ${gi < 3 || busca || buscaLoja ? 'open' : ''}><summary><b>📅 ${esc(g.rot)}</b><small>${g.lojas.length} loja(s)${g.meta ? ` · ✅ ${g.bateu} de ${g.meta} na meta` : ''}</small></summary>` + g.lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
       <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças${l.errosItens !== null && l.errosItens !== undefined ? ` · ${l.errosItens} erro(s)` : ''} · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small>${seloMeta(equipeLojaRobo(l))}${avisosDaLoja(l).length ? ` <span class="selo-meta nao">⚠️ ${avisosDaLoja(l).length} aviso(s) do arquivo</span>` : ''}</span>
-      <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('')}</div>`;
+      <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('') + '</details>').join(''))}</div>`;
+  const bl = document.getElementById('buscaLojaRobo');
+  if(bl){ bl.oninput = ()=>{ roboBuscaLoja = bl.value; const pos = bl.selectionStart; renderRobo(); const n = document.getElementById('buscaLojaRobo'); if(n){ n.focus(); try{ n.setSelectionRange(pos, pos); }catch(e){} } }; }
   renderDetalheRobo();
   const confBrutos = porConferenteRobo(idsVisao()), nDesl = confBrutos.filter(c=>desligadoNome(c.nome)).length;
   const confTodos = confVisiveis(idsVisao()).map((c,i)=>Object.assign({pos:i+1}, c));
@@ -6662,6 +6688,7 @@ const SETORES_LISTA = {
     'Higiene e perfumaria','Bazar','Pet','Frente de caixa','Estoque']
 };
 // opções do Mapa da loja: a lista de setores do tipo do cliente (a mesma da aba Setores) e, depois, os nomes que o robô usa
+function setoresExtras(){ return [...new Set(['Drive Thru', ...(robo.setoresExtras || [])])]; }
 function setoresParaMapa(seg){
   const tipo = seg === 'SUPERMERCADO' ? 'SUPERMERCADO' : (seg === 'OUTRO' || seg === 'VESTUARIO') ? 'ROUPA' : 'DROGARIA';
   const out = [];
@@ -7283,11 +7310,17 @@ async function abrirMapaLoja(id){
   const div = box.querySelector('[data-mapa]');
   div.innerHTML = `<div class="mapa-loja">${r.mapa.map((b, k)=>{
     const s = corr[k] !== undefined ? corr[k] : b.s;
-    const opcoes = [...new Set([s, b.s, ...lista].filter(Boolean))];
+    const opcoes = [...new Set([s, b.s, ...lista, ...setoresExtras()].filter(Boolean))];
     return `<div class="trecho${b.n <= 2 ? ' miudo' : ''}"><span><b>${b.i}–${b.f}</b> <small class="hint">${b.n} seç. · ${esc([...(quem[k]||[])].join(', ') || '—')}${b.ct ? ` · ${b.ct} códigos de cartelado` : ''}${b.k && b.k.length ? ' · ' + esc(b.k.join(', ')) : ''}</small></span>
-      <select data-trecho="${k}">${opcoes.map(o=>`<option ${o===s?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`; }).join('')}</div>`;
+      <select data-trecho="${k}">${opcoes.map(o=>`<option ${o===s?'selected':''}>${esc(o)}</option>`).join('')}<option value="__outro">✏️ Outro setor (escrever)…</option></select></div>`; }).join('')}</div>`;
   div.querySelectorAll('select[data-trecho]').forEach(sel=>sel.onchange = ()=>{
     const k = +sel.dataset.trecho, b = r.mapa[k];
+    if(sel.value === '__outro'){
+      const nv = (prompt('Nome do setor (ex.: Drive Thru):', '') || '').replace(/\s+/g, ' ').trim();
+      if(!nv){ const atual = (correcoesDaLoja(r)[k] !== undefined ? correcoesDaLoja(r)[k] : b.s); sel.value = atual; return; }
+      const op = document.createElement('option'); op.textContent = nv; sel.insertBefore(op, sel.lastElementChild); sel.value = nv;
+      robo.setoresExtras = [...new Set([...(robo.setoresExtras || []), nv])];
+    }
     robo.setoresCorr = robo.setoresCorr || {}; (robo.setoresCorr[id] = robo.setoresCorr[id] || {})[k] = sel.value;
     robo.setoresCorrEm = robo.setoresCorrEm || {}; robo.setoresCorrEm[id] = Date.now();
     // lembra para a próxima contagem desta loja
@@ -10030,8 +10063,9 @@ registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
   ()=>{ const q = lsGet(QUARTOS_KEY, {}); return !(q.coord || q.lider || q.motorista); });
 registrarSinc('robo', ()=>({link: robo.link, nomes: robo.nomes || {}, metas: robo.metas || {}, segmentos: robo.segmentos || {},
-    setoresCorr: robo.setoresCorr || {}, setoresLoja: robo.setoresLoja || {}, notasResumo: robo.notasResumo || {}, coletoresEstag: robo.coletoresEstag || {}, estimativas: robo.estimativas || [], padroesPrev: robo.padroesPrev || {}, errosDono: robo.errosDono || {}, errosDonoEm: robo.errosDonoEm || {}, setoresCorrEm: robo.setoresCorrEm || {}, desenv: robo.desenv || null, listasCod: robo.listasCod || null}),
+    setoresCorr: robo.setoresCorr || {}, setoresExtras: robo.setoresExtras || [], setoresLoja: robo.setoresLoja || {}, notasResumo: robo.notasResumo || {}, coletoresEstag: robo.coletoresEstag || {}, estimativas: robo.estimativas || [], padroesPrev: robo.padroesPrev || {}, errosDono: robo.errosDono || {}, errosDonoEm: robo.errosDonoEm || {}, setoresCorrEm: robo.setoresCorrEm || {}, desenv: robo.desenv || null, listasCod: robo.listasCod || null}),
   v=>{ if(!v || typeof v !== 'object') return;
+       if(Array.isArray(v.setoresExtras)) robo.setoresExtras = v.setoresExtras;
        ['setoresCorr', 'setoresLoja', 'notasResumo', 'coletoresEstag', 'estimativas', 'padroesPrev', 'errosDono', 'errosDonoEm', 'setoresCorrEm'].forEach(k=>{ if(v[k] && typeof v[k] === 'object') robo[k] = v[k]; });
        if(v.errosDono && typeof v.errosDono === 'object'){ aplicarDonosErros(); salvarRobo(); }
        if(v.desenv && typeof v.desenv === 'object' && JSON.stringify(v.desenv) !== JSON.stringify(robo.desenv || null)){ robo.desenv = v.desenv; salvarRobo(); try{ renderDesenv(); rerenderDev(); }catch(e){} }
@@ -10048,7 +10082,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 07/11/2026 11:46</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 08/11/2026 14:34</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
