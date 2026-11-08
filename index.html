@@ -455,6 +455,8 @@ details.dia-lojas>summary b{white-space:nowrap}
 details.dia-lojas>summary small{color:var(--muted);font-size:.78rem;text-align:right;margin-left:auto}
 details.dia-lojas>summary::after{content:'▸';color:var(--muted)}
 details.dia-lojas[open]>summary::after{transform:rotate(90deg)}
+
+.tag-seg{display:inline-block;margin-left:6px;font-size:.7rem;padding:1px 7px;border-radius:10px;background:var(--accent-soft);color:var(--accent);vertical-align:middle}
 </style>
 </head>
 <body>
@@ -6028,6 +6030,7 @@ function normLojaRobo(o){
     faltas:String(o['FALTAS']||'').split(';').map(x=>x.trim()).filter(Boolean).map(x=>{ const m = x.match(/^(.*?)\s*\((ATESTADO)\)$/); return m ? {nome:nomeCompletoCadastro(m[1]), atestado:true} : {nome:nomeCompletoCadastro(x), atestado:false}; }),
     transferidos:String(o['TRANSFERIDOS']||'').split(';').map(x=>x.trim()).filter(Boolean).map(nomeCompletoCadastro),
     azuis:String(o['FREELANCERS (AZUL NA ESCALA)']||'').split(';').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean),
+    assunto:String(o['ASSUNTO DO E-MAIL']||''), recebido:String(o['RECEBIDO EM']||''),
     temGestao: o['FALTAS'] !== undefined};
 }
 function numOuNulo(v){ return (v === '' || v === null || v === undefined) ? null : (Number(v) || 0); }
@@ -6465,6 +6468,56 @@ function abrirErros(id, nome){
   }
   return folhaErros('Erros da equipe', sub + ` · ${fmtN(l.errosItens)} erro(s)`, gruposDaLoja(l), false);
 }
+// ---- Pesquisa de loja tolerante (08/11): procura em TODAS as lojas (qualquer segmento/cliente), pelo nome,
+// número, título do e-mail, coordenador e nomes que a mesma loja já teve (robô e Presença). Aceita abreviação
+// (FCO, JD, AV, STA…), letra dobrada (MATTOS = MATOS), uma letra errada e palavras fora de ordem.
+const ABREV_LOJA = {FCO:'FRANCISCO', FRANC:'FRANCISCO', JD:'JARDIM', JDM:'JARDIM', AV:'AVENIDA', AVE:'AVENIDA', R:'RUA', STA:'SANTA', STO:'SANTO', S:'SAO',
+  PCA:'PRACA', PC:'PRACA', DR:'DOUTOR', PRES:'PRESIDENTE', PRE:'PRESIDENTE', SHOP:'SHOPPING', SHOPP:'SHOPPING', BH:'BELO HORIZONTE', CTGM:'CONTAGEM',
+  N:'NOSSA', SRA:'SENHORA', SR:'SENHOR', CEL:'CORONEL', GAL:'GENERAL', GEN:'GENERAL', MAL:'MARECHAL', PROF:'PROFESSOR', ENG:'ENGENHEIRO', VL:'VILA', BRO:'BAIRRO', CENT:'CENTRO'};
+const VAZIAS_LOJA = new Set(['DE','DA','DO','DAS','DOS','E','A','O','LOJA','LJ','FILIAL','ARQUIVO','ARQUIVOS','GERADOS','FWD','ENC','RE','PRODUTIVIDADE','CONTROLE']);
+function palavrasLoja(t){
+  return normalizarNome(t).replace(/[^A-Z0-9]+/g, ' ').trim().split(' ').filter(Boolean)
+    .flatMap(w=>(ABREV_LOJA[w] || w).split(' ')).map(w=>/^\d+$/.test(w) ? String(+w) : w.replace(/(.)\1+/g, '$1'))
+    .filter(w=>!VAZIAS_LOJA.has(w));
+}
+function quaseIgual(a, b){   // no máximo 1 letra diferente (troca, falta ou sobra)
+  if(Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, dif = 0;
+  while(i < a.length && j < b.length){
+    if(a[i] === b[j]){ i++; j++; continue; }
+    if(++dif > 1) return false;
+    if(a.length > b.length) i++; else if(b.length > a.length) j++; else { i++; j++; }
+  }
+  return dif + (a.length - i) + (b.length - j) <= 1;
+}
+function palavraCasa(q, ws){
+  if(/^\d+$/.test(q)) return ws.includes(q);
+  return ws.some(w=>w.startsWith(q) || (q.length >= 5 && w.length >= 4 && (quaseIgual(q, w) || (w.length > q.length && quaseIgual(q, w.slice(0, q.length))))));
+}
+function apelidosDasLojas(){
+  const m = {};
+  const add = (num, nome)=>{ if(!num || !nome) return; const k = String(+num || num); (m[k] = m[k] || new Set()).add(String(nome)); };
+  robo.lojas.forEach(l=>{ add(l.num, l.loja); add(l.num, l.assunto); });
+  try{ historicoAtivo().forEach(r=>add(r.codigo, r.loja)); if(loja.codigo) add(loja.codigo, loja.nome); }catch(e){}
+  return m;
+}
+function buscarLojas(q){
+  const qs = [...new Set(palavrasLoja(q))];
+  if(!qs.length) return {exatas:[], parecidas:[], falhas:[]};
+  const ap = apelidosDasLojas();
+  const todas = lojasRoboOrdenadas();
+  const exatas = [], parecidas = [];
+  todas.forEach(l=>{
+    const ws = palavrasLoja([l.loja, l.num, l.cliente, l.assunto, l.coordenador, ...((ap[String(+l.num || l.num)] || []))].join(' '));
+    const ok = qs.filter(x=>palavraCasa(x, ws)).length;
+    if(ok === qs.length) exatas.push(l);
+    else if(qs.length >= 2 && ok >= Math.ceil(qs.length / 2) && qs.some(x=>!/^\d+$/.test(x) && x.length >= 4 && palavraCasa(x, ws))) parecidas.push({l, ok});
+  });
+  parecidas.sort((a, b)=>b.ok - a.ok || dataParaChave(b.l.data) - dataParaChave(a.l.data));
+  const falhas = exatas.length ? [] : (robo.falhas || []).filter(f=>{ const ws = palavrasLoja(f.assunto + ' ' + f.anexo); return qs.filter(x=>palavraCasa(x, ws)).length >= Math.ceil(qs.length / 2); });
+  return {exatas, parecidas: parecidas.slice(0, 8).map(x=>x.l), falhas};
+}
+
 // lojas agrupadas pelo dia do inventário (data do relatório da loja, não a do e-mail)
 let roboBuscaLoja = '';
 const DIAS_SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
@@ -6500,12 +6553,19 @@ function renderRobo(){
   const casaPessoa = id => busca && robo.pessoas.some(p=>p.id===id && normalizarNome(p.nome).includes(busca));
   const casaBusca = l => normalizarNome(`${l.data} ${l.loja} ${l.num}`).includes(busca) || casaPessoa(l.id);
   const buscaLoja = normalizarNome(roboBuscaLoja || '');
-  const lojas = (busca ? todasLojas.filter(casaBusca) : todasLojas).filter(l=>!buscaLoja || normalizarNome(`${l.loja} ${l.num} ${l.cliente || ''}`).includes(buscaLoja) || String(+l.num) === buscaLoja.replace(/^0+/, ''));
+  const achou = buscaLoja ? buscarLojas(roboBuscaLoja) : null;
+  // pesquisa de loja: procura em todas as lojas (qualquer segmento e cliente)
+  const lojas = achou ? achou.exatas.filter(l=>!busca || casaBusca(l)) : (busca ? todasLojas.filter(casaBusca) : todasLojas);
+  const outroTipo = l => segDaLoja(l) !== segAtivo ? ` <small class="tag-seg">${esc(ROTULO_SEG[segDaLoja(l)] || '')}</small>` : '';
+  const linhaCurta = l => `<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>${outroTipo(l)}<small class="hist">📅 ${esc(l.data)} · ${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças${l.assunto && normalizarNome(l.assunto).indexOf(normalizarNome(l.loja)) < 0 ? ' · e-mail: ' + esc(l.assunto) : ''}</small></span><span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`;
+  const extrasBusca = !achou ? '' : (achou.parecidas.length ? `<div class="section-title">${lojas.length ? 'Também parecidas' : 'Não achei igual. Parecidas:'}</div>` + achou.parecidas.map(linhaCurta).join('') : '')
+    + (achou.falhas.length ? `<div class="msg warn" style="margin-top:8px"><b>⚠️ E-mail que o robô não conseguiu ler:</b><br>${achou.falhas.map(f=>`• ${esc(f.assunto || f.anexo)} (${esc(String(f.recebido).slice(0, 16))}): ${esc(f.erro)}`).join('<br>')}</div>` : '')
+    + (!lojas.length && !achou.parecidas.length && !achou.falhas.length ? `<p class="hint" style="margin-top:8px">Nenhuma loja com esse nome chegou pelo robô. Tente pelo número da loja (ex.: 229) ou por uma palavra só (ex.: Firmo). Se não achar, o e-mail pode não ter chegado ou estar sem "ARQUIVOS" no título.</p>` : '');
   // pesquisa que só acha resultado no outro tipo de cliente: oferece trocar
   const outroSeg = busca && !lojas.length ? Object.keys(SEGMENTOS).find(s=>s !== segAtivo && lojasDoSeg(s).some(casaBusca)) : null;
   const avisoOutro = outroSeg ? `<p class="hint" style="margin-top:8px">Nada em ${rotSeg}, mas tem resultado em ${ROTULO_SEG[outroSeg].toLowerCase()}. <button class="btn small secondary" style="margin:0 0 0 4px" data-seg-chave="${outroSeg}">Ver ${ROTULO_SEG[outroSeg].toLowerCase()}</button></p>` : '';
   const abrirLojas = roboUi.lojas || !!busca || !!buscaLoja;
-  const contLojas = (busca || buscaLoja) ? `${lojas.length} de ${todasLojas.length}` : `${todasLojas.length}`;
+  const contLojas = buscaLoja ? `${lojas.length} achada(s) em ${robo.lojas.length}` : busca ? `${lojas.length} de ${todasLojas.length}` : `${todasLojas.length}`;
   const comMeta = todasLojas.map(equipeLojaRobo).filter(eq=>eq.meta);
   const placarMeta = comMeta.length ? ` · ✅ ${comMeta.filter(eq=>eq.bateu).length} de ${comMeta.length} na meta` : '';
   renderMetas();
@@ -6513,7 +6573,7 @@ function renderRobo(){
     ? (robo.lojas.length ? `<div class="card"><p class="hint" style="margin:0">Nenhuma loja de ${segAtivo === 'OUTRO' ? 'outros clientes' : rotSeg.replace(/s$/, '')} recebida ainda.${segAtivo === 'SUPERMERCADO' ? ' Assim que chegar o e-mail de um supermercado (Farid, por exemplo), ela aparece aqui.' : ''}</p>${avisoOutro}</div>` : '')
     : `<div class="card"><button class="secao-toggle ${abrirLojas?'aberta':''}" onclick="alternarSecaoRobo('lojas')"><span class="seta">▶</span> Lojas recebidas <small>(${contLojas}${placarMeta})</small></button>${avisoOutro}${
     !abrirLojas ? '' : `<div class="busca-loja"><input type="search" id="buscaLojaRobo" placeholder="🔎 Pesquisar loja (nome ou número)" value="${esc(roboBuscaLoja || '')}" autocomplete="off"></div>` +
-    (!lojas.length ? (avisoOutro ? '' : '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>') : gruposPorData(lojas).map((g, gi)=>`<details class="dia-lojas" ${gi < 3 || busca || buscaLoja ? 'open' : ''}><summary><b>📅 ${esc(g.rot)}</b><small>${g.lojas.length} loja(s)${g.meta ? ` · ✅ ${g.bateu} de ${g.meta} na meta` : ''}</small></summary>` + g.lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
+    (!lojas.length ? (achou ? extrasBusca : avisoOutro ? '' : '<p class="hint" style="margin-top:8px">Nenhuma loja encontrada.</p>') : (achou ? lojas.map(linhaCurta).join('') + extrasBusca : '') || gruposPorData(lojas).map((g, gi)=>`<details class="dia-lojas" ${gi < 3 || busca || buscaLoja ? 'open' : ''}><summary><b>📅 ${esc(g.rot)}</b><small>${g.lojas.length} loja(s)${g.meta ? ` · ✅ ${g.bateu} de ${g.meta} na meta` : ''}</small></summary>` + g.lojas.map(l=>`<div class="pessoa-row"><span class="pessoa-nome"><b>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}</b>
       <small class="hist">${l.conferentes} conferente(s) · ${fmtN(l.pecas)} peças${l.errosItens !== null && l.errosItens !== undefined ? ` · ${l.errosItens} erro(s)` : ''} · ${String(l.horas).replace('.', ',')} h${l.inicio && l.fim ? ` (${esc(l.inicio)}–${esc(l.fim)})` : ''}${l.obs ? ' · ' + esc(l.obs) : ''}</small>${seloMeta(equipeLojaRobo(l))}${avisosDaLoja(l).length ? ` <span class="selo-meta nao">⚠️ ${avisosDaLoja(l).length} aviso(s) do arquivo</span>` : ''}</span>
       <span class="pill-btns"><button class="pill largo" data-robo="${esc(l.id)}">Ver ranking</button></span></div>`).join('') + '</details>').join(''))}</div>`;
   const bl = document.getElementById('buscaLojaRobo');
@@ -10082,7 +10142,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 08/11/2026 14:34</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 08/11/2026 14:55</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
