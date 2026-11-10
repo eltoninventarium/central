@@ -467,6 +467,15 @@ details.dia-lojas[open]>summary::after{transform:rotate(90deg)}
 .evo-svg .evo-pt.sel circle+circle{stroke:var(--text);stroke-width:2.5}
 .evo-det{margin-top:8px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:.88rem}
 .evo-det-num{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 4px}.evo-det-num span{display:flex;flex-direction:column;font-size:.72rem;color:var(--muted)}.evo-det-num b{font-size:1.05rem;color:var(--text)}
+
+.tp-pessoa{padding:7px 0;border-top:1px solid var(--border)}
+.tp-nome{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.88rem}
+.tp-nome .pill{padding:2px 8px;min-width:0}
+.tp-eixo{position:relative;height:14px;font-size:.65rem;color:var(--muted);margin:2px 6px 0}.tp-eixo span{position:absolute;transform:translateX(-50%)}
+.tp-barras{display:flex;align-items:flex-end;gap:4px;height:120px;padding:6px 4px 0;border:1px solid var(--border);border-radius:12px;background:var(--panel)}
+.tp-barra{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.tp-barra i{display:block;width:70%;border-radius:4px 4px 0 0}
+.tp-barra small{font-size:.65rem;font-weight:700}.tp-barra span{font-size:.6rem;color:var(--muted);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -6606,6 +6615,130 @@ function renderRobo(){
   try{ renderCoordsAgora(); renderCoordsAcesso(); }catch(e){}
   if(typeof atualizarBadges === 'function') atualizarBadges();
 }
+
+/* =====================================================================
+   ⏱ TEMPO PARADO (10/11) — pelos coletores (pasta CONTROLE). Régua = produtividade de cada ciclo
+   (fechou uma seção → fechou a próxima) contra o tempo que a seção pedia, pelo ritmo da equipe no dia.
+   Lento: 1,5× e +3 min (conta como minuto perdido) · Fora do normal: 2× e +5 min · Desacelerou: último quarto
+   ≥ 30% pior que o resto. Quem terminou antes não conta. Coordenador e instrutor ficam fora; estagiário entra com 🎓.
+   Colegas veem só as lojas que coordenaram.
+   ===================================================================== */
+const CORES_TP = ['#8b6fe0', '#f0a43a', '#d64545'];
+const hmTP = t => { t = ((Math.round(t) % 1440) + 1440) % 1440; return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); };
+const corParado = v => v >= 10 ? 'var(--danger)' : v >= 7 ? 'var(--warn)' : 'var(--ok)';
+const corParadoHex = v => v >= 10 ? '#c0392b' : v >= 7 ? '#b9770e' : '#1f7a45';
+function lojaDoColega(l){
+  if(souCriador()) return true;
+  const eu = normalizarNome((robo.voce || {}).nome || '').split(' ').filter(w=>w && !LIGA_NOME.has(w)); if(!eu.length) return false;
+  return String((l && l.coordenador) || '').split(/[\/,;]| E /).some(c=>{ const t = normalizarNome(c).split(' ').filter(w=>w && !LIGA_NOME.has(w));
+    return t.length && t[0] === eu[0] && (t.length === 1 || t.slice(1).some(w=>eu.includes(w))); });
+}
+// coordenador da loja pelo Relatório de Gestão ("GLAUCIA CRUZ / ELTON XAVIER")
+function ehCoordDaLoja(l, nome){
+  const t = normalizarNome(nome).split(' ').filter(w=>w && !LIGA_NOME.has(w)); if(!t.length) return false;
+  return String((l && l.coordenador) || '').split(/[\/,;]| E /).some(c=>{ const u = normalizarNome(c).split(' ').filter(w=>w && !LIGA_NOME.has(w));
+    return u.length >= 2 && u[0] === t[0] && u.slice(1).every(w=>t.includes(w)); });
+}
+function foraDoTempoParado(l, nome){ const pap = papelNaLoja(l.id, nome); return pap === 'coord' || pap === 'instrutor' || ehCoordDaLoja(l, nome); }
+function pessoasParado(l, pa){
+  return Object.keys(pa.pessoas).filter(n=>!/^COLETOR \d+/.test(n)).map(n=>{
+    const o = pa.pessoas[n], pap = papelNaLoja(l.id, n);
+    if(foraDoTempoParado(l, n)) return null;
+    return Object.assign({}, o, {nome:n, estag:pap === 'estagiario', porHora:o.min ? Math.round(o.perdido / o.min * 60) : 0,
+      atraso:pa.comecoEquipe !== null && pa.comecoEquipe !== undefined && !o.semHora ? Math.round(o.ini - pa.comecoEquipe) : 0,
+      transf:(l.transferidos || []).some(t=>mesmoNomeFlex(t, n))});
+  }).filter(Boolean).sort((a, b)=>b.porHora - a.porHora || b.perdido - a.perdido);
+}
+function svgLinhaTempo(o, t0, t1){
+  const W = 300, x = t=>Math.max(0, Math.min(W, (t - t0) / (t1 - t0) * W));
+  return `<svg viewBox="0 0 ${W} 16" preserveAspectRatio="none" style="width:100%;height:16px;display:block;background:rgba(139,111,224,.16);border-radius:4px;margin:3px 0">${
+    (o.seg || []).map(g=>`<rect x="${x(g[0]).toFixed(1)}" y="2" width="${Math.max(0.7, x(g[1]) - x(g[0])).toFixed(1)}" height="12" fill="${CORES_TP[g[2]]}" ${g[2] ? '' : 'fill-opacity="0.55"'}/>`).join('')}</svg>`;
+}
+const nomeTP = n => String(n || "");
+function linhaPessoaTP(o, t0, t1, botao){
+  const sinais = [o.desac ? '<b style="color:#c0392b">desacelerou no fim</b>' : '', o.atraso >= 5 ? `começou ${hmTP(o.ini)} (+${o.atraso} min)` : '',
+    o.transf ? 'transferido(a)' : '', o.semHora ? 'relógio do coletor zerado' : ''].filter(Boolean).join(' · ');
+  return `<div class="tp-pessoa"><div class="tp-nome"><span><b>${esc(nomeTP(o.nome))}</b>${o.estag ? ' 🎓' : ''}</span><span><b style="color:${corParadoHex(o.porHora)}">${o.porHora} min/h</b>${botao ? ` <button type="button" class="pill" data-tp-img="${esc(o.nome)}" title="Imagem só desta pessoa">🖼️</button>` : ''}</span></div>
+    ${svgLinhaTempo(o, t0, t1)}
+    <small class="hint">${o.perdido} min perdidos em ${fmtMinutos(o.min)} · ${(o.fora || []).length} ciclo(s) fora do normal${sinais ? ' · ' + sinais : ''}</small></div>`;
+}
+function eixoTP(t0, t1){
+  const marcas = []; for(let h = Math.ceil(t0 / 60) * 60; h <= t1; h += 60) marcas.push(h);
+  return `<div class="tp-eixo">${marcas.map(h=>`<span style="left:${((h - t0) / (t1 - t0) * 100).toFixed(1)}%">${hmTP(h)}</span>`).join('')}</div>`;
+}
+function tabelaForaTP(lista){
+  if(!lista.length) return '';
+  return `<div class="wrap-table"><table><thead><tr><th>Quem</th><th>Seção</th><th>Hora</th><th>Levou</th><th>Pedia</th><th>Peças</th></tr></thead><tbody>${
+    lista.map(f=>`<tr><td>${esc(nomeTP(f.nome))}</td><td>${f[0]}<br><small class="hint">${esc(f[1] || '—')}</small></td><td>${hmTP(f[2])}</td><td><b>${f[3]} min</b></td><td>${f[4]} min</td><td>${fmtN(f[5])}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function htmlTempoParado(l, pa, soNome){
+  let ps = pessoasParado(l, pa);
+  if(!ps.length) return '<p class="hint">Sem pessoas medidas nesta loja.</p>';
+  const t0 = Math.floor(Math.min(...ps.map(o=>o.ini)) / 30) * 30, t1 = Math.ceil(Math.max(...ps.map(o=>o.fim)) / 30) * 30;
+  if(soNome){ const o = ps.find(x=>mesmoNomeFlex(x.nome, soNome)); if(!o) return '';
+    return `${eixoTP(t0, t1)}${linhaPessoaTP(o, t0, t1, false)}<p class="hint" style="margin-top:8px">Cada ciclo = de quando fechou uma seção até fechar a próxima. <span style="color:${CORES_TP[1]}">■</span> lento · <span style="color:${CORES_TP[2]}">■</span> fora do normal, comparando com o que a seção pedia (peças, itens multiplicados/bipados, setor) no ritmo da equipe nesse dia.</p>
+      ${(o.fora || []).length ? '<div class="section-title">Ciclos fora do normal</div>' + tabelaForaTP(o.fora.map(f=>Object.assign(f.slice(), {nome:o.nome}))) : ''}`; }
+  const perd = ps.reduce((t, o)=>t + o.perdido, 0), min = ps.reduce((t, o)=>t + o.min, 0), media = min ? perd / min * 60 : 0;
+  const top = ps.flatMap(o=>(o.fora || []).map(f=>Object.assign(f.slice(), {nome:o.nome}))).sort((a, b)=>(b[3] - b[4]) - (a[3] - a[4])).slice(0, 8);
+  return `<div class="resumo" style="--n:3"><div class="item">Equipe<b>${fmtMinutos(perd)}</b><small>perdidos</small></div><div class="item">Média<b style="color:${corParado(media)}">${fmt1(media)}</b><small>min por hora</small></div>
+      <div class="item">10 min/h ou mais<b>${ps.filter(o=>o.porHora >= 10).length}</b><small>pessoa(s)</small></div></div>
+    <details class="ajuda"><summary>ℹ️ Como é calculado</summary><p class="hint">Minuto perdido = o que cada ciclo (fechou uma seção → fechou a próxima) passou do tempo que a seção pedia, pelo ritmo da própria equipe nesse dia (peças, itens multiplicados ou bipados, setor). Conta a partir de 1,5× e 3 min a mais; "fora do normal" = 2× e 5 min a mais. Quem terminou antes não conta. Coordenador e instrutor ficam fora. Os dados ajudam — a decisão é do seu olhar (pode ter sido recontagem, ajuda a outra pessoa, coletor travado…).</p></details>
+    <div class="section-title">Linha do tempo</div>${eixoTP(t0, t1)}${ps.map(o=>linhaPessoaTP(o, t0, t1, true)).join('')}
+    <p class="hint" style="margin-top:6px"><span style="color:${CORES_TP[0]};opacity:.6">■</span> normal · <span style="color:${CORES_TP[1]}">■</span> lento (1,5×) · <span style="color:${CORES_TP[2]}">■</span> fora do normal (2× e +5 min)</p>
+    ${top.length ? '<div class="section-title">Ciclos mais fora do normal</div>' + tabelaForaTP(top) : ''}`;
+}
+async function abrirTempoParado(id){
+  const l = robo.lojas.find(x=>x.id === id); if(!l) return;
+  const box = abrirFolha(`⏱ Tempo parado · ${esc(l.loja)}`, `<p class="hint" style="margin-top:0">${esc(l.data)} · pelos coletores (pasta CONTROLE)</p><div data-tp><p class="hint">Carregando…</p></div>`, 'Fechar', ()=>{});
+  const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
+  const div = box.querySelector('[data-tp]');
+  let r = null;
+  try{ r = await obterResumo(id); if(r && !r.parado) r = await obterResumo(id, true); }
+  catch(e){ div.innerHTML = `<p class="hint">${esc(e.message || 'Não consegui baixar agora.')}</p>`; return; }
+  if(!r || !r.parado || !r.parado.pessoas){ div.innerHTML = '<p class="hint">Esta loja chegou antes do relatório de tempo parado (ou veio sem a pasta CONTROLE). No robô, rode a função <b>refazerTempoParado</b> uma vez que as lojas dos últimos 45 dias entram aqui.</p>'; return; }
+  div.innerHTML = htmlTempoParado(l, r.parado) + (souCriador() ? `<div class="acoes"><button class="btn secondary small" type="button" data-tp-tudo>🔒 Imagem completa (meu controle)</button></div>` : '');
+  const titulo = `⏱ Tempo parado · ${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}`;
+  div.addEventListener('click', e=>{
+    const b = e.target.closest('[data-tp-img]');
+    if(b){ gerarImagem(cabecalhoImagem(esc(b.dataset.tpImg), titulo + ' · ' + esc(l.data)) + htmlTempoParado(l, r.parado, b.dataset.tpImg), `Tempo parado - ${limpaNomeArquivo(b.dataset.tpImg)} - ${limpaNomeArquivo(l.loja)}.png`); return; }
+    if(e.target.closest('[data-tp-tudo]')) gerarImagem(cabecalhoImagem(titulo, esc(l.data) + ' · 🔒 controle do coordenador') + htmlTempoParado(l, r.parado).replace(/<details[\s\S]*?<\/details>/, ''), `Tempo parado - ${limpaNomeArquivo(l.loja)} (controle).png`);
+  });
+}
+// dados de todas as lojas (perfis do robô): [nome, perdido, min, fora, lentos, desac, atraso, seções]
+function dadosParado(seg, dias){
+  if(!perfisRobo || !Array.isArray(perfisRobo.lojas)) return [];
+  const lim = dias ? Date.now() - dias * 864e5 : 0, visao = cliAtivo ? idsVisao() : null, por = {};
+  perfisRobo.lojas.forEach(lp=>{
+    if(!Array.isArray(lp.tp) || (seg && (lp.seg || 'DROGARIA') !== seg) || (visao && !visao.has(lp.id))) return;
+    const dt = String(lp.d).match(/(\d{2})\/(\d{2})\/(\d{4})/); if(lim && dt && new Date(+dt[3], +dt[2] - 1, +dt[1]).getTime() < lim) return;
+    const l = robo.lojas.find(x=>x.id === lp.id) || {id:lp.id, coordenador:''};
+    if(!lojaDoColega(l)) return;
+    lp.tp.forEach(x=>{
+      const nome = perfisRobo.nomes[x[0]]; if(!nome) return;
+      const pap = papelNaLoja(lp.id, nome); if(foraDoTempoParado(l, nome)) return;
+      const k = normalizarNome(nome), o = por[k] || (por[k] = {nome, lojas:[], perdido:0, min:0, fora:0, desac:0, atrasos:0, estag:false});
+      o.lojas.push({id:lp.id, d:lp.d, l:lp.l, perdido:x[1], min:x[2], fora:x[3], desac:x[5], atraso:x[6]});
+      o.perdido += x[1]; o.min += x[2]; o.fora += x[3]; o.desac += x[5] ? 1 : 0; o.atrasos += x[6] >= 5 ? 1 : 0; if(pap === 'estagiario') o.estag = true;
+    });
+  });
+  return Object.values(por).map(o=>Object.assign(o, {porHora:o.min ? o.perdido / o.min * 60 : 0})).sort((a, b)=>b.porHora - a.porHora);
+}
+// na ficha: histórico dela, comparando com ela mesma
+function htmlParadoFicha(nome){
+  if(!perfisRobo){ try{ const pr = atualizarPerfis(); if(pr) pr.then(()=>{ if(fichaAberta) renderFichas(); }); }catch(e){} return ''; }
+  const k = normalizarNome(nome), o = dadosParado(null, 0).find(x=>normalizarNome(x.nome) === k || mesmoNomeFlex(x.nome, nome));
+  if(!o || !o.lojas.length) return '';
+  const ls = o.lojas.slice().sort((a, b)=>dataParaChave(a.d) - dataParaChave(b.d)).slice(-12);
+  const ph = x=>x.min ? x.perdido / x.min * 60 : 0, max = Math.max(12, ...ls.map(ph));
+  const media = o.porHora, n = ls.length, k3 = Math.min(3, n >> 1);
+  const ini = k3 ? ls.slice(0, k3).reduce((t, x)=>t + ph(x), 0) / k3 : 0, fim = k3 ? ls.slice(-k3).reduce((t, x)=>t + ph(x), 0) / k3 : 0;
+  const frase = n < 4 ? `${n} loja(s) medida(s)` : Math.abs(fim - ini) < 1.5 ? `Estável: ${fmt1(ini)} → ${fmt1(fim)} min/h` : fim < ini ? `Melhorando 📈: ${fmt1(ini)} → ${fmt1(fim)} min/h (primeiras × últimas lojas)` : `Piorando 📉: ${fmt1(ini)} → ${fmt1(fim)} min/h (primeiras × últimas lojas)`;
+  return `<div class="section-title">⏱ Tempo parado (pelos coletores)</div>
+    <p class="hint" style="margin:0 2px 6px"><b>${esc(frase)}</b> · média dela ${fmt1(media)} min/h · desacelerou no fim em ${o.desac} de ${o.lojas.length} loja(s) · começou depois da equipe em ${o.atrasos}</p>
+    <div class="tp-barras">${ls.map(x=>{ const v = ph(x); return `<div class="tp-barra" title="${esc(x.d)} · ${esc(x.l)}"><i style="height:${Math.max(4, v / max * 100).toFixed(0)}%;background:${corParadoHex(v)}"></i><small>${Math.round(v)}</small><span>${esc(String(x.d).slice(0, 5))}</span></div>`; }).join('')}</div>
+    <p class="hint" style="margin:4px 2px 0">Minutos perdidos por hora em cada loja (mais baixo é melhor). ${o.fora} ciclo(s) fora do normal no total.</p>`;
+}
+
 // ---- ⏱ Análise de tempo: separado do ranking. Junta todas as lojas com CONTROLE (perfis do robô).
 let tempoAberto = null;
 function dadosTempo(seg){
@@ -6638,17 +6771,14 @@ function renderTempoRobo(){
   const aberto = !!roboUi.tempo;
   if(aberto && (!perfisRobo || Date.now() - (perfisRobo.em || 0) > 10 * 60 * 1000)){ const pr = atualizarPerfis(); if(pr) pr.then(()=>renderTempoRobo()); }
   const busca = normalizarNome(roboBusca || '');
-  const todos = aberto ? dadosTempo(segAtivo) : [];
+  const todos = aberto ? dadosParado(segAtivo, 30) : [];
   const lista = busca ? todos.filter(o=>normalizarNome(o.nome).includes(busca)) : todos;
-  const sel = tempoAberto && todos.find(o=>normalizarNome(o.nome) === tempoAberto);
-  div.innerHTML = `<div class="card"><button class="secao-toggle ${aberto?'aberta':''}" onclick="alternarSecaoRobo('tempo')"><span class="seta">▶</span> ⏱ Análise de tempo ${aberto && todos.length ? `<small>(${todos.length})</small>` : ''}</button>
-    ${!aberto ? '' : `<p class="hint" style="margin-top:6px">Separado do ranking. O robô mede cada seção no coletor (aberta → fechada) e compara com o tempo esperado para o que foi contado nela (itens multiplicados, peças bipadas, setor). <b>Índice</b> 1,00 = ritmo da loja; acima de 1,30 = mais devagar. Coordenador e instrutor não entram. Os dados ajudam — a decisão é do seu olhar.</p>
-      <p class="hint">🕐 <b>Tempo além do esperado</b>: devagar sem errar parcial (seções muito longas ou muito tempo entre seções). 🧩 <b>Sinais de dificuldade</b>: devagar com muita parcial errada ou seção apagada. <b>Além</b> = minutos além do esperado por loja · <b>Fora</b> = seções 2,5× acima do esperado.</p>
-      ${perfisBaixando && !todos.length ? '<p class="hint">Buscando no robô…</p>' : !todos.length ? '<p class="hint">Ainda sem lojas com CONTROLE analisadas. Depois de colar o robô novo e rodar "refazerTudo", elas aparecem aqui.</p>'
-      : `<div class="wrap-table"><table><thead><tr><th>Nome</th><th>Índice</th><th>Além</th><th>Fora</th><th>Parcial</th><th></th></tr></thead><tbody>${
-        lista.map(o=>`<tr class="linha-clicavel" data-tempo="${esc(normalizarNome(o.nome))}"><td>${esc(o.nome)}<br><small class="hint">${o.lojas.length} loja(s)${o.estag ? ' · estagiário' : ''}</small></td><td><b style="color:${corIndice(o.ix)}">${fmtIx(o.ix)}</b></td><td>${fmtMinutos(Math.round(o.al / o.lojas.length))}</td><td>${o.fora || '—'}</td><td>${o.pe || '—'}</td><td>${o.sinalHora ? '🕐' : ''}${o.sinalDif ? '🧩' : ''}</td></tr>`).join('')
-      }</tbody></table></div>`}
-      ${sel ? detalheTempo(sel) : ''}`}</div>`;
+  div.innerHTML = `<div class="card"><button class="secao-toggle ${aberto?'aberta':''}" onclick="alternarSecaoRobo('tempo')"><span class="seta">▶</span> ⏱ Tempo parado (30 dias) ${aberto && todos.length ? `<small>(${todos.length})</small>` : ''}</button>
+    ${!aberto ? '' : `<p class="hint" style="margin-top:6px">Quem mais perde tempo, pelos coletores: minutos perdidos por hora trabalhada (mais baixo é melhor). Toque no nome para ver a ficha; o detalhe de cada loja fica em Produtividade › loja › ⏱ Tempo parado.</p>
+      ${perfisBaixando && !todos.length ? '<p class="hint">Buscando no robô…</p>' : !todos.length ? '<p class="hint">Ainda sem lojas com tempo parado. Depois de colar o robô novo, rode no robô a função <b>refazerTempoParado</b> uma vez.</p>'
+      : `<div class="wrap-table"><table><thead><tr><th>Nome</th><th>min/h</th><th>Fora</th><th>Desacel.</th><th>Atraso</th></tr></thead><tbody>${
+        lista.map(o=>`<tr class="linha-clicavel" data-tp-ficha="${esc(o.nome)}"><td>${esc(o.nome)}${o.estag ? ' 🎓' : ''}<br><small class="hint">${o.lojas.length} loja(s) · ${fmtMinutos(o.perdido)} perdidos</small></td><td><b style="color:${corParado(o.porHora)}">${fmt1(o.porHora)}</b></td><td>${o.fora}</td><td>${o.desac}/${o.lojas.length}</td><td>${o.atrasos}</td></tr>`).join('')}</tbody></table></div>
+        <p class="hint">Fora = ciclos 2× acima do que a seção pedia · Desacel. = lojas em que o ritmo caiu no fim · Atraso = lojas em que começou 5 min ou mais depois da equipe.</p>`}`}</div>`;
 }
 function detalheTempo(o){
   return `<div class="card" id="cardTempo" style="margin-top:10px;background:var(--accent-soft)"><h2 style="font-size:1rem">${esc(o.nome)} · índice ${fmtIx(o.ix)} · ${textoIndice(o.ix)}</h2>
@@ -6658,6 +6788,7 @@ function detalheTempo(o){
     <div class="acoes"><button class="btn secondary small" onclick="abrirFicha(${esc(JSON.stringify(o.nome))})">Abrir ficha</button><button class="btn secondary small" style="margin-left:6px" onclick="tempoAberto=null;renderTempoRobo()">Fechar</button></div></div>`;
 }
 document.getElementById('tempoRobo').addEventListener('click', e=>{
+  const tf = e.target.closest('[data-tp-ficha]'); if(tf){ abrirFicha(tf.dataset.tpFicha); return; }
   const tr = e.target.closest('[data-tempo]'); if(!tr) return;
   tempoAberto = tempoAberto === tr.dataset.tempo ? null : tr.dataset.tempo; renderTempoRobo();
   const el = document.getElementById('cardTempo'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'nearest'});
@@ -6698,7 +6829,7 @@ function renderDetalheRobo(){
     ${htmlAvisosLoja(l)}
     ${(l.faltas || []).length || (l.transferidos || []).length ? `<p class="hint" style="margin:6px 2px">${(l.faltas || []).length ? `❌ <b>Faltaram (${l.faltas.length}):</b> ${l.faltas.map(f=>esc(nomeProprio(f.nome)) + (f.atestado ? ' (atestado)' : '')).join(', ')}` : ''}${(l.transferidos || []).length ? `${(l.faltas || []).length ? '<br>' : ''}↪️ Transferidos para outra loja: ${l.transferidos.map(n=>esc(nomeProprio(n))).join(', ')}` : ''}</p>` : ''}
     <p class="hint">${esc(textoErrosLoja(l))} Toque num nome para ver o resumo dele(a)${l.errosItens !== null && l.errosItens !== undefined ? ' e os itens ajustados' : ''}.</p>
-    ${l.resumo === 'PRONTO' ? `<div class="acoes" style="margin-top:0"><button class="btn small" onclick="abrirResumoEquipe(roboLojaAberta)">📝 Resumo da equipe</button><button class="btn small secondary" onclick="abrirMapaLoja(roboLojaAberta)">🗺️ Mapa da loja</button>${(()=>{ const rg = registroPresencaDaLojaRobo(l); return rg && (rg.atual || Object.keys(rg.setores || {}).length) ? `<button class="btn small secondary" onclick="abrirPlanejadoReal(roboLojaAberta)">🧭 Planejado × real</button>` : ''; })()}</div>`
+    ${l.resumo === 'PRONTO' ? `<div class="acoes" style="margin-top:0"><button class="btn small" onclick="abrirResumoEquipe(roboLojaAberta)">📝 Resumo da equipe</button><button class="btn small secondary" onclick="abrirMapaLoja(roboLojaAberta)">🗺️ Mapa da loja</button>${lojaDoColega(l) ? '<button class="btn small secondary" onclick="abrirTempoParado(roboLojaAberta)">⏱ Tempo parado</button>' : ''}${(()=>{ const rg = registroPresencaDaLojaRobo(l); return rg && (rg.atual || Object.keys(rg.setores || {}).length) ? `<button class="btn small secondary" onclick="abrirPlanejadoReal(roboLojaAberta)">🧭 Planejado × real</button>` : ''; })()}</div>`
       : l.resumo === 'AGUARDANDO CONTROLE' ? '<p class="hint">📝 O resumo de cada conferente aparece quando chegar o e-mail do CONTROLE desta loja.</p>' : ''}
     ${previstoXReal(l)}
     <div class="wrap-table"><table><thead><tr><th>#</th><th>Nome</th><th>Peças</th><th>Itens/hora</th>${l.errosItens !== null && l.errosItens !== undefined ? '<th>Erros</th>' : ''}</tr></thead><tbody>${
@@ -7951,6 +8082,7 @@ function renderFichaAberta(todas, rankNota){
     ${lojasRobo.length ? `<div class="section-title">Produtividade por loja (robô)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Pos.</th><th>Peças</th><th>Itens/h</th><th>Erros</th></tr></thead><tbody>${
       lojasRobo.map(({p,l})=>{ const ls = pessoasDaLojaRobo(l.id); return `<tr class="linha-clicavel" data-erros-loja="${esc(l.id)}" data-erros-nome="${esc(p.nome)}"><td>${esc(l.data)}</td><td>${esc(l.loja)}${l.num ? ' | ' + esc(l.num) : ''}${segDaLoja(l) !== 'DROGARIA' ? ` <small class="hint">${ICONE_SEG[segDaLoja(l)]} ${segDaLoja(l) === 'SUPERMERCADO' ? 'supermercado' : 'outro cliente'}</small>` : ''}${marcaAtrasoRobo(p)}</td><td>${ls.indexOf(p)+1}º de ${ls.length}</td><td>${fmtN(p.pecas)}</td><td>${fmtIH(p.ih)}</td>${celulaErros(p)}</tr>`; }).join('')}</tbody></table></div>` : ''}
     ${htmlEvolucao(x.nome, (x.cad && /ESTAG/i.test(String(x.cad.nivel || x.cad.tipo || ''))) || (x.ind && x.ind.lojasRobo <= 10))}
+    ${htmlParadoFicha(x.nome)}
     ${htmlAvalFicha(x.nome)}
     ${ind.registros && ind.registros.length ? `<div class="section-title">Presença (histórico das lojas)</div><div class="wrap-table"><table><thead><tr><th>Data</th><th>Loja</th><th>Status</th><th>Setor</th></tr></thead><tbody>${
       ind.registros.slice().reverse().map(r=>`<tr><td>${esc(r.data)}</td><td>${esc(r.loja)}</td><td>${rotuloHist(r)}${r.origem ? ' <small class="hint">(relatório de gestão)</small>' : ''}</td><td>${(r.setores||[]).map(esc).join(', ') || '—'}</td></tr>`).join('')}</tbody></table></div>` : ''}
@@ -10202,7 +10334,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 08/11/2026 18:02</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 10/11/2026 04:57</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
