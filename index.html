@@ -7244,11 +7244,7 @@ function renderDetalheRobo(){
             <div class="q"><b>${esc(nomeProprio(p.nome))}</b><small>${htmlCategoria(p.nome).replace('<br>', '').replace(/<\/?small[^>]*>/g, '')}${papelNaLoja(l.id, p.nome) ? ` · ${({estagiario:'estagiário', coord:'coord.', instrutor:'instrutor'})[papelNaLoja(l.id, p.nome)]}` : ''}${foraDaEscalaLoja(l, p.nome) ? ' · <span style="color:var(--danger)">⚠ fora da escala desta loja</span>' : ''}${marcaAtrasoRobo(p)}</small>
             <div class="bar"><i class="${cor}" style="width:${Math.round(100 * (p.ih || 0) / maxIh)}%"></i></div></div>
             <div class="v">${p.ih ? fmtIH(p.ih) : '-'}<small>${fmtN(p.pecas)} pç${err}</small></div></div>`; };
-        const podio = conf.length >= 3 && conf[2].ih ? `<div class="podio">${[1, 0, 2].map(i=>{ const p = conf[i];
-            const e = !temErr || p.erros === null || p.erros === undefined ? '' : ` · ${p.erros} erro${p.erros === 1 ? '' : 's'}`;
-            return `<div class="pod p${i + 1} linha-clicavel" data-erros-nome="${esc(p.nome)}"><span class="coroa">${i === 0 ? '👑' : ''}</span>${v4Av(p.nome)}<b>${esc(nomeCurto(nomeProprio(p.nome)))}</b>
-              <div class="base"><em>${i + 1}º</em><strong>${fmtIH(p.ih)}</strong><small>${fmtN(p.pecas)} pç${e}</small></div></div>`; }).join('')}</div>` : '';
-        return podio + conf.map((p,i)=>podio && i < 3 ? '' : linha(p, i+1)).join('') + (fora.length && conf.length ? `<div class="rk-sep">Fora da conta da equipe</div>` + fora.map(p=>linha(p, '—')).join('') : ''); })()
+        return conf.map((p,i)=>linha(p, i+1)).join('') + (fora.length && conf.length ? `<div class="rk-sep">Fora da conta da equipe</div>` + fora.map(p=>linha(p, '—')).join('') : ''); })()
     }</div>
     ${ps.some(p=>p.tempo === 'COLETOR') ? '<p class="hint">⏱ Itens/hora pelo tempo de cada pessoa no coletor (da 1ª seção aberta à última fechada).</p>' : ''}
     ${ps.some(p=>p.atraso) ? '<p class="hint">⏰ = chegou atrasado (marcado na Presença): itens/hora contados a partir da chegada.</p>' : ''}
@@ -10813,7 +10809,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 15/11/2026 06:20</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 15/11/2026 07:45</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
