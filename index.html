@@ -1264,7 +1264,7 @@ document.getElementById('statusNuvem').addEventListener('click', e=>{ const t = 
 function saudacao(){
   const d = new Date(), h = d.getHours(), oi = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
   const sd = document.getElementById('saudData'); if(sd) sd.textContent = d.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
-  let nome = ''; try{ nome = (robo.voce && robo.voce.nome ? String(robo.voce.nome).trim().split(/\s+/)[0] : ''); }catch(e){}
+  let nome = ''; try{ nome = (robo.voce && robo.voce.nome ? String(robo.voce.nome).trim().split(/\s+/)[0] : (robo.link && robo.voce && robo.voce.admin === true ? 'Elton' : '')); }catch(e){}   // colega: o nome que o criador deu ao acesso; chave do criador: Elton
   if(nome) nome = nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase();
   const t = document.getElementById('saudTitulo'); if(t) t.textContent = nome ? oi + ', ' + nome : oi + '!';
 }
@@ -5322,9 +5322,11 @@ const estaOnline = c => c.visto && (coordsAgoraRobo || Date.now()) - c.visto < O
 function bolinhaOnline(c){ const on = estaOnline(c); return `<span class="bola-online ${on ? 'on' : ''}" title="${on ? 'online' : 'offline'}"></span>`; }
 function textoVisto(c){
   if(estaOnline(c)) return 'online agora';
-  if(!c.visto) return 'offline';
-  const min = Math.round(((coordsAgoraRobo || Date.now()) - c.visto) / 60000);
-  return 'offline · visto há ' + (min < 60 ? min + ' min' : Math.round(min / 60) + ' h');
+  if(!c.visto) return 'offline · ainda sem registro de acesso';
+  const agora = coordsAgoraRobo || Date.now(), min = Math.round((agora - c.visto) / 60000), d = new Date(c.visto), hora = d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  const dia0 = t=>{ const x = new Date(t); x.setHours(0, 0, 0, 0); return x.getTime(); }, dias = Math.round((dia0(agora) - dia0(c.visto)) / 86400000);
+  const quando = dias === 0 ? 'hoje às ' + hora : dias === 1 ? 'ontem às ' + hora : d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' às ' + hora;
+  return 'offline · última vez ' + quando + (min < 60 ? ` (há ${min} min)` : dias >= 2 ? ` (há ${dias} dias)` : '');
 }
 // com a Gestão aberta, a bolinha se atualiza sozinha a cada minuto
 setInterval(()=>{ const g = document.getElementById('gestao'); if(g && g.classList.contains('active') && document.visibilityState === 'visible' && souCriador() && robo.link) carregarCoords(); }, 60000);
@@ -7412,6 +7414,7 @@ function salvarNotasResumo(nt){ if(nt) nt.em = Date.now(); salvarRobo(); marcarA
    Colega: sem Viagem, sem excluir, sem editar cadastro/lista de setores/metas. O robô também bloqueia. */
 function souCriador(){ return !robo.voce || robo.voce.admin !== false; }
 function aplicarPapel(){
+  try{ saudacao(); }catch(e){}   // o nome chega com a resposta do robô
   const col = !souCriador();
   document.body.classList.toggle('modo-colega', col);
   const bv = document.querySelector('#barra button[data-grupo="viagem"]'); if(bv) bv.hidden = col;
@@ -10810,7 +10813,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 15/11/2026 05:25</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 15/11/2026 06:20</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
