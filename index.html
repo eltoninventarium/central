@@ -9693,7 +9693,7 @@ function gravarCodTela(v){ try{ localStorage.setItem(COD_TELA_KEY, JSON.stringif
 let codWake = null, codCheiaAtual = null;
 function codTelaCheia(valor, interno, girado){
   const pref = lerCodTela();
-  codCheiaAtual = {valor, interno, girado: !!girado, tipo: pref.tipo || '', mod: pref.mod || 0};
+  codCheiaAtual = {valor, interno, girado: girado === true || pref.girado !== false, tipo: pref.tipo || '', mod: pref.mod || 0};   // padrão: girado; só abre normal se a pessoa escolheu "Normal"
   let box = document.getElementById('codCheia');
   if(!box){
     box = document.createElement('div'); box.id = 'codCheia';
@@ -9707,7 +9707,7 @@ function codTelaCheia(valor, interno, girado){
       </div>`;
     document.body.appendChild(box);
     box.querySelector('[data-fechar]').onclick = fecharCodCheia;
-    box.querySelector('[data-girar]').onclick = ()=>{ codCheiaAtual.girado = !codCheiaAtual.girado; desenharCodCheia(); };
+    box.querySelector('[data-girar]').onclick = ()=>{ codCheiaAtual.girado = !codCheiaAtual.girado; const p = lerCodTela(); p.girado = codCheiaAtual.girado; gravarCodTela(p); desenharCodCheia(); };
     box.querySelector('[data-menos]').onclick = ()=>mudarModCheia(-1);
     box.querySelector('[data-mais]').onclick = ()=>mudarModCheia(1);
     box.querySelector('#codCheiaTipos').onclick = e=>{ const b = e.target.closest('[data-tipo]'); if(!b || b.disabled) return; codCheiaAtual.tipo = b.dataset.tipo; gravarCodTela(Object.assign(lerCodTela(), {tipo: codCheiaAtual.tipo})); desenharCodCheia(); };
@@ -9726,7 +9726,7 @@ function limitesCodCheia(cb){
   const disp = Math.floor((codCheiaAtual.girado ? area.clientHeight : area.clientWidth) * d * 0.96);
   const caber = Math.max(1, Math.floor(disp / total));
   const min = caber >= 2 ? 2 : 1;   // PC com tela comum (dpr 1): 1 px se 2 não couber
-  return {min, max: Math.max(min, Math.min(12, caber)), caber, padrao: Math.max(min, Math.min(12, caber, Math.round(0.4 / mmPorPx())))};
+  return {min, max: Math.max(min, Math.min(12, caber)), caber, padrao: Math.max(min, Math.min(12, caber, Math.round((codCheiaAtual.girado ? 0.5 : 0.4) / mmPorPx())))};   // girado: barra de ~0,5 mm (a que o coletor leu melhor)
 }
 function mudarModCheia(passo){
   const cb = codBarras(codCheiaAtual.valor, codCheiaAtual.interno, codCheiaAtual.tipo); if(!cb) return;
@@ -10810,7 +10810,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 15/11/2026 03:10</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 15/11/2026 05:25</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
