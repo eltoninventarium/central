@@ -361,6 +361,11 @@ body.modo-colega .so-criador{display:none !important;}
 .filtro-cli label{margin:0;font-weight:700;font-size:.85rem;white-space:nowrap;}
 .filtro-cli select{flex:1;min-width:0;}
 .cod-destaque{border:2px solid var(--accent);border-radius:12px;padding:10px 11px;margin-top:8px;}
+.int-busca input{padding-right:48px;font-size:1.15rem;letter-spacing:.06em;}
+.int-busca .cod-limpar{right:10px;}
+.int-desc{font-size:1.12rem;font-weight:800;line-height:1.25;}
+.int-cod{font-size:.8rem;color:var(--muted);margin:2px 0 4px;}
+.msg.perigo{color:var(--danger);border:1px solid var(--danger);}
 .cod-teclado{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:1px solid var(--border);background:var(--panel);color:var(--muted);border-radius:10px;padding:5px 9px;font:inherit;font-size:.72rem;font-weight:800;cursor:pointer;}
 .cod-info{font-size:.82rem;color:var(--muted);margin:8px 0;}
 .cod-row{border:1px solid var(--border);border-radius:12px;padding:9px 11px;margin-top:8px;cursor:pointer;}
@@ -9244,7 +9249,7 @@ const codBases = {};                                // cliente → base carregad
 const codMem = {};                                  // sem IndexedDB: guarda só na memória
 let codBaixando = '', codAviso = '', codListaAberta = '';
 const CLIENTES_COD = {ARAUJO:'Araujo', RD:'RD (Raia/Drogasil)', PACHECO:'Pacheco', CLARA:'Droga Clara', DROGA_REDE:'Droga Rede',
-  ZAK:'Zak', CHART:'Chart', TRACK_FIELD:'Track & Field', PMG:'PMG'};
+  ZAK:'Zak', CHART:'Chart', TRACK_FIELD:'Track & Field', PMG:'PMG', SUP_BRILHO:'Supermercado Brilho'};
 const CLIENTES_ROUPA = new Set(['ZAK', 'CHART', 'TRACK_FIELD', 'PMG']);
 const LISTAS_COD_PADRAO = {"ARAUJO":[{"id":"avulso","nome":"Avulso / cartelado","itens":[["468843","ACIDO ACETIL EMS 100MG","20468842"],["1180","APRACUR","20001186"],["100544","ASPIRINA C ENVELOPE C/2","20100544"],["412821","BIOFLAC","20412821"],["232882","CX ISOPOR 3L","7898157441028"],["271187","CX ISOPOR 5L","7898157441035"],["213063","CX ISOPOR 500G","7898157441295"],["579890","DECONGEX C/4","7896658009075"],["984876","DIPIRONA EMS","7896004769196"],["437360","DIPIRONA MEDLEY","7891058005733"],["825107","DIPIRONA PRATI","20825102"],["699373","DORALGINA C/4","7896714269917"],["290351","DUODERM CURATIVO 10X10","20290351"],["290360","DUODERM TUBO GEL 30G","20290368"],["426644","ENGOV","20426644"],["23337","ENTEROFIGON","7896331706727"],["71293","EPAREMA HORTELA","7896094922334"],["703826","EPAREMA GUARANA","7896641810176"],["703834","EPAREMA LARANJA","7896641810190"],["25372","EPOCLER","7896094912298"],["286710","FIGATIL","7896023756849"],["756520","GASTROGEL","7896862991081"],["592897","HEPATILON","7896331705096"],["878227","LUFTAGASTROPRO SACHE VERDE","20878221"],["527157","MELOCOX CAIXA AZUL","20527150"],["715891","MELOXICAN CAIXA VERDE","25419894"],["29114","MINILAX ADULTO","20029111"],["825204","PARACETAMOL PRATI"],["26433","PROFENID","20026431"],["903183","SALICETIL C/10","7898100243792"],["579777","SORO FISIOL EQUIPLEX AMARELO","20579777"],["850012","SORO FISIOL SOLUSAM PEQUENO","7898415820176"],["31380","VOLTAREN","20031381"],["902268","XANTINON C/10","20902261"],["977888","XANTINON FLACONETE","7896006216537"],["45837","VALDA PRATA","20045838"],["195456","VALDA XILITOL DIET AZUL","78904231"],["841161","TINTURA COLOR 5/0","7891182019309"],["993948","GARRAFAO GALAO INGA","20993948"],["765953","SERINGA ASSEPTO 21","20765958"],["765961","SERINGA ASSEPTO 23","20765965"],["765970","SERINGA ASSEPTO 25","20765972"],["762245","SERINGA ASSEPTO 27","20762247"],["611131","ANGIOCATH 16","7891463000866"],["611115","ANGIOCATH 18","7891463000880"],["563587","ANGIOCATH 20","7891463000897"],["563609","ANGIOCATH 22","7891463000910"],["563595","ANGIOCATH 24","7891463000927"],["608882","SONDA NASOGASTRICA EMBRAMED 18","7898468475705"],["985040","AGULHA AZUL 0,60X30","382903035175"],["609951","SONDA URETRAL EMBRAMED 14","7898468477617"],["1012258","PERIFERICO 16 CINZA","7898283813669"],["1012266","PERIFERICO 18 VERDE","7898283813676"],["1012274","PERIFERICO 20 ROSA","7898283813683"],["1012290","PERIFERICO 22 AZUL","7898283813690"],["1012282","PERIFERICO 24 AMARELO","7898283813706"]]},{"id":"protetor","nome":"Protetor solar (Sundown/Neutrogena)","itens":[["125660","PROT SOL SUNDOWN N30 120ML"],["360260","PROT SOL SUNDOWN N30 200ML","7891010096496"],["133140","PROT SOL SUNDOWN N50 120ML","7891010008147"],["417041","PROT SOL SUNDOWN N50 200ML","7891010020279"],["714569","PROT SOL SUNDOWN N50 350ML","7891010518752"],["879240","PROT SOL SUNDOWN N70 200ML","7891010244361"],["460290","PROT SOL SUNDOWN KIDS N60 120ML","7891010026264"],["118605","GEL POS SOL SUNDOWN 140G","7891010253288"],["710954","PROT SOL NEUTROGENA N30 120ML"],["710970","PROT SOL NEUTROGENA N30 200ML","7891010514846"],["710920","PROT SOL NEUTROGENA N50 120ML","7891010510985"],["775690","PROT SOL NEUTROGENA N50 200ML","7891010591038"],["775649","PROT SOL NEUTROGENA N70 120ML","7891010591014"],["775681","PROT SOL NEUTROGENA N70 200ML","7891010591007"],["235016","PROT SOL NEUTROGENA N90 120ML"],["234702","PROT SOL NEUTROGENA N90 200ML","7891010249106"]]},{"id":"racao","nome":"Ração (seção veterinária)","itens":[["399370","RAC PEDIGREE RAÇA PEQUENA 10,1KG","7896029069134"],["77208","RAC PEDIGREE NUTRIÇÃO ESSENCIAL 10,1KG","7896029010099"],["657808","RAC PEDIGREE CARNE AO LEITE 10,1KG","7896029009055"],["226149","RAC PEDIGREE CARNE/VEG NUGGETS CROC 10,1KG","7896029068328"],["813834","RAC QUATREE FILHOTE 15KG (VERDE)","7898256300363"],["104795","RAC QUATREE GOURMET 10,1KG (BORDÔ)","7898256300837"],["1018825","RAC QUATREE CÃO AD SELECT FGO/ARZ 10,1KG(LARANJA)","7898256302060"],["90123","RAC QUATREE LIVRE DE CORANTE 15KG (MARROM)","7898256301254"],["967106","RAC QUATREE LIVRE DE CORANTE 20KG (MARROM/NOVA)","7898256302992"],["1018833","RAC QUATREE CÃO AD SELECT FGO/ARZ 15KG(ROSA)","7898256302053"],["190632","RAC QUATREE CARNE 15KG (VERMELHA)","7898256301988"],["453528","RAC DOG CHOW AD MED/GDE 10,1KG (VERDE/VERMELHO)","7891000350621"],["79960","RAC DOG CHOW AD MINI/PEQ 10,1KG (VERDE/BEGE)","7891000350560"],["77518","RAC PAPA DOG 15KG","7896049002234"],["213551","RAC PAPA DOG 10,1KG (NOVA)","7896049002012"],["956759","RAC PAPA CATS 10,1KG (NOVA)","7896049002395"],["304689","RAC HOTDOG SEM CORANTE 15KG","7898256301346"],["891240","RAC KYNUS CARNE ADULTO 15KG","7898914000550"],["109053","RAC MAGNUS TODO DIA AD CARNE 15KG","7898363312815"],["974650","RAC MAGNUS TODO DIA RAÇAS PEQUENAS FGO 10,1KG","7898363318169"],["76554","RAC TUFÃO 15KG","7896049001343"],["959170","RAC TUFÃO FILHOTE 10,1KG (NOVA)","7896049003262"],["89940","RAC BROTHER RAÇA PEQUENA 10,1KG (BRANCA)","7896049001862"],["213535","RAC BROTHER SEM CORANTE ADULTO 15KG (VERDE)","7896049002340"],["936510","RAC PITTY ADULTO 15KG","7897807202729"],["1014366","RAC ORIGENS 15KG","7898363316615"],["1026704","RAC TORO 15KG","7896049002296"],["1072498","RAC PEDIGREE ADULTO CARNE E LEITE 10,1KG","7896029008829"],["1027239","RAC QUATREE GOURMET FILHOTE 10,1KG","7898256300783"],["1114328","RAC QUATREE S ONE ADULTO FRANGO/CARNE 15KG","7898256304132"],["1030604","RAC QUATREE GATO GOURMET ADULTO MIX CARNES 10,1KG","7898256301612"],["1046926","RAC QUATREE GATO CASTRADO MIX CARNES 10,1KG","7898256301940"],["1077490","RAC BARÃO ADULTO CARNE/VEGETAIS 10,1KG","7898715840683"],["1090798","RAC FOSTER ADULTO CARNE/ARROZ 10,1KG","7898942162367"],["1090801","RAC FOSTER GATO CASTRADO CARNE 10,1KG","7898942162329"],["1122428","RAC DUKE ADULTO CARNE 15KG","7898937439412"],["837172","AREIA HIG. PIPCAT FLORAL 4KG (AZUL/ROSA)","7896273805182"],["370622","AREIA HIG. PIPCAT CLASSIC 4KG (AZUL/VERDE)","7896273800033"],["529150","AREIA HIG. COLOSSO ABSORCAT 4KG","7897846301872"],["762237","AREIA HIG. COLOSSO ABSORCAT 12KG","7897846303746"]]}],"RD":[{"id":"avulso","nome":"Avulso / cartelado","itens":[["49416","APRACUR 1X6S","7891104193087"],["10935","FLOGORAL PAST 1X4S LAR","7896658012440"],["74493","ASPIRINA 500MG 1X10","7891106915175"],["110117","IBUFLEX 400MG 4S","7896004747507"],["24026","ASPIRINA C EF 1X2S","7891106915151"],["8444","LUFTAGASTROPRO 10ML","7898962943137"],["1114449","BENALET MEL E LIMAO 4S","7891010258726"],["33312","MELHORAL AD 1X8S","7896094921146"],["20481","BENALET FRAMBOESA 4PAS","7891010974916"],["32368","MELHORAL INF 1X8S","7896094999541"],["1114447","BENALET MENTA 4S","7891010258733"],["76386","PARACET 750 EMG 1X4","7896004703602"],["45391","CAFIASPIRINA 1X4S","7891106900775"],["65985","PARACT 500MG PRG 10S","7898148295098"],["67308","DECONGEX PLUS 1X4S","7896658007996"],["65986","PARACET 750MG PRG 12S","7898148295142"],["92680","DIPIRONA 500 MEG 1X10S","7896422507066"],["79641","PARACETAMOL 750MG 10S CIMED","7896523201689"],["66715","DIPIRONA 500 PRG 10S","7899547537208"],["86702","SIMETICON 125 MEG 1X3S","7896422520652"],["59568","DIPIRONA EMG 500 1X10S","7896004703398"],["20501","TYLENOL POWER 2S"],["37372","ENGOV 1X6S","7896094903104"],["17270","VALDA TABL DIET C/1","7891137006316"],["43381","EPOCLER 1FLAC","7896094903289"],["42388","VALDA TAB CLASSIC 4G","7891137004121"],["38608","EQUIPLEX"],["50060","XANTINON 1X10S","7896641804465"],["26383","FLOGORAL MENTA 1X4S","7896658007804"]]}],"CLARA":[{"id":"avulso","nome":"Avulso / cartelado","itens":[["32017","APRACUR","7891104193087"],["591412","MÁSCARA DESCARTEVÁVEL DUPLA C/100","7908134605852"],["33293","AS-MED 100MG","7896862910372"],["50361","MELHORAL ADULTO C/8","7896094904156"],["28720","AS-MED 500 MG","7896862910105"],["7193","MELHORAL INFANTIL C/8","7896094915053"],["8017","ASPIRINA C/10","7891106004213"],["76230","METOPROLOL SUCCINATO 25MG C 30","7891058000950"],["51199","BIOPANTOVIT 10ML","7898277712558"],["613157","MINOXIDIL P/SOMBRACELHAS - MANIPULADO"],["18368","CHICLETE VALDA CLASSIC TABLETE","7890080698579"],["605333","NALDECON MULTI COM 4CPR","7898962943045"],["27428","CHICLETE VALDA TABLETE DIET","7891137006316"],["9451","NAVRALGEX C/10"],["36237","DIPIRONA PRATI C/10"],["68343","NEOSALDINA C 10 DRAG","7896094921993"],["9655","DORALGINA C/10"],["36151","NEOSALDINA C 4 DRAG","7896094921986"],["55286","DORMEC","7898179710065"],["604898","NEOSALDINA DIP 1G 10 CP","7896094999558"],["587023","DRAMIN 50MG C/10","7896094999503"],["63180","PANTOCLER ABACAXI UN 10 ML","7898722860353"],["32015","ENGOV","7896094903104"],["614634","PANTOCLER BOLDO UN 10 ML","7898722860360"],["56940","ENOXALOW 20 MG 02ML INJ C 01 S","7896014670789"],["51809","PANTOVIT 10ML","7898277712541"],["54174","ENOXALOW 40MG 04ML INJ C 01 SE","7896014670895"],["45213","PARACETAMOL PRATI 500MG C/10","7899547543872"],["57000","ENOXALOW 60MG 06ML INJ C 01 S","7896014670802"],["35416","PARACETAMOL UNIÃO QUIMÍCA 750MG C/10","789627910297"],["60926","ENOXALOW 80MG 08ML INJ C 01 SE","7896014670918"],["49340","PILHA ENERGIZER AA 2 UN PAR (PAR)","39800015464"],["61616","EPAREMA GUARANA FLACONETE 10M","7896094922198"],["45731","PILHA PANASONIC AA 2UN (PAR)","7896067201541"],["61617","EPAREMA LARANJA FLACONETES 10","7896094922211"],["48979","PILHA PANASONIC AAA 2UN (PAR)","7896067200186"],["62639","EPOCLER FLACONETE 10 ML","7896094903289"],["605579","REIDRATANTE CATARINENSE","1789602370220"],["613130","ESMALTE ANTI MICOTICO - MANIPULACAO"],["605640","RESFRIV LARANJA E ACEROLA 1 ENVELOPE","7899095064256"],["602980","FACE MASK","1036237"],["69471","RESFRIV MEL E LIMÃO 1 ENVELOPE","7899095221338"],["63811","FLANAX 550MG C/2","7891106908313"],["44408","SAL DE FRUTA ENO ABACAXI C 2","7896015521646"],["62098","HEPAMED ABACAXI C/1 FLACONETE"],["53745","SEDAMED C/10","7896523224404"],["587682","IMEGOV","7898179711017"],["602704","SERUM VIT C COM ÁCIDO HIALURONICO MAN"],["605306","INA COMPRESSA","7898361300142"],["53031","SIRINGA SR DESC DESCARTAVEL AGULHA 3ML","7891463000347"],["48735","KAOSEC","7898014560817"],["54258","TORSILAX C/10","7896714205236"],["26742","LAMINA BARBEAR WILKINSON INOX","7891051015210"],["26193","TORSILAX C/4","7896714200835"],["587189","LISADOR DIP 1G C/10","7896094916227"],["594287","TRICHOXIDIL TURBINADO MANIPULADO"],["47743","LIXA UNHA MOSTARDA","7897214700757"],["613125","LUVA DE SILICONE - MANIPULACAO"],["588152","XANTINON COMPLEX FLACONETE","7896006216636"],["602697","MASCARA BELAMASK KN95 UNI","7893596029073"]]}],"PACHECO":[{"id":"avulso","nome":"Avulso / cartelado","itens":[["104515","APRACUR 6CP","7891104193087"],["9857","ASPIRINA 500 AD.10CP","7891106004213"],["156426","BENALET FRAMBOESA 4PT","7891010974916"],["156400","BENALET MEL/LIMAO 4PT","7891010256685"],["156434","BENALET MENTA 4PT","7891010256692"],["104523","BENEGRIP 6CP","7896094903036"],["215414","DECONGEX PLUS 4CP","7896658007934"],["312070","DIP SOD 1G 4CP NEO","7896714207575"],["67563","DIPIRONA 500 EMS 10CP","7896004703398"],["288799","DIPIRONA 500 MD.10CP","7891058005726"],["647616","DIPIRONA 500 PD 10CP","7898148294121"],["27049","ENGOV 6CP","7896094903104"],["96695","EPOCLER FLC.1X10ML","7896094903289"],["24651","FIGATIL FLC.1X10ML","7896023756801"],["670626","GEL A.EVER CARE 60ML","7898946495737"],["4960","GELMAX ABACAXI ENV.5G","7896004791449"],["289639","HEPATILON FLAC.10ML","7896331702620"],["604860","LUFTA GASTRO SACH 10ML","7891035650130"],["709620","MANT CACAU FPS8 EVER","7908271300191"],["138827","PARACET 750MG 4CP NEO","7896714214542"],["288756","PARACETAMOL 500MG 4CP"],["701076","PARACETAMOL 750 CI.10C","7896523201689"],["12327","PARACETAMOL 750 EMS 4C","7896004703602"],["193267","XANTINON 10DG","7896006216251"],["222003","XANTINON COMPLEX 1X10M","7896641804472"]]}]};
 // fotos dos produtos das listas: ficam num arquivo à parte (fotos-listas-v1.js, ~0,45 MB), baixado UMA vez e guardado
@@ -9284,6 +9289,7 @@ function clienteCodDe(nome){
   if(/ CHART /.test(t)) return 'CHART';
   if(/TRACK/.test(t)) return 'TRACK_FIELD';
   if(/ PMG /.test(t)) return 'PMG';
+  if(/BRILHO/.test(t)) return 'SUP_BRILHO';
   return '';
 }
 // cliente pelo nome do arquivo importado
@@ -9294,6 +9300,7 @@ function clienteDoArquivo(nome){
   if(/CHART/.test(t)) return 'CHART';
   if(/TRACK/.test(t)) return 'TRACK_FIELD';
   if(/\bPMG\b/.test(t)) return 'PMG';
+  if(/BRILHO/.test(t)) return 'SUP_BRILHO';
   if(/\bDSP\b/.test(t)) return 'PACHECO';
   if(/COLETOR/.test(t)) return 'CLARA';
   if(/CODBAR/.test(t)) return 'ARAUJO';
@@ -9470,6 +9477,8 @@ const FORMATOS_PRODUTOS = [
   ['CLARA', l=>{ const m = l.match(/^(\d{6}) {7}(\d{13}) ?(.*?)\s*$/); return m && [m[1], m[2], m[3], '']; }],
   ['PACHECO', l=>(l.length > 17 && /^\d+ +$/.test(l.slice(0, 16)) && /^\d+ *$/.test(l.slice(16, 31))) ? [l.slice(0, 16), l.slice(16, 31), l.slice(31), ''] : null],
   ['PMG', l=>(l.length > 40 && /^[0-9A-Z]{4,14} +$/.test(l.slice(0, 20)) && /\d/.test(l.slice(0, 20)) && /^\S+ +$/.test(l.slice(20, 40))) ? (()=>{ const ps = l.slice(40).trim().split(/ {3,}/); return [l.slice(0, 20).trim(), '', ps[ps.length - 1] + ' REF ' + l.slice(20, 40).trim(), 'B']; })() : null],
+  // supermercado (Brilho, 21/11): "12058          07891234567890 DESCRIÇÃO" — sem EAN o campo de barras repete o interno
+  ['SUPER15', l=>(l.length > 30 && /^\d+ +$/.test(l.slice(0, 15)) && /^\d[\d ]{12}\d$/.test(l.slice(15, 29)) && l[29] === ' ') ? [l.slice(0, 15), l.slice(15, 29), l.slice(30), ''] : null],
   ['ARAUJO', l=>{ const m = l.match(/^\s*(\d{3,14})\s+(\d{1,9})\s+(\S.*?)\s*$/); return m && [m[2], m[1], m[3], '']; }],
   ['CODDESC', l=>{ const m = l.match(/^([0-9A-Z]{4,20}) {2,}(\S.*?)\s*$/); return m && [m[1], '', m[2], 'B']; }],
   ['SOCOD', l=>{ const t = l.trim(); return (/^[0-9A-Z][0-9A-Z \-.]{2,24}$/.test(t) && /\d/.test(t)) ? [t, '', '', 'B'] : null; }]
@@ -9535,7 +9544,7 @@ async function codImportar(files){
     `<p class="hint" style="margin-top:0">${esc(files.map(f=>f.name).join(', '))}<br><b>${fmtMil(res.n)} produtos</b> reconhecidos${soControlado ? ' (lista de controlados: junto com o arquivo que já está no aparelho)' : ''}.</p>
      <label>De qual cliente?</label><select id="codImpCli" class="full">${opcoes}<option value="__outro__">+ Outro cliente…</option></select>
      <input type="text" id="codImpOutro" placeholder="Nome do cliente (ex.: Hering)" style="margin-top:6px;display:none">
-     ${admin ? `<label class="check" style="margin-top:10px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="codImpTodos" checked> Mandar para todos os coordenadores (pelo robô)</label>` : '<p class="hint">Fica só neste aparelho.</p>'}`,
+     ${admin ? `<label class="check" style="margin-top:10px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="codImpTodos" ${/^SUP_/.test(res.cli) ? '' : 'checked'}> Mandar para todos os coordenadores (pelo robô)</label>` : '<p class="hint">Fica só neste aparelho.</p>'}`,
     'Guardar', b=>{ b.dataset.ok = '1'; return ''; });
   const okBtn = box.querySelector('[data-ok]');
   const selCli = box.querySelector('#codImpCli'), outro = box.querySelector('#codImpOutro');
@@ -9929,6 +9938,15 @@ function renderConsulta(){
       <div id="codInfo"></div>
       <div id="resCod"></div>
     </div>
+    <div class="card so-criador" id="cardIntBarras">
+      <h2 style="margin-bottom:4px">🔢 Sem código: interno → barras <span class="tag-cod lista">só você</span></h2>
+      <p class="hint" style="margin-top:0">A loja passou o código interno de um item sem código? Digite aqui: aparece o <b>código de barras</b> do produto para bipar no coletor (o interno não entra digitado). Só código exato, do cliente escolhido acima.</p>
+      <div class="busca-robo int-busca"><span class="lupa" aria-hidden="true">🔢</span>
+        <input type="text" id="intCod" inputmode="numeric" placeholder="Código interno" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <button type="button" class="cod-limpar" id="intLimpar" title="Limpar" aria-label="Limpar" hidden>✕</button></div>
+      <div id="intRes"></div>
+      <div id="intHoje"></div>
+    </div>
     <div class="card">
       <div class="section-title" style="margin-top:0">Arquivo de produtos</div>
       <p class="hint">Vem sozinho pelo robô (de dentro do zip da loja) e só baixa de novo quando muda. Para um cliente que o robô ainda não tem, importe o TXT do cliente.</p>
@@ -9950,6 +9968,10 @@ function renderConsulta(){
     document.getElementById('codCamera').onclick = ()=>{ pararVoz(); abrirCameraCod(); };
     document.getElementById('codFalar').onclick = ()=>{ codUi.falar = codUi.falar === false; salvarCodUi(); if(!codUi.falar && window.speechSynthesis) speechSynthesis.cancel(); pintarVoz(); };
     aplicarTecladoCod(); pintarVoz();
+    const ic = document.getElementById('intCod');
+    ic.addEventListener('input', ()=>{ clearTimeout(ic._t); ic._t = setTimeout(renderIntBarras, 350); document.getElementById('intLimpar').hidden = !ic.value; });
+    ic.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); clearTimeout(ic._t); renderIntBarras(); ic.blur(); } });
+    document.getElementById('intLimpar').onclick = ()=>{ ic.value = ''; renderIntBarras(); ic.focus(); };
   }
   document.getElementById('codChips').innerHTML = htmlChipsCli();
   document.getElementById('codInfo').innerHTML = htmlInfoBase();
@@ -9959,6 +9981,7 @@ function renderConsulta(){
   }).join('');
   document.getElementById('codVersoes').innerHTML = vs || '';
   renderResultadosCod();
+  renderIntBarras();
 }
 // ✕ do campo: apaga a pesquisa e deixa pronto para o próximo código (teclado aberto)
 function mostrarLimparCod(){ const b = document.getElementById('buscaCod'), x = document.getElementById('codLimpar'); if(b && x) x.hidden = !b.value; }
@@ -10620,7 +10643,7 @@ function renderResultadosCod(){
   if(vozMaosLivres){ const it = r.lista[0], larg = Math.min(box.clientWidth || 330, 420);
     h += it.f.includes('B')
       ? `<div class="cod-destaque"><div class="cod-desc">${esc(it.d || '✅ Código existe no arquivo')}</div>${blocoBarras(it.c, false, larg)}</div>`
-      : `<div class="cod-destaque"><div class="cod-desc">${esc(it.d)}</div><div class="cod-sub">Int. <b>${esc(it.c)}</b></div>${it.e[0] ? blocoBarras(it.e[0], false, larg) : ''}${blocoBarras(it.c, true, larg)}</div>`; }
+      : `<div class="cod-destaque"><div class="cod-desc">${esc(it.d)}</div><div class="cod-sub">Int. <b>${esc(it.c)}</b></div>${it.e[0] ? blocoBarras(cliSemInterno(cli) ? barrasDoItem(it)[0].v : it.e[0], false, larg) : ''}${cliSemInterno(cli) && it.e[0] ? '' : blocoBarras(it.c, true, larg)}</div>`; }
   box.innerHTML = h + r.lista.slice(vozMaosLivres ? 1 : 0).map(it=>{ const foto = fotoCod(cli, it.c);
     return `<div class="cod-row${foto ? ' com-foto' : ''}" role="button" tabindex="0" data-cod="${esc(it.c)}">${foto ? `<img class="cod-foto" src="${foto}" alt="" loading="lazy">` : ''}<div class="cod-txt">
       <div class="cod-desc">${esc(it.d || (it.soCod ? '✅ Código existe no arquivo do cliente (sem descrição)' : '(sem descrição)'))}</div>
@@ -10628,6 +10651,100 @@ function renderResultadosCod(){
       <div>${tagsItem(cli, it)}${it.daLista && codBases[cli] ? '<span class="tag-cod">só na lista (não veio no arquivo da loja)</span>' : ''}</div></div></div>`; }).join('') + (r.mais ? '<p class="hint">Mostrando os 60 primeiros — escreva mais palavras para filtrar.</p>' : '');
   box.querySelectorAll('[data-cod]').forEach(el=>el.onclick = ()=>abrirItemCod(cli, el.dataset.cod));
   if(vozMaosLivres) alinharBarras(box);
+}
+/* ---------- SÓ VOCÊ: interno → código de barras (21/11/2026, Supermercado Brilho) ----------
+   Item sem código na loja: o cliente passa o código interno; você digita aqui e o app mostra o código de BARRAS do
+   produto para bipar no coletor (o interno não entra digitado). Só código exato. A "lista de hoje" fica só neste aparelho.
+   Conferência: no arquivo da contagem, código com até 7 dígitos = suspeito (interno digitado) → auditar o setor. */
+const SEMCOD_KEY = 'central_semcod_v1';
+const cliSemInterno = c => /^SUP_/.test(c || '');   // supermercado: na ficha só o código de barras (sem o interno em barras)
+const ORDEM_BARRA = {ean:0, outro:1, etiqueta:2};
+function barrasDoItem(it){
+  return (it.e || []).map(e=>{
+    let v = e;
+    if(!eanDe(v) && v.length >= 9 && v.length <= 11 && eanOk(v.padStart(13, '0'))) v = v.padStart(13, '0');   // UPC/EAN que perdeu os zeros da frente
+    const ok = eanDe(v);
+    return {v, tipo: ok ? 'ean' : (v.length <= 8 ? 'etiqueta' : 'outro'),
+      nome: ok ? ok.tipo : (v.length <= 8 ? 'etiqueta da loja' : v.length === 14 ? 'código da caixa (14 dígitos)' : 'código de barras')};
+  }).sort((a, b)=>ORDEM_BARRA[a.tipo] - ORDEM_BARRA[b.tipo]);
+}
+function lerSemCod(){ try{ return JSON.parse(localStorage.getItem(SEMCOD_KEY)) || {}; }catch(e){ return {}; } }
+function gravarSemCod(v){ try{ localStorage.setItem(SEMCOD_KEY, JSON.stringify(v)); }catch(e){} }
+function itensHoje(cli){ return (lerSemCod()[cli] || {})[hojeBR()] || []; }
+function guardarHoje(cli, it, b){
+  const v = lerSemCod(), porDia = v[cli] = v[cli] || {}, d = hojeBR(), l = porDia[d] = porDia[d] || [];
+  if(l.some(x=>x[0] === it.c)) return;
+  l.push([it.c, it.d || '', b ? b.v : '', b ? b.tipo : 'interno', new Date().toTimeString().slice(0, 5)]);
+  const ymd = k => k.split('/').reverse().join('');
+  Object.keys(porDia).sort((a, b)=>ymd(b).localeCompare(ymd(a))).slice(7).forEach(k=>delete porDia[k]);   // guarda só os 7 últimos dias
+  gravarSemCod(v);
+}
+function tirarHoje(cli, cod){
+  const v = lerSemCod(), l = (v[cli] || {})[hojeBR()]; if(!l) return;
+  v[cli][hojeBR()] = l.filter(x=>x[0] !== cod); gravarSemCod(v);
+}
+function renderIntBarras(){
+  const box = document.getElementById('intRes'), inp = document.getElementById('intCod'); if(!box || !inp) return;
+  if(!souCriador()){ box.innerHTML = ''; return; }
+  const cli = codUi.cli, base = codBases[cli];
+  const q0 = inp.value.replace(/\D/g, ''), lp = document.getElementById('intLimpar'); if(lp) lp.hidden = !inp.value;
+  renderIntHoje();
+  if(!base){ box.innerHTML = `<div class="msg warn">Sem o arquivo de produtos de ${esc(rotuloCli(cli))} neste aparelho: importe o TXT do cliente em “Arquivo de produtos”, abaixo.</div>`; return; }
+  if(!q0){ box.innerHTML = ''; return; }
+  const q = q0.replace(/^0+/, '') || '0';
+  const it = base.porCod.get(q);
+  const larg = Math.min(box.clientWidth || 330, 420);
+  if(!it){
+    const outro = base.porEan.get(q);
+    box.innerHTML = outro
+      ? `<div class="msg ok"><b>${esc(q)}</b> já é um código de barras (${esc(outro.d || 'produto ' + outro.c)}): pode bipar o produto normalmente.</div>`
+      : `<div class="msg warn perigo">❌ O código interno <b>${esc(q)}</b> não existe no arquivo de ${esc(rotuloCli(cli))}${codLocal[cli] ? ' (de ' + esc(codLocal[cli].data || '') + ')' : ''}. Peça para a loja conferir — <b>não lance no coletor</b>.</div>`;
+    return;
+  }
+  const bs = barrasDoItem(it);
+  let h = `<div class="cod-destaque"><div class="int-desc">${esc(it.d || '(sem descrição)')}</div>
+    <div class="int-cod">Interno ${esc(it.c)} · confira se é o produto que está na mão</div>`;
+  if(it.c.length <= 3) h += `<div class="msg warn">⚠ Código curto (${it.c.length} dígito${it.c.length > 1 ? 's' : ''}): um número errado vira outro produto. Confira a descrição.</div>`;
+  if(bs.length) h += bs.map((b, i)=>`<div class="section-title">${i ? 'Outro código deste produto' : 'Bipe este'} · ${esc(b.nome)}</div>${b.tipo === 'etiqueta' ? `<p class="hint" style="margin:0">Etiqueta da própria loja (${b.v.length} dígitos): vai aparecer no filtro de código curto — por isso guarde na lista de hoje.</p>` : ''}${blocoBarras(b.v, false, larg)}`).join('');
+  else h += `<div class="msg warn perigo">Este produto <b>não tem código de barras</b> no arquivo do cliente: no coletor ele só entra pelo interno <b>${esc(it.c)}</b>. Guarde na lista de hoje para saber, na conferência, que este código curto é esperado.</div>
+    <button class="btn small secondary" type="button" id="intMostrarInterno" style="margin-top:8px">Mostrar o interno em barras (bipar sem digitar)</button><div id="intInterno"></div>`;
+  const ja = itensHoje(cli).some(x=>x[0] === it.c);
+  h += `<div class="acoes" style="margin-top:10px"><button class="btn small" type="button" id="intGuardar" ${ja ? 'disabled' : ''}>${ja ? '✓ Já está na lista de hoje' : '+ Guardar na lista de hoje'}</button></div></div>`;
+  box.innerHTML = h; alinharBarras(box);
+  const mi = box.querySelector('#intMostrarInterno');
+  if(mi) mi.onclick = ()=>{ box.querySelector('#intInterno').innerHTML = blocoBarras(it.c, true, larg); mi.remove(); alinharBarras(box); };
+  const g = box.querySelector('#intGuardar');
+  if(g) g.onclick = ()=>{ guardarHoje(cli, it, bs[0]); renderIntBarras(); toast('Guardado na lista de hoje.'); };
+}
+function textoListaHoje(cli){
+  return ['Interno\tDescrição\tCódigo bipado\tTipo\tHora'].concat(itensHoje(cli).map(x=>[x[0], x[1], x[2] || '(interno)', {ean:'EAN', etiqueta:'etiqueta da loja', outro:'outro', interno:'sem código de barras'}[x[3]] || x[3], x[4]].join('\t'))).join('\n');
+}
+function renderIntHoje(){
+  const el = document.getElementById('intHoje'); if(!el) return;
+  const cli = codUi.cli, l = itensHoje(cli);
+  const conf = `<p class="hint">🔍 <b>Conferência:</b> no arquivo da contagem, código com até 7 dígitos → digite aqui. Se aparecer “Bipe este”, o produto tem código de barras: entrou o interno digitado → auditar o setor. Se aparecer “não tem código de barras” ou “já é um código de barras”, está certo.</p>`;
+  if(!souCriador()){ el.innerHTML = ''; return; }
+  if(!l.length){ el.innerHTML = codBases[cli] ? conf : ''; return; }
+  const curtos = l.filter(x=>x[3] === 'interno' || (x[2] && x[2].length <= 7)).length;
+  el.innerHTML = `<div class="section-title">Lista de hoje — ${esc(rotuloCli(cli))} (${l.length})</div>
+    ${l.map(x=>`<div class="cod-row" role="button" tabindex="0" data-int="${esc(x[0])}"><div class="cod-txt"><div class="cod-desc">${esc(x[1] || '(sem descrição)')}</div>
+      <div class="cod-sub">Int. <b>${esc(x[0])}</b> · ${x[3] === 'interno' ? '<b style="color:var(--danger)">sem código de barras (entra o interno)</b>' : (x[3] === 'etiqueta' ? 'etiqueta da loja ' : 'barras ') + esc(x[2])} · ${esc(x[4] || '')}
+      <button class="x-item" type="button" title="Tirar da lista" data-tirar-int="${esc(x[0])}">✕</button></div></div></div>`).join('')}
+    <div class="acoes" style="flex-wrap:wrap;margin-top:8px">
+      <button class="btn small secondary" type="button" id="intCopiar">📋 Copiar (cola no Excel)</button>
+      <button class="btn small secondary" type="button" id="intImprimir">🖨 Imprimir / PDF</button></div>
+    ${curtos ? `<p class="hint">Desta lista, <b>${curtos}</b> entra${curtos > 1 ? 'm' : ''} no coletor com código curto e ${curtos > 1 ? 'são esperados' : 'é esperado'} (sem código de barras ou etiqueta da loja).</p>` : ''}${conf}`;
+  el.querySelectorAll('[data-int]').forEach(r=>r.onclick = e=>{ if(e.target.closest('[data-tirar-int]')) return; const i = document.getElementById('intCod'); i.value = r.dataset.int; renderIntBarras(); i.scrollIntoView({block:'center'}); });
+  el.querySelectorAll('[data-tirar-int]').forEach(b=>b.onclick = ()=>{ tirarHoje(cli, b.dataset.tirarInt); renderIntBarras(); });
+  el.querySelector('#intCopiar').onclick = async ()=>{
+    const txt = textoListaHoje(cli);
+    try{ await navigator.clipboard.writeText(txt); }catch(e){ const t = document.createElement('textarea'); t.value = txt; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    toast('Lista copiada: cole no Excel.');
+  };
+  el.querySelector('#intImprimir').onclick = ()=>{
+    const fl = {nome: 'Sem código — ' + hojeBR(), itens: itensHoje(cli).map(x=>[x[0], x[1], x[3] === 'interno' ? '' : x[2]])};
+    gerarFolhaCod(cli, fl, 'ean', +(codUi.folhaMod || 0.5));
+  };
 }
 function itemCod(cli, cod){
   const base = codBases[cli];
@@ -10644,7 +10761,9 @@ function abrirItemCod(cli, cod){
   const box = abrirFolha(esc(it.d || 'Produto'), `<div class="cod-ficha">
       ${foto ? `<img class="cod-foto-grande" src="${foto}" alt="">${fotoParecida(cli, it.c) ? '<p class="hint" style="text-align:center;margin:0 0 6px">Foto do mesmo produto em outra embalagem.</p>' : ''}` : ''}
       <div style="margin-bottom:6px">${tagsItem(cli, it)}</div>
-      ${it.f.includes('B') ? `<div class="section-title">Código da etiqueta: ${esc(it.c)}</div>${blocoBarras(it.c, false, larg)}${it.soCod ? '<p class="hint">O arquivo deste cliente só tem os códigos (sem descrição): o código existe.</p>' : ''}` : `
+      ${it.f.includes('B') ? `<div class="section-title">Código da etiqueta: ${esc(it.c)}</div>${blocoBarras(it.c, false, larg)}${it.soCod ? '<p class="hint">O arquivo deste cliente só tem os códigos (sem descrição): o código existe.</p>' : ''}` : (cliSemInterno(cli) && it.e.length) ? `
+      <div class="section-title">Código interno: ${esc(it.c)}</div><p class="hint" style="margin:0">Supermercado: bipe o código de barras (o interno não vai para o coletor).</p>
+      ${barrasDoItem(it).map((b, i, a)=>`<div class="section-title">${esc(b.nome)}${a.length > 1 ? ' ' + (i + 1) + ' de ' + a.length : ''}: ${esc(b.v)}</div>${blocoBarras(b.v, false, larg)}`).join('')}` : `
       <div class="section-title">Código interno: ${esc(it.c)}</div>${blocoBarras(it.c, true, larg)}
       ${it.e.length ? it.e.map((e, i)=>`<div class="section-title">EAN${it.e.length > 1 ? ' ' + (i + 1) + ' de ' + it.e.length : ''}: ${esc(e)}</div>${blocoBarras(e, false, larg)}`).join('') : '<p class="hint">Este produto não tem EAN no arquivo do cliente: use o código interno.</p>'}`}
       ${it.daLista ? '<p class="hint">Dados da lista (o arquivo de produtos deste cliente ainda não está no aparelho).</p>' : ''}
@@ -10814,7 +10933,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 21/11/2026 10:05</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 21/11/2026 17:30</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
