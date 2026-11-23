@@ -361,8 +361,10 @@ body.modo-colega .so-criador{display:none !important;}
 .filtro-cli label{margin:0;font-weight:700;font-size:.85rem;white-space:nowrap;}
 .filtro-cli select{flex:1;min-width:0;}
 .cod-destaque{border:2px solid var(--accent);border-radius:12px;padding:10px 11px;margin-top:8px;}
-.int-busca input{padding-right:48px;font-size:1.15rem;letter-spacing:.06em;}
-.int-busca .cod-limpar{right:10px;}
+.int-busca input{font-size:1.08rem;}
+#intCod{padding-right:142px !important;text-overflow:ellipsis;}
+.brilho-lista .cod-row{cursor:pointer;}
+.bmesmo{text-decoration:underline;cursor:pointer;font-weight:800;}
 .int-desc{font-size:1.12rem;font-weight:800;line-height:1.25;}
 .int-cod{font-size:.8rem;color:var(--muted);margin:2px 0 4px;}
 .msg.perigo{color:var(--danger);border:1px solid var(--danger);}
@@ -9810,7 +9812,12 @@ const ABREV_COD = {COMPRIMIDO:['CPR','COMP','CP','COMPRIMIDO'], CAPSULA:['CAPS',
   MASCULINO:['MASC','MASCULINO'], FEMININO:['FEM','FEMININO'], PRETO:['PTO','PRETO','PRET','PRETA'], PRETA:['PTO','PRETA','PRET','PRETO'], BRANCO:['BCO','BRANCO','BRAN','BRANCA'], BRANCA:['BCO','BRANCA','BRAN','BRANCO'],
   AZUL:['AZ','AZUL'], VERMELHO:['VERM','VERMELHO','VERMELHA'], VERMELHA:['VERM','VERMELHA','VERMELHO'], LEGGING:['LEG','LEGGING'], LEGUI:['LEG','LEGGING'], MOLETOM:['MOLET','MOLETOM'],
   SHORT:['SHORT','SHOR'], SHORTS:['SHORT','SHOR'], TENIS:['TEN','TENIS'], BONE:['BONE','BON'], REGATA:['REG','REGATA'], SUTIA:['SUT','SUTIA'], CALCINHA:['CALC','CALCINHA'], PIJAMA:['PIJ','PIJAMA'],
-  BLUSA:['BL','BLUSA'], CONJUNTO:['CONJ','CONJUNTO'], MACACAO:['MACAC','MACACAO'], SAIA:['SAIA'], CAMISOLA:['CAMISOLA','CAMIS']};
+  BLUSA:['BL','BLUSA'], CONJUNTO:['CONJ','CONJUNTO'], MACACAO:['MACAC','MACACAO'], SAIA:['SAIA'], CAMISOLA:['CAMISOLA','CAMIS'],
+  // supermercado (Brilho, 23/11)
+  CERVEJA:['CERV','CERVEJA'], LATA:['LT','LATA','LAT'], LATINHA:['LT','LATA'], LATAO:['LATAO','LT'], GARRAFA:['GAR','GARRAFA','GF','GFA'], LONG:['LN','LONG'], NECK:['NECK','LN'],
+  REFRIGERANTE:['REFRIG','REFRI','REFRIGERANTE'], DETERGENTE:['DET','DETERGENTE'], DESINFETANTE:['DESINF','DESINFETANTE'], AMACIANTE:['AMAC','AMACIANTE'], HIGIENICO:['HIG','HIGIENICO'],
+  LINGUICA:['LING','LINGUICA'], MORTADELA:['MORT','MORTADELA'], BISCOITO:['BISC','BISCOITO'], CHOCOLATE:['CHOC','CHOCOLATE'], ACHOCOLATADO:['ACHOC','ACHOCOLATADO'], IOGURTE:['IOG','IOGURTE'],
+  SABAO:['SAB','SABAO'], MACARRAO:['MAC','MACARRAO'], TEMPERO:['TEMP','TEMPERO'], CONGELADO:['CONG','CONGELADO'], ENERGETICO:['ENERG','ENERGETICO'], REQUEIJAO:['REQ','REQUEIJAO'], MARGARINA:['MARG','MARGARINA']};
 const UNIDADES_COD = {MILIGRAMA:'MG', MILIGRAMAS:'MG', MG:'MG', GRAMA:'G', GRAMAS:'G', MILILITRO:'ML', MILILITROS:'ML', ML:'ML', LITRO:'L', LITROS:'L', QUILO:'KG', QUILOS:'KG', KG:'KG', MICROGRAMA:'MCG', MICROGRAMAS:'MCG'};
 const FORMAS_OPCIONAIS = new Set(['COMPRIMIDO','CAPSULA','DRAGEA','PASTILHA','GOTA','ENVELOPE','SACHE','FLACONETE','AMPOLA','CAIXA','UNIDADE']);
 const PALAVRAS_VAZIAS = new Set(['DE','DO','DA','DOS','DAS','COM','E','O','A','OS','AS','PARA','PRA','EM','NO','NA','CAIXA','CODIGO','INTERNO','EAN','BARRA','BARRAS','NUMERO','PRODUTO','ITEM','TAMANHO']);
@@ -10711,11 +10718,14 @@ function renderBrilho(){
     sec.innerHTML = `<div class="card brilho-topo">
       <h2 style="margin-bottom:4px">🛒 ${BRILHO_NOME}</h2>
       <div id="brilhoInfo"></div>
-      <div class="hint-box"><p class="hint" style="margin:6px 0 0">Item sem código: a loja passa o <b>código interno</b> → digite aqui → bipe o <b>código de barras</b> que aparecer. O interno não entra digitado no coletor. Só código exato.</p></div>
-      <div class="busca-robo int-busca"><span class="lupa" aria-hidden="true">🔢</span>
-        <input type="text" id="intCod" inputmode="numeric" placeholder="Código interno" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
-        <button type="button" class="cod-limpar" id="intLimpar" title="Limpar" aria-label="Limpar" hidden>✕</button></div>
-      <div id="intRes"></div>
+      <div class="hint-box"><p class="hint" style="margin:6px 0 0">Pesquise pelo <b>código interno</b>, pelo <b>código de barras</b>, pela <b>descrição</b> (ex.: “skol 473”) ou falando 🎤. Aparece o <b>código de barras cadastrado</b> para bipar — o interno não entra digitado no coletor.</p></div>
+      <div class="busca-robo cod-busca int-busca"><span class="lupa" aria-hidden="true">🔍</span>
+        <input type="text" id="intCod" inputmode="numeric" placeholder="Interno, código de barras ou descrição" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <button type="button" class="cod-limpar" id="intLimpar" title="Limpar" aria-label="Limpar" hidden>✕</button>
+        <button type="button" class="cod-mic" id="brilhoMic" title="Pesquisar falando" aria-label="Pesquisar falando">🎤</button>
+        <button type="button" class="cod-teclado" id="brilhoTecl" title="Trocar teclado">ABC</button></div>
+      <div class="cod-voz-linha"><button type="button" class="chip-cli" id="brilhoCerv">🍺 Cervejas</button></div>
+      <div id="intRes" class="brilho-lista"></div>
     </div>
     <div class="card"><div id="intHoje"></div></div>
     <div class="card">
@@ -10725,9 +10735,14 @@ function renderBrilho(){
       <input type="file" id="arqBrilho" accept=".txt,.TXT,text/plain" hidden>
     </div>`;
     const ic = document.getElementById('intCod');
-    ic.addEventListener('input', ()=>{ clearTimeout(ic._t); ic._t = setTimeout(renderIntBarras, 350); document.getElementById('intLimpar').hidden = !ic.value; });
-    ic.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); clearTimeout(ic._t); renderIntBarras(); ic.blur(); } });
-    document.getElementById('intLimpar').onclick = ()=>{ ic.value = ''; renderIntBarras(); ic.focus(); };
+    ic.addEventListener('input', ()=>{ brilhoSel = null; if(ic.value) brilhoModo = ''; clearTimeout(ic._t); ic._t = setTimeout(renderIntBarras, 350); document.getElementById('intLimpar').hidden = !ic.value; });
+    ic.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); clearTimeout(ic._t); brilhoSel = null; renderIntBarras(); ic.blur(); } });
+    document.getElementById('intLimpar').onclick = ()=>{ ic.value = ''; brilhoSel = null; renderIntBarras(); ic.focus(); };
+    document.getElementById('brilhoMic').onclick = brilhoOuvir;
+    document.getElementById('brilhoTecl').onclick = ()=>{ brilhoAplicarTeclado(!brilhoNumerico()); ic.focus(); };
+    document.getElementById('brilhoCerv').onclick = ()=>{ brilhoModo = brilhoModo === 'cerv' ? '' : 'cerv'; brilhoSel = null; ic.value = ''; renderIntBarras(); };
+    document.getElementById('intRes').addEventListener('click', cliqueBrilho);
+    brilhoAplicarTeclado(brilhoNumerico());
     document.getElementById('arqBrilho').onchange = e=>{ brilhoImportar(e.target.files); e.target.value = ''; };
   }
   const inf = document.getElementById('brilhoInfo');
@@ -10765,32 +10780,108 @@ function tirarHoje(cli, cod){
   const v = lerSemCod(), l = (v[cli] || {})[hojeBR()]; if(!l) return;
   v[cli][hojeBR()] = l.filter(x=>x[0] !== cod); gravarSemCod(v);
 }
+let brilhoSel = null, brilhoModo = '', brilhoTam = '', brilhoRec = null, brilhoUltimaCerv = [];
+function brilhoNumerico(){ try{ return localStorage.getItem('central_brilho_tecl') !== 'abc'; }catch(e){ return true; } }
+function brilhoAplicarTeclado(num){
+  try{ localStorage.setItem('central_brilho_tecl', num ? '123' : 'abc'); }catch(e){}
+  const i = document.getElementById('intCod'), t = document.getElementById('brilhoTecl');
+  if(i) i.setAttribute('inputmode', num ? 'numeric' : 'search'); if(t) t.textContent = num ? 'ABC' : '123';
+}
+// ---- cervejas (23/11): lata de fardo e garrafa de 300 mL não passam no coletor → lista com o código cadastrado ----
+const ehCerveja = it => /^(CERV|CERVEJA|CHOPP|CHOP)\b/.test(it.n || '');
+function mlDe(n){
+  let m = n.match(/(\d{3,4})\s?ML\b/); if(m) return +m[1];
+  m = n.match(/\b(\d+)(?:[.,](\d))?\s?(?:L|LITRO|LITROS)\b/); if(m) return Math.round(parseFloat(m[1] + '.' + (m[2] || '0')) * 1000);
+  return 0;
+}
+const TAMS_CERV = [['269','269'],['300','300'],['330','330/355'],['350','350'],['473','473'],['600','550/600'],['1000','1 L ou mais']];
+function tamCerv(ml){
+  if(!ml) return 'outro'; if(ml <= 275) return '269'; if(ml <= 315) return '300'; if(ml >= 330 && ml <= 345 || ml === 355) return '330';
+  if(ml <= 352) return '350'; if(ml <= 500) return '473'; if(ml <= 650) return '600'; if(ml >= 900) return '1000'; return 'outro';
+}
+function htmlCervejas(){
+  const base = brilhoBase;
+  if(!base.cerv) base.cerv = base.itens.filter(ehCerveja).map(it=>({it, ml: mlDe(it.n), marca: (it.n.split(' ')[1] || '')}))
+    .sort((a, b)=>a.marca.localeCompare(b.marca) || a.ml - b.ml || a.it.n.localeCompare(b.it.n));
+  const cont = {}; base.cerv.forEach(x=>{ const k = tamCerv(x.ml); cont[k] = (cont[k] || 0) + 1; });
+  const lista = base.cerv.filter(x=>!brilhoTam || tamCerv(x.ml) === brilhoTam).map(x=>x.it);
+  brilhoUltimaCerv = lista;
+  return `<div class="section-title" style="margin-top:8px">🍺 Cervejas (${lista.length})</div>
+    <p class="hint" style="margin:0 0 6px">Lata de fardo e garrafa que não passam no coletor: toque e bipe o código cadastrado no ${BRILHO_NOME}. Dá para imprimir a folha e deixar no setor.</p>
+    <div class="cod-voz-linha">${[['', 'Todas']].concat(TAMS_CERV).filter(([k])=>!k || cont[k]).map(([k, r])=>`<button class="chip-cli ${brilhoTam === k ? 'on' : ''}" type="button" data-btam="${k}">${r}${k ? ' (' + cont[k] + ')' : ''}</button>`).join('')}</div>
+    <div class="acoes" style="margin:6px 0"><button class="btn small secondary" type="button" data-bimpr>🖨 Imprimir estas (${lista.length})</button></div>
+    ${lista.map(linhaBrilho).join('')}`;
+}
+function imprimirCervejas(){
+  const l = brilhoUltimaCerv || []; if(!l.length) return;
+  if(l.length > 80 && !confirm(`São ${l.length} cervejas (várias folhas). Imprimir mesmo assim? Dica: escolha um tamanho antes.`)) return;
+  const rot = brilhoTam ? (TAMS_CERV.find(t=>t[0] === brilhoTam) || ['', ''])[1] + ' mL' : '(todas)';
+  gerarFolhaCod(BRILHO_CLI, {nome: `Cervejas ${rot}`, itens: l.map(it=>{ const b = barrasDoItem(it)[0]; return [it.c, it.d, b ? b.v : '']; })}, 'ean', +(codUi.folhaMod || 0.5));
+}
+function linhaBrilho(it){
+  const b = barrasDoItem(it)[0];
+  return `<div class="cod-row" role="button" tabindex="0" data-bsel="${esc(it.c)}"><div class="cod-txt"><div class="cod-desc">${esc(it.d || '(sem descrição)')}</div>
+    <div class="cod-sub">Int. <b>${esc(it.c)}</b> · ${b ? (b.v.length === 14 ? 'caixa ' : b.tipo === 'etiqueta' ? 'etiqueta ' : '') + esc(b.v) : '<b style="color:var(--danger)">sem código de barras</b>'}</div></div></div>`;
+}
+// mesmo nome em outro código (cadastro repetido na loja: um com código de barras e outro sem)
+function chaveNomeBrilho(n){ return String(n || '').replace(/(\d)\s+(ML|L|G|KG|UN|UND)\b/g, '$1$2').replace(/\bLONG NECK\b/g, 'LN').replace(/\bLATA\b/g, 'LT').replace(/[.,]/g, ' ').split(/\s+/).filter(Boolean).sort().join(' '); }
+function mesmoNomeBrilho(it){
+  const b = brilhoBase;
+  if(!b.porNome){ b.porNome = new Map(); b.itens.forEach(x=>{ const k = chaveNomeBrilho(x.n); const l = b.porNome.get(k); if(l) l.push(x); else b.porNome.set(k, [x]); }); }
+  return (b.porNome.get(chaveNomeBrilho(it.n)) || []).filter(x=>x !== it);
+}
+function cliqueBrilho(e){
+  const s = e.target.closest('[data-bsel]');
+  if(s){ const it = brilhoBase && brilhoBase.porCod.get(s.dataset.bsel); if(it){ brilhoSel = it; renderIntBarras(); const r = document.getElementById('intRes'); if(r && r.scrollIntoView) r.scrollIntoView({block:'start', behavior:'smooth'}); } return; }
+  const t = e.target.closest('[data-btam]'); if(t){ brilhoTam = t.dataset.btam; renderIntBarras(); return; }
+  if(e.target.closest('[data-bimpr]')){ imprimirCervejas(); return; }
+  if(e.target.closest('[data-bvolta]')){ brilhoSel = null; renderIntBarras(); }
+}
 function renderIntBarras(){
   const box = document.getElementById('intRes'), inp = document.getElementById('intCod'); if(!box || !inp) return;
   if(!brilhoLigado()){ box.innerHTML = ''; return; }
-  const cli = BRILHO_CLI, base = brilhoBase;
-  const q0 = inp.value.replace(/\D/g, ''), lp = document.getElementById('intLimpar'); if(lp) lp.hidden = !inp.value;
+  const lp = document.getElementById('intLimpar'); if(lp) lp.hidden = !inp.value;
+  const bc = document.getElementById('brilhoCerv'); if(bc) bc.classList.toggle('on', brilhoModo === 'cerv' && !inp.value.trim());
   renderIntHoje();
-  if(!base){ box.innerHTML = ''; return; }
-  if(!q0){ box.innerHTML = ''; return; }
-  const q = q0.replace(/^0+/, '') || '0';
-  const it = base.porCod.get(q);
+  const base = brilhoBase; if(!base){ box.innerHTML = ''; return; }
   const larg = Math.min(box.clientWidth || 330, 420);
-  if(!it){
-    const outro = base.porEan.get(q);
-    box.innerHTML = outro
-      ? `<div class="msg ok"><b>${esc(q)}</b> já é um código de barras (${esc(outro.d || 'produto ' + outro.c)}): pode bipar o produto normalmente.</div>`
-      : `<div class="msg warn perigo">❌ O código interno <b>${esc(q)}</b> não existe na lista do ${BRILHO_NOME}${brilhoInfo && brilhoInfo.data ? ' (de ' + esc(brilhoInfo.data) + ')' : ''}. Peça para a loja conferir — <b>não lance no coletor</b>.</div>`;
+  if(brilhoSel) return mostrarProdutoBrilho(brilhoSel, larg, '');
+  const q = inp.value.trim();
+  if(!q){ box.innerHTML = brilhoModo === 'cerv' ? htmlCervejas() : ''; return; }
+  const num = q.replace(/[\s.\-]/g, '');
+  if(/^\d+$/.test(num)){
+    const k = num.replace(/^0+/, '') || '0';
+    const pi = base.porCod.get(k), pe = base.porEan.get(k);
+    if(pi) return mostrarProdutoBrilho(pi, larg, 'interno');
+    if(pe) return mostrarProdutoBrilho(pe, larg, 'barras');
+    const par = k.length >= 3 ? codBuscar(base, k, BRILHO_CLI).lista.slice(0, 20) : [];
+    box.innerHTML = `<div class="msg warn perigo">❌ O código <b>${esc(k)}</b> não existe na lista do ${BRILHO_NOME}${brilhoInfo && brilhoInfo.data ? ' (de ' + esc(brilhoInfo.data) + ')' : ''}, nem como interno nem como código de barras. Peça para a loja conferir — <b>não lance no coletor</b>.</div>` +
+      (par.length ? `<details class="via-det" style="margin-top:8px"><summary>Códigos parecidos (${par.length}) — confira a descrição</summary>${par.map(linhaBrilho).join('')}</details>` : '');
     return;
   }
+  const r = codBuscar(base, q, BRILHO_CLI);
+  if(r.lista.length === 1) return mostrarProdutoBrilho(r.lista[0], larg, '');
+  box.innerHTML = r.lista.length
+    ? `<p class="hint" style="margin:8px 2px">${r.mais ? 'Mais de 60' : r.lista.length} produtos${r.comoSom ? ' (achados pelo som: confira)' : ''}. Toque para ver o código de barras.</p>` + r.lista.map(linhaBrilho).join('')
+    : `<div class="msg warn">Nada com “${esc(q)}”. Tente menos palavras (ex.: “skol 473”).</div>`;
+}
+function mostrarProdutoBrilho(it, larg, origem){
+  const box = document.getElementById('intRes'), cli = BRILHO_CLI;
+  const q = (document.getElementById('intCod').value || '').replace(/\D/g, '').replace(/^0+/, '');
   const bs = barrasDoItem(it);
   const eanFoto = (bs.find(b=>b.tipo === 'ean') || {}).v || '';
-  let h = `<div class="cod-destaque"><div class="int-desc">${esc(it.d || '(sem descrição)')}</div>
+  let h = brilhoSel ? `<button class="btn small secondary" type="button" data-bvolta style="margin:6px 0">← Voltar</button>` : '';
+  h += `<div class="cod-destaque">`;
+  if(origem === 'barras') h += `<div class="msg ok" style="margin:0 0 6px">✅ <b>${esc(q)}</b> é o código de barras deste produto: no coletor está certo.</div>`;
+  else if(origem === 'interno') h += `<div class="int-cod" style="margin:0 0 2px">Achado pelo <b>código interno</b></div>`;
+  h += `<div class="int-desc">${esc(it.d || '(sem descrição)')}</div>
     <div class="int-cod">Interno ${esc(it.c)} · confira se é o produto que está na mão</div>
     <div class="int-foto" id="intFoto"></div>
     <div class="int-links"><button class="btn small secondary" type="button" data-foto-google>🔎 Ver foto no Google</button>${eanFoto ? '<button class="btn small secondary" type="button" data-foto-cosmos>Cosmos</button>' : ''}</div>`;
+  const dups = mesmoNomeBrilho(it);
+  if(dups.length) h += `<div class="msg warn">⚠ Mesmo nome em outro cadastro: ${dups.map(x=>`<span class="bmesmo" role="button" tabindex="0" data-bsel="${esc(x.c)}">${esc(x.c)}</span>${barrasDoItem(x).length ? '' : ' (sem código de barras)'}`).join(', ')}. Confirme com a loja qual código usar.</div>`;
   if(it.c.length <= 3) h += `<div class="msg warn">⚠ Código curto (${it.c.length} dígito${it.c.length > 1 ? 's' : ''}): um número errado vira outro produto. Confira a descrição.</div>`;
-  if(bs.length) h += bs.map((b, i)=>`<div class="section-title">${i ? 'Outro código deste produto' : 'Bipe este'} · ${esc(b.nome)}</div>${b.tipo === 'etiqueta' ? `<p class="hint" style="margin:0">Etiqueta da própria loja (${b.v.length} dígitos): vai aparecer no filtro de código curto — por isso guarde na lista de hoje.</p>` : ''}${blocoBarras(b.v, false, larg)}`).join('');
+  if(bs.length) h += bs.map((b, i)=>`<div class="section-title">${i ? 'Outro código deste produto' : 'Bipe este'} · ${esc(b.nome)}</div>${b.tipo === 'etiqueta' ? `<p class="hint" style="margin:0">Etiqueta da própria loja (${b.v.length} dígitos): vai aparecer no filtro de código curto — por isso guarde na lista de hoje.</p>` : b.v.length === 14 ? `<p class="hint" style="margin:0">Código da caixa/fardo: a unidade não tem esse código — bipe aqui pelo app.</p>` : ''}${blocoBarras(b.v, false, larg)}`).join('');
   else h += `<div class="msg warn perigo">Este produto <b>não tem código de barras</b> no arquivo do cliente: no coletor ele só entra pelo interno <b>${esc(it.c)}</b>. Guarde na lista de hoje para saber, na conferência, que este código curto é esperado.</div>
     <button class="btn small secondary" type="button" id="intMostrarInterno" style="margin-top:8px">Mostrar o interno em barras (bipar sem digitar)</button><div id="intInterno"></div>`;
   const ja = itensHoje(cli).some(x=>x[0] === it.c);
@@ -10798,18 +10889,51 @@ function renderIntBarras(){
   box.innerHTML = h; alinharBarras(box); box.dataset.cod = it.c;
   box.querySelector('[data-foto-google]').onclick = ()=>window.open('https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(eanFoto || it.d), '_blank', 'noopener');
   const bc = box.querySelector('[data-foto-cosmos]'); if(bc) bc.onclick = ()=>window.open('https://cosmos.bluesoft.com.br/produtos/' + eanFoto, '_blank', 'noopener');
-  if(eanFoto) fotoAbertaBrilho(eanFoto).then(url=>{ const f = document.getElementById('intFoto');
+  if(eanFoto) fotoAberta(eanFoto).then(url=>{ const f = document.getElementById('intFoto');
     if(url && f && box.dataset.cod === it.c) f.innerHTML = `<img src="${esc(url)}" alt="" loading="lazy" onerror="this.parentNode.innerHTML=''"><small>foto: Open Food Facts</small>`; });
   const mi = box.querySelector('#intMostrarInterno');
   if(mi) mi.onclick = ()=>{ box.querySelector('#intInterno').innerHTML = blocoBarras(it.c, true, larg); mi.remove(); alinharBarras(box); };
   const g = box.querySelector('#intGuardar');
   if(g) g.onclick = ()=>{ guardarHoje(cli, it, bs[0]); renderIntBarras(); toast('Guardado na lista de hoje.'); };
 }
+// 🎤 da aba do Brilho: fala o código ("um dois zero cinco oito"), o código de barras ou o nome ("skol quatrocentos e setenta e três")
+async function brilhoOuvir(){
+  const inp = document.getElementById('intCod'), mic = document.getElementById('brilhoMic');
+  if(!RecVoz){ brilhoAplicarTeclado(false); inp.focus(); toast('Neste aparelho use o 🎤 do teclado: toque no campo e depois no microfone do teclado.', 6000); return; }
+  if(!(await garantirMicrofone())) return;
+  try{ if(brilhoRec) brilhoRec.abort(); }catch(e){}
+  const rec = new RecVoz(); brilhoRec = rec;
+  rec.lang = 'pt-BR'; rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = false;
+  let final = null;
+  rec.onstart = ()=>mic.classList.add('ouvindo');
+  rec.onresult = ev=>{ const r = ev.results[ev.results.length - 1]; if(!r.isFinal){ inp.value = r[0].transcript; return; } final = [...r].map(a=>a.transcript); };
+  rec.onerror = ev=>{
+    mic.classList.remove('ouvindo');
+    if(ev.error === 'not-allowed' || ev.error === 'service-not-allowed' || ev.error === 'audio-capture'){
+      vozMicOk = false;
+      if(/iPhone|iPad/.test(navigator.userAgent)) toast('No iPhone com o app instalado use o 🎤 do teclado.', 6000);
+      else ajudaMicrofone(ev.error === 'service-not-allowed' ? 'servico' : ev.error === 'audio-capture' ? 'captura' : 'negado');
+    } else if(ev.error === 'network') toast('Sem internet: a voz precisa de conexão. Digite ou use o 🎤 do teclado.', 6000);
+  };
+  rec.onend = ()=>{
+    mic.classList.remove('ouvindo');
+    if(!final){ return; }
+    let txt = textoDaFala(final[0], false);
+    for(const a of final){ const t = textoDaFala(a, false); if(brilhoBase && (/^\d+$/.test(t) ? (brilhoBase.porCod.get(t.replace(/^0+/, '')) || brilhoBase.porEan.get(t.replace(/^0+/, ''))) : codBuscar(brilhoBase, t, BRILHO_CLI).lista.length)){ txt = t; break; } }
+    inp.value = txt; brilhoSel = null; brilhoModo = ''; renderIntBarras();
+    const it = brilhoBase && (/^\d+$/.test(txt) ? (brilhoBase.porCod.get(txt.replace(/^0+/, '')) || brilhoBase.porEan.get(txt.replace(/^0+/, ''))) : null);
+    const r = it ? null : brilhoBase ? codBuscar(brilhoBase, txt, BRILHO_CLI) : {lista:[]};
+    const um = it || (r.lista.length === 1 ? r.lista[0] : null);
+    if(um) falarCod(descFalada(um.d) + '. Interno ' + digitosFalados(um.c) + '.');
+    else falarCod(r.lista.length ? (r.mais ? 'Mais de 60' : r.lista.length) + ' produtos.' : 'Não encontrei ' + txt.toLowerCase() + '.');
+  };
+  try{ rec.start(); }catch(e){ mic.classList.remove('ouvindo'); }
+}
 // foto do produto mostrado, pela base aberta Open Food Facts (gratuita; ~1 KB de consulta + ~12 KB da foto, só com internet).
 // Guarda a resposta no aparelho (achou / não achou) para não perguntar de novo.
 const FOTO_ABERTA_KEY = 'central_foto_aberta_v1';
 let fotoAbertaCache = null;
-async function fotoAbertaBrilho(ean){
+async function fotoAberta(ean){
   if(!fotoAbertaCache){ try{ fotoAbertaCache = JSON.parse(localStorage.getItem(FOTO_ABERTA_KEY)) || {}; }catch(e){ fotoAbertaCache = {}; } }
   const c = fotoAbertaCache[ean];
   if(c !== undefined && (c || Date.now() - (fotoAbertaCache['_t' + ean] || 0) < 30 * 864e5)) return c || '';
@@ -10831,7 +10955,7 @@ function textoListaHoje(cli){
 function renderIntHoje(){
   const el = document.getElementById('intHoje'); if(!el) return;
   const cli = BRILHO_CLI, l = itensHoje(cli);
-  const conf = `<p class="hint">🔍 <b>Conferência:</b> no arquivo da contagem, código com até 7 dígitos → digite no campo de cima. Se aparecer “Bipe este”, o produto tem código de barras: entrou o interno digitado → auditar o setor. Se aparecer “não tem código de barras” ou “já é um código de barras”, está certo.</p>`;
+  const conf = `<p class="hint">🔍 <b>Conferência:</b> no arquivo da contagem, código com até 7 dígitos → digite no campo de cima. Se aparecer “Achado pelo código interno” e um código de barras para bipar, entrou o interno digitado → auditar o setor. Se aparecer “✅ é o código de barras deste produto” ou “não tem código de barras”, está certo.</p>`;
   if(!brilhoLigado()){ el.innerHTML = ''; return; }
   if(!l.length){ el.innerHTML = `<div class="section-title" style="margin-top:0">Lista de hoje</div><p class="hint">Vazia. Depois de mostrar o código, toque em “+ Guardar na lista de hoje”.</p>${conf}`; return; }
   const curtos = l.filter(x=>x[3] === 'interno' || (x[2] && x[2].length <= 7)).length;
@@ -10867,8 +10991,12 @@ function abrirItemCod(cli, cod){
   const ls = listasDoCli(cli);
   const admin = souCriador();
   const foto = fotoCod(cli, it.c);
+  // foto na internet: pelo EAN (ou pela descrição, se não tiver EAN). Roupa (código da etiqueta) fica de fora.
+  const eanNet = it.f.includes('B') ? '' : ((barrasDoItem(it).find(b=>b.tipo === 'ean') || {}).v || '');
+  const qNet = eanNet || (it.f.includes('B') ? '' : it.d || '');
   const box = abrirFolha(esc(it.d || 'Produto'), `<div class="cod-ficha">
       ${foto ? `<img class="cod-foto-grande" src="${foto}" alt="">${fotoParecida(cli, it.c) ? '<p class="hint" style="text-align:center;margin:0 0 6px">Foto do mesmo produto em outra embalagem.</p>' : ''}` : ''}
+      ${!foto && eanNet ? '<div class="int-foto" id="fichaFotoNet"></div>' : ''}
       <div style="margin-bottom:6px">${tagsItem(cli, it)}</div>
       ${it.f.includes('B') ? `<div class="section-title">Código da etiqueta: ${esc(it.c)}</div>${blocoBarras(it.c, false, larg)}${it.soCod ? '<p class="hint">O arquivo deste cliente só tem os códigos (sem descrição): o código existe.</p>' : ''}` : (cliSemInterno(cli) && it.e.length) ? `
       <div class="section-title">Código interno: ${esc(it.c)}</div><p class="hint" style="margin:0">Supermercado: bipe o código de barras (o interno não vai para o coletor).</p>
@@ -10876,11 +11004,16 @@ function abrirItemCod(cli, cod){
       <div class="section-title">Código interno: ${esc(it.c)}</div>${blocoBarras(it.c, true, larg)}
       ${it.e.length ? it.e.map((e, i)=>`<div class="section-title">EAN${it.e.length > 1 ? ' ' + (i + 1) + ' de ' + it.e.length : ''}: ${esc(e)}</div>${blocoBarras(e, false, larg)}`).join('') : '<p class="hint">Este produto não tem EAN no arquivo do cliente: use o código interno.</p>'}`}
       ${it.daLista ? '<p class="hint">Dados da lista (o arquivo de produtos deste cliente ainda não está no aparelho).</p>' : ''}
+      ${qNet ? `<div class="int-links" style="margin-top:4px"><button class="btn small secondary" type="button" data-foto-google>🔎 Ver foto no Google</button>${eanNet ? '<button class="btn small secondary" type="button" data-foto-cosmos>Cosmos</button>' : ''}</div>` : ''}
       ${admin ? `<div class="section-title">Listas</div><div class="row"><select id="codAddLista" class="full">${ls.map(l=>`<option value="${esc(l.id)}">${esc(l.nome)}${l.itens.some(x=>String(x[0]) === it.c) ? ' ✓' : ''}</option>`).join('')}<option value="__nova__">+ Nova lista…</option></select>
         <button class="btn small secondary" type="button" data-add-lista>+ Adicionar</button></div>` : ''}
     </div>`, 'Fechar', ()=>{});
   const canc = box.querySelector('[data-cancelar]'); if(canc) canc.remove();
   alinharBarras(box); box.addEventListener('scroll', ()=>alinharBarras(box), {passive:true});
+  const bg = box.querySelector('[data-foto-google]'); if(bg) bg.onclick = ()=>window.open('https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(qNet), '_blank', 'noopener');
+  const bcz = box.querySelector('[data-foto-cosmos]'); if(bcz) bcz.onclick = ()=>window.open('https://cosmos.bluesoft.com.br/produtos/' + eanNet, '_blank', 'noopener');
+  if(!foto && eanNet) fotoAberta(eanNet).then(url=>{ const f = box.querySelector('#fichaFotoNet');
+    if(url && f) f.innerHTML = `<img src="${esc(url)}" alt="" loading="lazy" onerror="this.parentNode.innerHTML=''"><small>foto da internet (Open Food Facts) — confira com o produto</small>`; });
   const bt = box.querySelector('[data-add-lista]');
   if(bt) bt.onclick = ()=>{
     let id = box.querySelector('#codAddLista').value;
@@ -11042,7 +11175,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 21/11/2026 17:30</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 23/11/2026 14:30</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
