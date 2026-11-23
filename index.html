@@ -10667,10 +10667,10 @@ function renderResultadosCod(){
 const SEMCOD_KEY = 'central_semcod_v1';
 // PARA DESLIGAR a aba do Supermercado Brilho: trocar true por false (a lista guardada no aparelho fica lá, sem uso)
 const BRILHO_LIGADO = true;
-const BRILHO_ARQ = 'brilho-produtos-v1.js';   // lista no GitHub (só o app do criador baixa, 1 vez, ≈ 0,5 MB). Mudou a lista? Mude o nome (v2).
+const BRILHO_ARQ = 'brilho-produtos-v1.js';   // lista no GitHub (cada aparelho baixa 1 vez, só quando abre a aba, ≈ 0,5 MB). Mudou a lista? Mude o nome (v2).
 const BRILHO_CLI = 'SUP_BRILHO', BRILHO_NOME = 'Supermercado Brilho';
 let brilhoBase = null, brilhoInfo = null, brilhoEstado = '';
-function brilhoLigado(){ return BRILHO_LIGADO && souCriador(); }
+function brilhoLigado(){ return BRILHO_LIGADO; }   // 23/11: liberada para todos os coordenadores (antes só o criador)
 function baixarListaBrilho(){
   return new Promise(res=>{
     if(window.__BRILHO_PRODUTOS) return res(window.__BRILHO_PRODUTOS);
@@ -10728,7 +10728,7 @@ function renderBrilho(){
       <div id="intRes" class="brilho-lista"></div>
     </div>
     <div class="card"><div id="intHoje"></div></div>
-    <div class="card">
+    <div class="card so-criador">
       <div class="section-title" style="margin-top:0">Lista de produtos do Brilho</div>
       <div id="brilhoArq" class="hint"></div>
       <div class="acoes" style="flex-wrap:wrap"><button class="btn small secondary" type="button" onclick="document.getElementById('arqBrilho').click()">📂 Trocar por outro arquivo</button></div>
@@ -11175,7 +11175,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 23/11/2026 14:30</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 23/11/2026 15:15</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
