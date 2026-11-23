@@ -3468,7 +3468,7 @@ async function analisarImagemEscala(f){
       const data = (aoa.flat().join(' ').match(/\d{1,2}\/\d{1,2}\/\d{2,4}/) || [''])[0];
       lojasDetectadas = [{col, row:-1, loja:'', codigo:'', data, inicio:'', semLoja:true}];
     }
-    sel.innerHTML = lojasDetectadas.map((l,i)=>`<option value="${i}">${l.semLoja ? 'Nomes da imagem (loja não encontrada)' : esc(l.loja) + ' | ' + esc(l.codigo)}${l.data?' — '+esc(l.data):''}</option>`).join('');
+    sel.innerHTML = lojasDetectadas.map((l,i)=>`<option value="${i}">${l.semLoja ? 'Nomes da imagem (loja não encontrada)' : esc(l.loja) + (l.codigo ? ' | ' + esc(l.codigo) : '')}${l.data?' — '+esc(l.data):''}</option>`).join('');
     bloco.style.display = '';
     msg.innerHTML = `<div class="msg ok">Imagem lida: ${lojasDetectadas[0].semLoja ? 'não achei o nome da loja (preencha depois em "Nome da loja")' : lojasDetectadas.length + ' loja(s) encontrada(s)'}. Toque em "Importar esta loja" e confira os nomes.</div>`;
   }catch(err){
@@ -3550,7 +3550,7 @@ async function analisarArquivo(){
     const sel = document.getElementById('selecaoLoja');
     const bloco = document.getElementById('blocoSelecaoLoja');
     if(lojasDetectadas.length){
-      sel.innerHTML = lojasDetectadas.map((l,i)=>`<option value="${i}">${esc(l.loja)} | ${esc(l.codigo)}${l.data?' — '+esc(l.data):''}</option>`).join('');
+      sel.innerHTML = lojasDetectadas.map((l,i)=>`<option value="${i}">${esc(l.loja)}${l.codigo ? ' | ' + esc(l.codigo) : ''}${l.data?' — '+esc(l.data):''}</option>`).join('');
       bloco.style.display = '';
       msg.innerHTML = `<div class="msg ok">${lojasDetectadas.length} loja(s) encontrada(s) no arquivo. Escolha qual importar.</div>`;
     } else {
@@ -4809,16 +4809,22 @@ const RE_LOJA_SEM_BARRA = /^([A-Za-zÀ-ÿ].*?[A-Za-zÀ-ÿ0-9])\s+(\d{3,5})$/;
 function lerLojaDoTexto(t){
   const v = String(t || '').replace(/\s+/g, ' ').trim();
   if(!v || RE_FIM_LISTA.test(v) || /in[ií]cio programado/i.test(v)) return null;
-  const m = v.match(/^(.+?)\s*\|\s*(\d+)$/) || v.match(RE_LOJA_SEM_BARRA);
+  const m = v.match(/^(.+?)\s*\|\s*(\d+)$/) || v.match(/^(.+?)\s*\|\s*([A-Za-z]{1,2}\d{2,6})$/) || v.match(RE_LOJA_SEM_BARRA);   // "| L2606" (Pacheco) também
   return m ? {loja: m[1].trim(), codigo: m[2], semBarra: !/\|/.test(v)} : null;
 }
 // na planilha da escala: sem a barra, só vale se tiver a data em cima ou o "Início programado" embaixo
 // (evita confundir endereço da referência, ex. "Rua X 123", com uma loja)
 function lojaNaCelula(aoa, r, c){
-  const l = lerLojaDoTexto(aoa[r] && aoa[r][c]);
-  if(!l || !l.semBarra) return l;
+  const v = aoa[r] && aoa[r][c];
+  const l = lerLojaDoTexto(v);
+  if(l && !l.semBarra) return l;
   const cima = String((aoa[r-1] && aoa[r-1][c]) || ''), baixo = String((aoa[r+1] && aoa[r+1][c]) || '');
-  return (/\d{1,2}\/\d{1,2}(\/\d{2,4})?/.test(cima) || /in[ií]cio programado/i.test(baixo)) ? l : null;
+  const temData = /\d{1,2}\/\d{1,2}(\/\d{2,4})?/.test(cima), temInicio = /in[ií]cio programado/i.test(baixo);
+  if(l) return (temData || temInicio) ? l : null;
+  // 23/11: loja SEM número (ex.: "BH AIRPORT - CONFINS") só vale com a data em cima E o "Início programado" embaixo
+  const t = String(v || '').replace(/\s+/g, ' ').trim();
+  if(t && temData && temInicio && /[A-Za-zÀ-ÿ]{2}/.test(t) && !RE_FIM_LISTA.test(t) && !/in[ií]cio programado/i.test(t)) return {loja: t, codigo: '', semBarra: true, semNumero: true};
+  return null;
 }
 function novaLojaProdutividade(){
   ['prodData','prodNumLoja','prodLoja','prodInicio','prodFim','prodArquivoContagem','prodArquivoFaixas','prodArquivoColetores']
@@ -11175,7 +11181,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 23/11/2026 15:15</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 23/11/2026 17:15</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
