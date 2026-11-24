@@ -373,6 +373,24 @@ nav#subnav button.aba-brilho{background:linear-gradient(135deg,#f59e0b,#ea580c) 
 nav#subnav button.aba-brilho.active{box-shadow:inset 0 0 0 2px #fff,0 4px 14px rgba(234,88,12,.45) !important;}
 .brilho-topo{border:2px solid #ea580c;}
 .brilho-topo h2{color:#ea580c;}
+/* ✈️ BH Airport (miudezas em folha) */
+nav#subnav button.aba-aero{background:linear-gradient(135deg,#38bdf8,#0369a1) !important;color:#fff !important;font-weight:800;box-shadow:0 4px 14px rgba(3,105,161,.35) !important;}
+nav#subnav button.aba-aero.active{box-shadow:inset 0 0 0 2px #fff,0 4px 14px rgba(3,105,161,.45) !important;}
+.miud-topo{border:2px solid #0284c7;}
+.miud-topo h2{color:#0284c7;}
+.miud-novo{display:grid;grid-template-columns:1fr 2fr 78px;gap:6px;}
+.miud-novo input,.miud-item input{min-width:0;width:100%;box-sizing:border-box;}
+.miud-item{border:1px solid var(--border);border-radius:12px;padding:8px;margin-top:8px;}
+.miud-l1{display:flex;gap:6px;align-items:center;}
+.miud-n{font-size:.75rem;color:var(--muted);min-width:20px;text-align:right;flex:none;}
+.miud-l1 .miud-cod{width:74px;flex:none;font-weight:700;padding-left:8px;padding-right:6px;}
+.miud-l1 .miud-desc{flex:1;font-size:.9rem;padding-left:8px;padding-right:6px;}
+.miud-desc,#miudNovoDesc{text-transform:uppercase;}
+.miud-del{border:none;background:none;color:var(--danger);font-size:1.05rem;cursor:pointer;padding:4px;flex:none;}
+.miud-q{display:grid;grid-template-columns:62px repeat(4,1fr);gap:6px;margin-top:6px;}
+.miud-q select,.miud-novo select{width:100%;min-width:0;box-sizing:border-box;padding:8px 2px;font-weight:700;text-align:center;}
+.miud-q label{display:flex;flex-direction:column;gap:2px;font-size:.72rem;color:var(--muted);text-align:center;font-weight:700;}
+.miud-q input{text-align:center;font-size:1.1rem;font-weight:800;padding:8px 2px;}
 .int-foto img{display:block;margin:8px auto 2px;max-width:170px;max-height:170px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:10px;padding:4px;}
 .int-foto small{display:block;text-align:center;color:var(--muted);font-size:.7rem;}
 .int-links{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;}
@@ -1174,6 +1192,7 @@ section#presenca .pill-btns .pill{font-size:.7rem;padding:8px 0;letter-spacing:-
   <section id="consulta" class="view"><div id="conteudoConsulta"></div></section>
   <section id="listascod" class="view"><div id="conteudoListasCod"></div></section>
   <section id="brilho" class="view"><div id="conteudoBrilho"></div></section>
+  <section id="miudezas" class="view"><div id="conteudoMiudezas"></div></section>
 </main>
 <nav id="barra" aria-label="Menu principal"><div class="itens">
       <button data-grupo="inicio"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></span>Início<span class="badge" id="badge-inicio" hidden></span></button>
@@ -1460,7 +1479,7 @@ function mostrarAvisoArquivo(){
 const GRUPOS = {
   inicio: [['inicio','Início']],
   viagem: [['viagemres','Resumo'],['niveis','Por nível'],['escala','Escala'],['quartos','Quartos'],['equipe','Equipe']],
-  loja:   [['presenca','Presença'],['setores','Setores'],['historico','Histórico']],
+  loja:   [['presenca','Presença'],['setores','Setores'],['historico','Histórico'],['miudezas','✈️ BH Airport']],
   gestao: [['gestao','Gestão'],['quadro','Quadro da equipe'],['modelos','Listas de setores']],
   consulta: [['consulta','Pesquisar'],['listascod','Listas'],['brilho','🛒 Supermercado Brilho']],
   prod:   [['produtividade','Produtividade']],
@@ -1478,8 +1497,9 @@ function abrirView(id){
   if((g === 'viagem' || g === 'gestao') && typeof souCriador === 'function' && !souCriador()) return abrirView(id === 'modelos' ? 'setores' : 'inicio');
   if(id === 'plano' && typeof planoLigado === 'function' && !planoLigado()) return abrirView('niveis');
   if(id === 'brilho' && !(typeof brilhoLigado === 'function' && brilhoLigado())) return abrirView('consulta');
-  const subs = GRUPOS[g].filter(([v])=>v !== 'brilho' || (typeof brilhoLigado === 'function' && brilhoLigado()));
-  sub.innerHTML = subs.length>1 ? subs.map(([v,rot])=>`<button data-view="${v}" class="${v===id?'active':''}${v==='brilho'?' aba-brilho':''}">${rot}</button>`).join('') : '';
+  if(id === 'miudezas' && !(typeof miudezasLigado === 'function' && miudezasLigado())) return abrirView('presenca');
+  const subs = GRUPOS[g].filter(([v])=>(v !== 'brilho' || (typeof brilhoLigado === 'function' && brilhoLigado())) && (v !== 'miudezas' || (typeof miudezasLigado === 'function' && miudezasLigado())));
+  sub.innerHTML = subs.length>1 ? subs.map(([v,rot])=>`<button data-view="${v}" class="${v===id?'active':''}${v==='brilho'?' aba-brilho':''}${v==='miudezas'?' aba-aero':''}">${rot}</button>`).join('') : '';
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active', s.id===id));
   ui.view = id; ui.ultimaPorGrupo[g] = id; lsSet(UI_KEY, ui);
   if(typeof fecharFolhaCod === 'function') fecharFolhaCod();
@@ -1488,6 +1508,7 @@ function abrirView(id){
   if(id==='consulta') codAoAbrir();
   if(id==='listascod'){ renderListasCod(); codCarregar(codUi.cli).then(renderListasCod); }
   if(id==='brilho') brilhoAbrir();
+  if(id==='miudezas') renderMiudezas();
   if(id==='quartos') renderRJQuartosOptions();
   if(typeof renderBarraViagem === 'function') renderBarraViagem(g === 'viagem');
   if(id==='viagemres') renderResumoViagem();
@@ -9210,7 +9231,7 @@ function restaurarHistoricoDoBackup(lista){
 function fazerBackup(){
   const dados = {
     app:'central-inventario', versao:1, geradoEm:new Date().toISOString(),
-    dados:{ equipe:db, escala:(SINC.escala ? SINC.escala.obter() : lsGet(ESCALA_KEY, null)), loja, quartos:lsGet(QUARTOS_KEY, {}), modelos:modelosProprios, historico, roboLink: robo.link, roboMetas: robo.metas || {}, roboSegmentos: robo.segmentos || {} }
+    dados:{ equipe:db, escala:(SINC.escala ? SINC.escala.obter() : lsGet(ESCALA_KEY, null)), loja, quartos:lsGet(QUARTOS_KEY, {}), miudezas:lsGet(MIUD_KEY, null), modelos:modelosProprios, historico, roboLink: robo.link, roboMetas: robo.metas || {}, roboSegmentos: robo.segmentos || {} }
   };
   const d = new Date(), dd = n=>String(n).padStart(2,'0');
   const nome = `Backup Central - ${dd(d.getDate())}.${dd(d.getMonth()+1)}.${d.getFullYear()} ${dd(d.getHours())}h${dd(d.getMinutes())}.json`;
@@ -9227,7 +9248,7 @@ async function restaurarBackup(){
   const quando = b.geradoEm ? new Date(b.geradoEm).toLocaleString('pt-BR') : 'data desconhecida';
   if(!confirm(`Substituir os dados deste aparelho pelo backup de ${quando}?`)) return;
   const d = b.dados;
-  [['equipe', d.equipe], ['escala', d.escala], ['loja', d.loja], ['quartos', d.quartos]].forEach(([nome, valor])=>{
+  [['equipe', d.equipe], ['escala', d.escala], ['loja', d.loja], ['quartos', d.quartos], ['miudezas', d.miudezas]].forEach(([nome, valor])=>{
     if(valor===undefined || !SINC[nome]) return;
     SINC[nome].aplicar(valor);
     marcarAlterado(nome, true);
@@ -9241,6 +9262,123 @@ async function restaurarBackup(){
   if(d.roboMetas && typeof d.roboMetas === 'object'){ robo.metas = d.roboMetas; robo.segmentos = d.roboSegmentos || robo.segmentos || {}; salvarRobo(); marcarAlterado('robo'); renderRobo(); }
   if(typeof d.roboLink === 'string' && d.roboLink){ robo.link = d.roboLink; salvarRobo(); marcarAlterado('robo'); renderRobo(); atualizarDoRobo(false); if(!nuvemLigada) iniciarNuvem(); }
   msg.innerHTML = `<div class="msg ok">Backup restaurado: ${db.clt.length} CLT, ${db.fl.length} freelancers, ${loja.pessoas.length} pessoa(s) na lista da loja, ${modelosProprios.length} modelo(s) de setores, ${historicoAtivo().length} loja(s) no histórico.</div>`;
+}
+
+/* ---------- ✈️ BH AIRPORT: miudezas contadas em folha (24/11/2026, só o criador) ----------
+   Inventário sem coletor: para cada item, código interno, descrição e até 4 contagens.
+   Salva no aparelho a cada número e sincroniza PC ↔ celular pelo robô (estado/miudezas, entra no backup).
+   Para desligar: MIUDEZAS_LIGADO = false. */
+const MIUDEZAS_LIGADO = true;
+const MIUD_KEY = 'central_miudezas_v1';
+const UNIDADES_MIUD = ['UN', 'CX', 'PCT', 'KG', 'G', 'L', 'ML', 'M', 'PAR', 'DZ', 'FD', 'RL', 'SC', 'KIT'];
+const opcoesUnid = sel => UNIDADES_MIUD.concat(sel && !UNIDADES_MIUD.includes(sel) ? [sel] : []).map(u=>`<option ${u === sel ? 'selected' : ''}>${u}</option>`).join('');
+function miudezasLigado(){ return MIUDEZAS_LIGADO && souCriador(); }
+function miudDados(){ const v = lsGet(MIUD_KEY, null); return (v && Array.isArray(v.itens)) ? v : {titulo:'BH AIRPORT - CONFINS', data:hojeBR(), itens:[]}; }
+let miud = miudDados(), miudTimer = null;
+function miudSalvar(agora){
+  clearTimeout(miudTimer);
+  const f = ()=>{ miud.atualizadoEm = Date.now(); lsSet(MIUD_KEY, miud); marcarAlterado('miudezas'); };
+  if(agora) f(); else miudTimer = setTimeout(f, 500);
+}
+window.addEventListener('pagehide', ()=>{ if(miudTimer){ clearTimeout(miudTimer); miud.atualizadoEm = Date.now(); lsSet(MIUD_KEY, miud); } });
+function miudResumo(){
+  const el = document.getElementById('miudResumo'); if(!el) return;
+  const n = miud.itens.length, c = k=>miud.itens.filter(it=>String((it.q || [])[k] || '').trim() !== '').length;
+  el.innerHTML = n ? `<b>${n}</b> ite${n > 1 ? 'ns' : 'm'} · 1ª contagem: <b>${c(0)}</b> de ${n} · 2ª: <b>${c(1)}</b> · 3ª: <b>${c(2)}</b> · 4ª: <b>${c(3)}</b>` : 'Nenhum item ainda: adicione abaixo.';
+}
+function linhaMiud(it, i){
+  return `<div class="miud-item" data-mid="${esc(it.id)}">
+    <div class="miud-l1"><span class="miud-n">${i + 1}</span>
+      <input class="miud-cod" data-f="cod" type="text" value="${esc(it.cod || '')}" placeholder="Código" autocomplete="off" aria-label="Código interno">
+      <input class="miud-desc" data-f="desc" type="text" value="${esc(it.desc || '')}" placeholder="Descrição" autocomplete="off" autocapitalize="characters" aria-label="Descrição">
+      <button class="miud-del" type="button" data-mdel title="Excluir item" aria-label="Excluir item">🗑</button></div>
+    <div class="miud-q"><label>Unid.<select data-f="un" aria-label="Unidade">${opcoesUnid(it.un || 'UN')}</select></label>${[0, 1, 2, 3].map(k=>`<label>${k + 1}ª cont.<input data-q="${k}" type="text" inputmode="decimal" value="${esc((it.q || [])[k] || '')}" autocomplete="off" enterkeyhint="next"></label>`).join('')}</div>
+  </div>`;
+}
+function pintarListaMiud(){
+  const l = document.getElementById('miudLista'); if(!l) return;
+  l.innerHTML = miud.itens.length ? miud.itens.map(linhaMiud).join('') : '<p class="hint">Os itens adicionados aparecem aqui, na mesma ordem da folha.</p>';
+  miudResumo();
+}
+function imagemMiudezas(){
+  const its = miud.itens; if(!its.length){ toast('Adicione os itens primeiro.'); return; }
+  // só as contagens que têm algum número (sem colunas vazias na imagem)
+  const ks = [0, 1, 2, 3].filter(k=>k === 0 || its.some(it=>String((it.q || [])[k] || '').trim() !== ''));
+  const n = its.length, c = k=>its.filter(it=>String((it.q || [])[k] || '').trim() !== '').length;
+  const th = 'padding:6px 5px;border-bottom:2px solid #0369a1;font-size:11px;color:#0c4a6e;text-align:center';
+  const td = 'padding:6px 5px;border-bottom:1px solid #e3e8f0;font-size:12px';
+  let h = `<div style="font-size:20px;font-weight:700;margin-bottom:2px">✈️ ${esc(miud.titulo || 'BH Airport')}</div>
+    <div style="color:#62597a;font-size:13px;margin-bottom:10px">Miudezas${miud.data ? ' · ' + esc(miud.data) : ''} · ${n} ite${n > 1 ? 'ns' : 'm'} · ${ks.map(k=>`${k + 1}ª contagem: ${c(k)}`).join(' · ')}</div>
+    <table style="width:100%;border-collapse:collapse">
+      <tr style="background:#e0f2fe"><th style="${th}">Nº</th><th style="${th};text-align:left">CÓDIGO</th><th style="${th};text-align:left">DESCRIÇÃO</th><th style="${th}">UNID.</th>${ks.map(k=>`<th style="${th}">${k + 1}ª</th>`).join('')}</tr>
+      ${its.map((it, i)=>`<tr style="background:${i % 2 ? '#f6f8fb' : '#ffffff'}"><td style="${td};text-align:center;color:#7a7191">${i + 1}</td><td style="${td};font-weight:700;white-space:nowrap">${esc(it.cod || '')}</td><td style="${td}">${esc(it.desc || '')}</td><td style="${td};text-align:center">${esc(it.un || 'UN')}</td>${ks.map(k=>`<td style="${td};text-align:center;font-weight:700;font-size:13px">${esc((it.q || [])[k] || '')}</td>`).join('')}</tr>`).join('')}
+    </table>`;
+  gerarImagem(h, `BH Airport - miudezas - ${(miud.data || hojeBR()).replace(/\//g, '-')}.png`);
+}
+function miudAdicionar(){
+  const c = document.getElementById('miudNovoCod'), d = document.getElementById('miudNovoDesc'), u = document.getElementById('miudNovoUn');
+  const cod = c.value.trim(), desc = d.value.trim().toUpperCase(), un = (u && u.value) || 'UN';
+  if(!cod && !desc){ toast('Digite o código ou a descrição do item.'); c.focus(); return; }
+  const igual = cod && miud.itens.find(it=>String(it.cod).trim() === cod);
+  if(igual && !confirm(`Já existe o item ${cod} (${igual.desc || 'sem descrição'}). Adicionar outro com o mesmo código?`)) return;
+  miud.itens.push({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), cod, desc, un, q:['', '', '', '']});
+  miud.ultimaUn = un;   // a próxima vem com a mesma unidade
+  miudSalvar(true); pintarListaMiud();
+  c.value = ''; d.value = ''; c.focus();
+  toast(`Item ${miud.itens.length} adicionado.`);
+}
+function renderMiudezas(){
+  const sec = document.getElementById('conteudoMiudezas'); if(!sec) return;
+  if(!miudezasLigado()){ sec.innerHTML = ''; return; }
+  sec.innerHTML = `<div class="card miud-topo">
+      <h2 style="margin-bottom:4px">✈️ ${esc(miud.titulo || 'BH Airport')}</h2>
+      <div class="hint" style="margin:0 0 4px">Miudezas · ${esc(miud.data || '')}</div>
+      <div id="miudResumo" class="cod-info"></div>
+      <div class="acoes" style="margin-top:8px"><button class="btn small secondary" type="button" id="miudImg">🖼 Imagem</button></div>
+      <div class="hint-box"><p class="hint" style="margin:6px 0 0">Inventário em folha (sem coletor): para cada item, o código interno, a descrição e as contagens. Salva sozinho a cada número digitado.</p></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0">Adicionar item</div>
+      <div class="miud-novo"><input id="miudNovoCod" type="text" placeholder="Código interno" autocomplete="off" enterkeyhint="next">
+        <input id="miudNovoDesc" type="text" placeholder="Descrição" autocomplete="off" autocapitalize="characters" enterkeyhint="done">
+        <select id="miudNovoUn" aria-label="Unidade">${opcoesUnid(miud.ultimaUn || 'UN')}</select></div>
+      <button class="btn" type="button" id="miudAdd" style="margin-top:8px;width:100%">+ Adicionar item</button>
+    </div>
+    <div class="card"><div class="section-title" style="margin-top:0">Itens</div><div id="miudLista"></div></div>`;
+  const c = document.getElementById('miudNovoCod'), d = document.getElementById('miudNovoDesc');
+  c.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); d.focus(); } });
+  d.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); miudAdicionar(); } });
+  document.getElementById('miudAdd').onclick = miudAdicionar;
+  document.getElementById('miudImg').onclick = imagemMiudezas;
+  const l = document.getElementById('miudLista');
+  l.addEventListener('input', e=>{
+    const inp = e.target, row = inp.closest('[data-mid]'); if(!row) return;
+    const it = miud.itens.find(x=>x.id === row.dataset.mid); if(!it) return;
+    if(inp.dataset.q !== undefined){
+      const v = inp.value.replace(/[^\d.,]/g, ''); if(v !== inp.value) inp.value = v;
+      if(!Array.isArray(it.q)) it.q = ['', '', '', ''];
+      it.q[+inp.dataset.q] = v;
+    } else if(inp.dataset.f === 'cod') it.cod = inp.value.trim();
+    else if(inp.dataset.f === 'desc') it.desc = inp.value.toUpperCase();
+    else if(inp.dataset.f === 'un') it.un = inp.value;
+    miudSalvar(); miudResumo();
+  });
+  l.addEventListener('change', e=>{ if(e.target.dataset.f !== 'un') return; const row = e.target.closest('[data-mid]'), it = row && miud.itens.find(x=>x.id === row.dataset.mid); if(it && it.un !== e.target.value){ it.un = e.target.value; miudSalvar(); } });
+  l.addEventListener('keydown', e=>{
+    if(e.key !== 'Enter' || e.target.dataset.q === undefined) return;
+    e.preventDefault();
+    // Enter: desce para o próximo item na mesma contagem (para lançar a folha inteira de uma vez)
+    const k = e.target.dataset.q, row = e.target.closest('[data-mid]'), prox = row && row.nextElementSibling;
+    const alvo = prox && prox.querySelector(`[data-q="${k}"]`);
+    if(alvo){ alvo.focus(); alvo.select && alvo.select(); } else e.target.blur();
+  });
+  l.addEventListener('click', e=>{
+    const b = e.target.closest('[data-mdel]'); if(!b) return;
+    const row = b.closest('[data-mid]'), it = miud.itens.find(x=>x.id === row.dataset.mid); if(!it) return;
+    if(!confirm(`Excluir o item ${it.cod || ''} ${it.desc || ''}?\n\nAs contagens dele também somem.`)) return;
+    miud.itens = miud.itens.filter(x=>x !== it); miudSalvar(true); pintarListaMiud();
+  });
+  pintarListaMiud();
 }
 
 /* =====================================================================
@@ -11158,6 +11296,10 @@ registrarSinc('loja', ()=>loja,
        if(!Array.isArray(loja.pessoas)) loja.pessoas = []; if(!loja.setores || typeof loja.setores!=='object') loja.setores = {};
        lsSet(LOJA_KEY, loja); document.getElementById('nomeLoja').value = loja.nome || ''; document.getElementById('inicioLoja').value = loja.inicio || ''; renderPresenca(); renderSetores(); },
   ()=>!loja.pessoas.length);
+registrarSinc('miudezas', ()=>lsGet(MIUD_KEY, null),
+  v=>{ lsSet(MIUD_KEY, v || null); miud = miudDados(); const a = document.activeElement;
+       if(ui.view === 'miudezas' && !(a && a.closest && a.closest('#conteudoMiudezas'))) renderMiudezas(); },
+  ()=>!(miud.itens || []).length);
 registrarSinc('quartos', ()=>lsGet(QUARTOS_KEY, {}),
   v=>{ lsSet(QUARTOS_KEY, v || {}); preencherQuartosNomes(v); },
   ()=>{ const q = lsGet(QUARTOS_KEY, {}); return !(q.coord || q.lider || q.motorista); });
@@ -11181,7 +11323,7 @@ if(robo.link) atualizarDoRobo(false);
 mostrarAvisoArquivo();
 iniciarNuvem();
 </script>
-<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 23/11/2026 17:15</div>
+<div id="versaoApp" style="text-align:center;font-size:11px;opacity:.55;margin:10px 0 96px">Versão do app: 24/11/2026 03:40</div>
 <script>
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(()=>{}); });
